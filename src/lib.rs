@@ -1,18 +1,18 @@
 #![allow(dead_code)]
 
 #[derive(Clone, Copy, Debug)]
-struct EntityId(u32);
+pub struct EntityId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq)]
-struct EntityGeneration(u32);
+pub struct EntityGeneration(pub u32);
 #[derive(Clone, Copy, Debug)]
-struct ArchetypeId(u32);
+pub struct ArchetypeId(pub u32);
 #[derive(Clone, Copy, Debug)]
-struct ArchetypeRow(u32);
+pub struct ArchetypeRow(pub u32);
 
 #[derive(Clone, Copy, Debug)]
 pub struct Entity {
-    gen: EntityGeneration,
-    id: EntityId,
+    pub gen: EntityGeneration,
+    pub id: EntityId,
 }
 
 /// A generational Arena that can only store Entities
@@ -94,6 +94,21 @@ impl EntityStore {
         }
     }
 
+    pub fn set_archetype(&mut self, e: Entity, archetype: (ArchetypeId, ArchetypeRow)) {
+        let index = e.id.0 as usize;
+        let slot = &mut self.slots[index];
+        assert_eq!(slot.gen, e.gen);
+        slot.archetype = archetype.0;
+        slot.row = archetype.1;
+    }
+
+    pub fn get_archetype(&mut self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
+        let index = e.id.0 as usize;
+        let slot = &mut self.slots[index];
+        assert_eq!(slot.gen, e.gen);
+        (slot.archetype, slot.row)
+    }
+
     pub fn destroy(&mut self, e: Entity) {
         let index = e.id.0 as usize;
         if let Some(slot) = self.slots.get_mut(index) {
@@ -114,5 +129,30 @@ mod test {
     fn check_struct_sizes() {
         assert_eq!(8, size_of::<Entity>());
         assert_eq!(12, size_of::<EntitySlot>());
+    }
+
+    #[test]
+    fn entity_create() {
+        let mut store = EntityStore::new();
+        for _ in 0..10000 {
+            store.create();
+        }
+        let e = store.create();
+        assert_eq!(10000, e.id.0);
+        assert_eq!(1, e.gen.0);
+    }
+
+    #[test]
+    fn entity_reuse() {
+        let mut store = EntityStore::new();
+        let e = store.create();
+        store.destroy(e);
+        let e = store.create();
+        assert_eq!(0, e.id.0);
+        assert_eq!(3, e.gen.0);
+        store.destroy(e);
+        let e = store.create();
+        assert_eq!(0, e.id.0);
+        assert_eq!(5, e.gen.0);
     }
 }
