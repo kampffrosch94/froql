@@ -164,4 +164,27 @@ mod test {
         assert_eq!(0, get(0).0);
         assert_eq!(90, get(9).0);
     }
+
+    #[test]
+    fn test_remove_swap() {
+        struct MyStruct(usize);
+        let (layout, drop_fn) = layout_vec_args::<MyStruct>();
+        let mut vec = LayoutVec::new(layout, drop_fn);
+        for i in 0..10 {
+            unsafe {
+                let ptr = vec.half_push();
+                let ptr = std::mem::transmute::<*mut u8, *mut MyStruct>(ptr);
+                std::ptr::write(ptr, MyStruct(i * 10));
+            }
+        }
+        let old_index = vec.remove_swap(5);
+        assert_eq!(9, old_index);
+        let get = move |index| unsafe {
+            let ptr = vec.get(index);
+            let ptr = std::mem::transmute::<*mut u8, *const MyStruct>(ptr);
+            &*ptr
+        };
+        assert_eq!(90, get(5).0);
+    }
+
 }
