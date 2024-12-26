@@ -27,13 +27,6 @@ impl LayoutVec {
         }
     }
 
-    #[inline]
-    fn grow_if_necessary(&mut self, index: u32) {
-        if index >= self.capacity {
-            self.grow();
-        }
-    }
-
     // mostly from https://doc.rust-lang.org/nomicon/vec/vec-alloc.html
     fn grow(&mut self) {
         let new_ptr = if self.capacity == 0 {
@@ -186,5 +179,4 @@ mod test {
         };
         assert_eq!(90, get(5).0);
     }
-
 }
