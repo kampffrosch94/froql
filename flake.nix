@@ -31,14 +31,14 @@
         default = (pkgs.mkShell.override { stdenv = pkgs.useMoldLinker pkgs.clangStdenv; }) {
           packages = with pkgs; [
             # rust stuff
-            #(with pkgs.fenix; with complete; combine [
-            (with pkgs.fenix; with stable; combine [
+            (with pkgs.fenix; with complete; combine [
+            #(with pkgs.fenix; with stable; combine [
               cargo
               clippy
               rust-src
               rustc
               rustfmt
-              # miri
+               miri
             ])
             rust-analyzer-nightly # optional
 
