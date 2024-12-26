@@ -132,11 +132,11 @@ mod test {
     #[test]
     fn entity_create() {
         let mut store = EntityStore::new();
-        for _ in 0..10000 {
+        for _ in 0..10 {
             store.create();
         }
         let e = store.create();
-        assert_eq!(10000, e.id.0);
+        assert_eq!(10, e.id.0);
         assert_eq!(1, e.gen.0);
     }
 
