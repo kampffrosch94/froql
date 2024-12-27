@@ -6,13 +6,18 @@ use crate::layout_vec::layout_vec_args;
 pub struct ComponentId(pub u32);
 
 pub struct Component {
+    pub id: ComponentId,
     pub layout: Layout,
     pub drop_fn: Box<fn(*mut u8)>,
 }
 
 impl Component {
-    pub fn new<T: 'static>() -> Self {
+    pub fn new<T: 'static>(id: ComponentId) -> Self {
         let (layout, drop_fn) = layout_vec_args::<T>();
-        Component { layout, drop_fn }
+        Component {
+            layout,
+            drop_fn,
+            id,
+        }
     }
 }

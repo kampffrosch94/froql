@@ -4,8 +4,8 @@ use crate::component::{Component, ComponentId};
 
 #[derive(Default)]
 pub struct World {
-    component_map: HashMap<TypeId, ComponentId>,
-    components: Vec<Component>,
+    pub component_map: HashMap<TypeId, ComponentId>,
+    pub components: Vec<Component>,
 }
 impl World {
     pub fn register_component<T: 'static>(&mut self) {
@@ -14,7 +14,7 @@ impl World {
             return;
         }
         let id = ComponentId(self.components.len() as u32);
-        self.components.push(Component::new::<T>());
+        self.components.push(Component::new::<T>(id));
         self.component_map.insert(tid, id);
     }
 }

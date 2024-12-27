@@ -1,11 +1,9 @@
+use crate::archetype::{ArchetypeId, ArchetypeRow};
+
 #[derive(Clone, Copy, Debug)]
 pub struct EntityId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EntityGeneration(pub u32);
-#[derive(Clone, Copy, Debug)]
-pub struct ArchetypeId(pub u32);
-#[derive(Clone, Copy, Debug)]
-pub struct ArchetypeRow(pub u32);
 
 #[derive(Clone, Copy, Debug)]
 pub struct Entity {
@@ -92,12 +90,12 @@ impl EntityStore {
         }
     }
 
-    pub fn set_archetype(&mut self, e: Entity, archetype: (ArchetypeId, ArchetypeRow)) {
+    pub fn set_archetype(&mut self, e: Entity, id: ArchetypeId, row: ArchetypeRow) {
         let index = e.id.0 as usize;
         let slot = &mut self.slots[index];
         assert_eq!(slot.gen, e.gen);
-        slot.archetype = archetype.0;
-        slot.row = archetype.1;
+        slot.archetype = id;
+        slot.row = row;
     }
 
     pub fn get_archetype(&mut self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
