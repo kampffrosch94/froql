@@ -103,6 +103,10 @@ impl Bookkeeping {
                 (old_swapped, new_row) = LayoutVec::move_entry(from, to, old_a_row.0);
             }
         }
+        if offset == 0 {
+            // new column was not set because we finished the loop before finding the extra column
+            new_column = old.components.len();
+        }
         debug_assert!(
             offset <= 1,
             "\nOld: {:?}\nNew: {:?}",

@@ -71,7 +71,7 @@ mod test {
         let pos = world.get_component::<Pos>(e);
         let name = world.get_component::<Name>(e);
         assert_eq!(pos.0, 4);
-        assert_eq!(pos.0, 2);
+        assert_eq!(pos.1, 2);
         assert_eq!(name.0, "Player");
     }
 }

@@ -106,7 +106,11 @@ impl LayoutVec {
     #[inline]
     #[must_use]
     pub unsafe fn get(&self, index: u32) -> *mut u8 {
-        debug_assert!(self.len > 0 && index < self.len);
+        debug_assert!(
+            self.len > 0 && index < self.len,
+            "Len: {} Index: {index}",
+            self.len
+        );
         self.ptr.as_ptr().add((index * self.element_size) as usize)
     }
 
