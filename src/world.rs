@@ -67,11 +67,19 @@ mod test {
         let e = world.create();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
+        let other = world.create();
+        world.add_component(other, Pos(5, 4));
+        world.add_component(other, Name("Other".to_string()));
 
         let pos = world.get_component::<Pos>(e);
         let name = world.get_component::<Name>(e);
         assert_eq!(pos.0, 4);
         assert_eq!(pos.1, 2);
         assert_eq!(name.0, "Player");
+        let pos = world.get_component::<Pos>(other);
+        let name = world.get_component::<Name>(other);
+        assert_eq!(pos.0, 5);
+        assert_eq!(pos.1, 4);
+        assert_eq!(name.0, "Other");
     }
 }
