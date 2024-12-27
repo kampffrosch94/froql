@@ -15,7 +15,9 @@ pub struct LayoutVec {
 
 impl LayoutVec {
     /// layout: Layout of the contained type
-    /// drop_fn: Boxed closure of drop_in_place for the contained type with type punning
+    /// drop_fn: Boxed fn of drop_in_place for the contained type with type punning
+    ///
+    /// the correct arguments for a type can be obtained by calling `layout_vec_args::<T>()`
     pub fn new(layout: Layout, drop_fn: Box<fn(*mut u8)>) -> Self {
         debug_assert!(layout.size() > 0, "Layout vec does not handle ZSTs");
         LayoutVec {
@@ -102,8 +104,36 @@ impl LayoutVec {
     /// returns a pointer to the element at index
     #[inline]
     pub unsafe fn get(&self, index: u32) -> *mut u8 {
-        debug_assert!(index < self.len);
+        debug_assert!(self.len > 0 && index < self.len);
         self.ptr.as_ptr().add((index * self.element_size) as usize)
+    }
+
+    /// moves entry between two LayoutVecs with the same layout
+    /// returns the index of the last element (in `from`)
+    /// before it was swapped (like `remove_swap`)
+    /// also returns the new index in `to` as second tuple member
+    pub unsafe fn move_entry(from: &mut Self, to: &mut Self, index: u32) -> (u32, u32) {
+        debug_assert_eq!(from.element_align, to.element_align);
+        debug_assert_eq!(from.element_size, to.element_size);
+        debug_assert!(from.len > 0 && index < from.len);
+        unsafe {
+            // make space and copy over
+            let entry = from.get(index);
+            let target = to.half_push();
+            std::ptr::copy_nonoverlapping(entry, target, from.element_size as usize);
+
+            // cleanup the hole
+            // don't need to do anything if it was the last element,
+            // otherwise need to swap in the last element
+            from.len -= 1;
+            if index != from.len {
+                let last = from.get(from.len);
+                std::ptr::copy_nonoverlapping(last, entry, from.element_size as usize);
+            }
+        }
+        // we return the index of the element which was swapped
+        // so that the caller can update the archetype row for the swapped entity if necessary
+        (from.len, to.len - 1)
     }
 }
 
