@@ -106,9 +106,9 @@ impl EntityStore {
         slot.row = row;
     }
 
-    pub fn get_archetype(&mut self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
+    pub fn get_archetype(&self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
         let index = e.id.0 as usize;
-        let slot = &mut self.slots[index];
+        let slot = &self.slots[index];
         assert_eq!(slot.gen, e.gen);
         (slot.archetype, slot.row)
     }

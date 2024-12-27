@@ -41,6 +41,17 @@ impl World {
             std::ptr::write(dst, val);
         }
     }
+
+    // TODO wrap T in Refcell
+    pub fn get_component<T: 'static>(&self, e: Entity) -> &T {
+        let tid = TypeId::of::<T>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap();
+        let ptr = self.bookkeeping.get_component(e, cid);
+        unsafe {
+            let dst = mem::transmute::<*mut u8, *const T>(ptr);
+            &*dst
+        }
+    }
 }
 
 #[cfg(test)]
@@ -51,9 +62,16 @@ mod test {
     fn create_and_get() {
         struct Pos(i32, i32);
         struct Name(String);
+
         let mut world = World::new();
         let e = world.create();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
+
+        let pos = world.get_component::<Pos>(e);
+        let name = world.get_component::<Name>(e);
+        assert_eq!(pos.0, 4);
+        assert_eq!(pos.0, 2);
+        assert_eq!(name.0, "Player");
     }
 }

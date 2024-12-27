@@ -49,8 +49,17 @@ impl Bookkeeping {
         e
     }
 
+    #[must_use]
     pub fn get_component_id(&self, tid: TypeId) -> Option<ComponentId> {
         self.component_map.get(&tid).copied()
+    }
+
+    #[must_use]
+    pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
+        let (aid, row) = self.entities.get_archetype(e);
+        let a = &self.archetypes[aid.0 as usize];
+        let col = a.components.iter().position(|it| *it == cid).unwrap();
+        unsafe { a.columns[col].get(row.0) }
     }
 
     // TODO: handle ZSTs differently
