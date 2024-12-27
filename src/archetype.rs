@@ -8,6 +8,7 @@ pub struct ArchetypetId(pub u32);
 pub enum Erased {}
 type ErasedPointer = *const RefCell<Erased>;
 
+// TODO Optimization: use SmallVec instead of Vec
 pub struct Archetype {
     components: Vec<ComponentId>,
     columns: Vec<LayoutVec>,
@@ -16,6 +17,8 @@ pub struct Archetype {
 
 #[cfg(test)]
 mod test {
+    use crate::world::World;
+
     use super::*;
 
     #[test]
@@ -25,6 +28,9 @@ mod test {
 
     #[test]
     fn insert_and_get() {
-        todo!();
+        struct Name(String);
+        struct Health(i32);
+        let mut world = World::default();
+        world.register_component::<Name>();
     }
 }
