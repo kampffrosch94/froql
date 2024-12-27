@@ -71,10 +71,10 @@ impl Bookkeeping {
             let ni = new_a_id.0 as usize;
             if old_a_id < new_a_id {
                 let (old_slice, new_slice) = self.archetypes.split_at_mut(ni);
-                (&mut old_slice[oi], &mut new_slice[ni - oi])
+                (&mut old_slice[oi], &mut new_slice[0])
             } else {
                 let (new_slice, old_slice) = self.archetypes.split_at_mut(oi);
-                (&mut old_slice[oi - ni], &mut new_slice[ni])
+                (&mut old_slice[0], &mut new_slice[ni])
             }
         };
 
@@ -94,7 +94,12 @@ impl Bookkeeping {
                 (old_swapped, new_row) = LayoutVec::move_entry(from, to, old_a_row.0);
             }
         }
-        debug_assert_eq!(1, offset);
+        debug_assert!(
+            offset <= 1,
+            "\nOld: {:?}\nNew: {:?}",
+            &old.components,
+            &new.components
+        );
 
         // update entities in the entity storage
         self.entities
