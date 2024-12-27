@@ -5,7 +5,7 @@ use std::ptr::NonNull;
 /// A vector which does not care about the underlying type, just its Layout.
 /// It can not be cloned, but elements can be savely deleted.
 pub struct LayoutVec {
-    len: u32, // TODO OPTIMIZATION: try out usize too
+    len: u32,
     capacity: u32,
     element_size: u32,
     element_align: u32,
@@ -17,6 +17,7 @@ impl LayoutVec {
     /// layout: Layout of the contained type
     /// drop_fn: Boxed closure of drop_in_place for the contained type with type punning
     pub fn new(layout: Layout, drop_fn: Box<fn(*mut u8)>) -> Self {
+        debug_assert!(layout.size() > 0, "Layout vec does not handle ZSTs");
         LayoutVec {
             len: 0,
             capacity: 0,
@@ -83,14 +84,18 @@ impl LayoutVec {
     /// then swaps the last element into the resulting hole and reduces len by one
     /// returns the index of the last element before it was swapped
     pub fn remove_swap(&mut self, index: u32) -> u32 {
-        debug_assert!(self.len > 0);
-        let deletee = unsafe { self.ptr.as_ptr().add((index * self.element_size) as usize) };
-        (self.drop_fn)(deletee);
-        unsafe {
-            let last = self.get(self.len - 1);
-            std::ptr::copy_nonoverlapping(last, deletee, self.element_size as usize);
+        debug_assert!(self.len > 0 && index < self.len);
+        if index == self.len - 1 {
+            self.remove_last();
+        } else {
+            let deletee = unsafe { self.ptr.as_ptr().add((index * self.element_size) as usize) };
+            (self.drop_fn)(deletee);
+            unsafe {
+                let last = self.get(self.len - 1);
+                std::ptr::copy_nonoverlapping(last, deletee, self.element_size as usize);
+            }
+            self.len -= 1;
         }
-        self.len -= 1;
         self.len
     }
 
@@ -172,11 +177,15 @@ mod test {
         }
         let old_index = vec.remove_swap(5);
         assert_eq!(9, old_index);
+        // remove last element
+        let old_index = vec.remove_swap(8);
+        assert_eq!(8, old_index);
         let get = move |index| unsafe {
             let ptr = vec.get(index);
             let ptr = std::mem::transmute::<*mut u8, *const MyStruct>(ptr);
             &*ptr
         };
         assert_eq!(90, get(5).0);
+        assert_eq!(70, get(7).0);
     }
 }
