@@ -1,6 +1,6 @@
 use crate::archetype::{ArchetypeId, ArchetypeRow};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EntityId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EntityGeneration(pub u32);
@@ -94,6 +94,14 @@ impl EntityStore {
         let index = e.id.0 as usize;
         let slot = &mut self.slots[index];
         assert_eq!(slot.gen, e.gen);
+        slot.archetype = id;
+        slot.row = row;
+    }
+
+    #[doc(hidden)]
+    pub fn set_archetype_unchecked(&mut self, eid: EntityId, id: ArchetypeId, row: ArchetypeRow) {
+        let index = eid.0 as usize;
+        let slot = &mut self.slots[index];
         slot.archetype = id;
         slot.row = row;
     }

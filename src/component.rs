@@ -2,7 +2,7 @@ use std::alloc::Layout;
 
 use crate::layout_vec::layout_vec_args;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ComponentId(pub u32);
 
 pub struct Component {

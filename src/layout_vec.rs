@@ -58,6 +58,7 @@ impl LayoutVec {
     }
 
     /// grows the vec by one element and provides a pointer the caller can write the element to
+    #[must_use]
     pub unsafe fn half_push(&mut self) -> *mut u8 {
         if self.len >= self.capacity {
             self.grow();
@@ -103,6 +104,7 @@ impl LayoutVec {
 
     /// returns a pointer to the element at index
     #[inline]
+    #[must_use]
     pub unsafe fn get(&self, index: u32) -> *mut u8 {
         debug_assert!(self.len > 0 && index < self.len);
         self.ptr.as_ptr().add((index * self.element_size) as usize)
