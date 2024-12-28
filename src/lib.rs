@@ -5,5 +5,7 @@ mod bookkeeping;
 mod component;
 mod entity_store;
 mod layout_vec;
+mod relation;
+mod relation_vec;
 mod util;
 mod world;
