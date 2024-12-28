@@ -80,6 +80,7 @@ impl Archetype {
     }
 
     /// returns true if an entity was swapped to fill the hole
+    #[must_use]
     pub fn delete_row(&mut self, row: ArchetypeRow) -> bool {
         self.entities.swap_remove(row.0 as usize);
         for col in &mut self.columns {
