@@ -39,42 +39,53 @@ impl Archetype {
             entities: Vec::new(),
         }
     }
+
+    /// moves row between archetypes
+    /// the caller has to fix up entity entries
+    /// both for the moved entity and for the entity that was moved to fill holes in the
+    /// old archetype
+    pub fn move_row(old: &mut Self, new: &mut Self, row: ArchetypeRow) {
+        debug_assert!(new.components.len().abs_diff(old.components.len()) <= 1);
+
+        let new_bigger = new.components.len() > old.components.len();
+        let mut i = 0;
+        let mut j = 0;
+
+        for _ in 0..old.components.len() {
+            if old.components[i] != new.components[j] {
+                if new_bigger {
+                    j += 1;
+                } else {
+                    i += 1;
+                }
+                debug_assert_eq!(old.components[i], new.components[j]);
+            }
+            let from = &mut old.columns[i];
+            let to = &mut new.columns[j];
+            unsafe {
+                LayoutVec::move_entry(from, to, row.0);
+            }
+            i += 1;
+            j += 1;
+        }
+        debug_assert!(
+            i.abs_diff(j) <= 1,
+            "\nOld: {:?}\nNew: {:?}",
+            &old.components,
+            &new.components
+        );
+
+        let e_id = old.entities.swap_remove(row.0 as usize);
+        new.entities.push(e_id);
+    }
 }
 
 #[cfg(test)]
 mod test {
-    use std::any::TypeId;
-
-    use crate::world::World;
-
     use super::*;
 
     #[test]
     fn check_struct_sizes() {
         assert!(72 >= size_of::<Archetype>()); // Vec has usize inside, smaller on wasm32
-    }
-
-    #[test]
-    fn insert_and_get() {
-        struct Name(String);
-        struct Health(i32);
-        let mut world = World::new();
-        world.register_component::<Name>();
-        world.register_component::<Health>();
-        let name_id = world
-            .bookkeeping
-            .component_map
-            .get(&TypeId::of::<Name>())
-            .unwrap();
-        let health_id = world
-            .bookkeeping
-            .component_map
-            .get(&TypeId::of::<Health>())
-            .unwrap();
-        let components = [
-            &world.bookkeeping.components[name_id.0 as usize],
-            &world.bookkeeping.components[health_id.0 as usize],
-        ];
-        let archetype = Archetype::new(&components);
     }
 }

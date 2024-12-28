@@ -45,12 +45,20 @@ impl World {
     // TODO wrap T in Refcell
     pub fn get_component<T: 'static>(&self, e: Entity) -> &T {
         let tid = TypeId::of::<T>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         let ptr = self.bookkeeping.get_component(e, cid);
         unsafe {
             let dst = mem::transmute::<*mut u8, *const T>(ptr);
             &*dst
         }
+    }
+
+    // TODO wrap T in Refcell
+    pub fn remove_component<T: 'static>(&mut self, e: Entity) {
+        let tid = TypeId::of::<T>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let _ptr = self.bookkeeping.remove_component(e, cid);
+        todo!();
     }
 }
 
