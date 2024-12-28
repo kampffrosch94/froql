@@ -120,13 +120,13 @@ impl Bookkeeping {
         );
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
         let removed_column = components.iter().position(|it| *it == cid).unwrap();
-        components.push(cid);
-        components.sort();
+        components.retain(|it| *it != cid);
         let new_a_id = self.find_archetype_or_create(components);
 
         let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
 
         Archetype::move_row(old, new, old_a_row);
+        old.columns[removed_column].remove_swap(old_a_row.0);
 
         // update entities in the entity storage
         let new_row = (new.entities.len() - 1) as u32;
@@ -140,11 +140,13 @@ impl Bookkeeping {
                 .set_archetype_unchecked(eid, old_a_id, old_a_row);
         }
 
-        old.columns[removed_column].remove_swap(old_a_row.0);
-
         debug_assert!({
             let expected = old.entities.len();
             old.columns.iter().all(|col| col.len() == expected)
+        });
+        debug_assert!({
+            let expected = new.entities.len();
+            new.columns.iter().all(|col| col.len() == expected)
         });
     }
 }

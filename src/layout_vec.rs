@@ -109,6 +109,7 @@ impl LayoutVec {
     /// returns a pointer to the element at index
     #[inline]
     #[must_use]
+    #[track_caller]
     pub unsafe fn get(&self, index: u32) -> *mut u8 {
         debug_assert!(
             self.len > 0 && index < self.len,
@@ -137,7 +138,10 @@ impl LayoutVec {
             // otherwise need to swap in the last element
             from.len -= 1;
             if index != from.len {
-                let last = from.get(from.len);
+                let last = from
+                    .ptr
+                    .as_ptr()
+                    .add((from.len * from.element_size) as usize);
                 std::ptr::copy_nonoverlapping(last, entry, from.element_size as usize);
             }
         }

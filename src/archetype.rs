@@ -51,7 +51,7 @@ impl Archetype {
         let mut i = 0;
         let mut j = 0;
 
-        for _ in 0..old.components.len() {
+        while i < old.components.len() && j < new.components.len() {
             if old.components[i] != new.components[j] {
                 if new_bigger {
                     j += 1;
