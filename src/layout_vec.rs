@@ -30,6 +30,10 @@ impl LayoutVec {
         }
     }
 
+    pub fn len(&self) -> usize {
+        self.len as usize
+    }
+
     // mostly from https://doc.rust-lang.org/nomicon/vec/vec-alloc.html
     fn grow(&mut self) {
         let new_ptr = if self.capacity == 0 {

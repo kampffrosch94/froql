@@ -4,7 +4,6 @@ use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
     component::{Component, ComponentId},
     entity_store::{Entity, EntityStore},
-    layout_vec::LayoutVec,
     util::get_mut_2,
 };
 
@@ -120,50 +119,32 @@ impl Bookkeeping {
             self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
         );
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
-        components.retain(|it| *it != cid);
+        let removed_column = components.iter().position(|it| *it == cid).unwrap();
+        components.push(cid);
+        components.sort();
         let new_a_id = self.find_archetype_or_create(components);
 
         let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
 
-        // transfer every component over from the old archetype
-        let mut offset = 0; // used to skip the deleted column while copying over
-        let mut deleted_column = 0;
-        let mut new_row = 0; // row in the new archetype
-        let mut old_swapped = 0; // row which got swapped to fill holes in the old archetype
-        for i in 0..new.components.len() {
-            if old.components[i] != new.components[i] {
-                offset += 1;
-                deleted_column = i;
-            }
-            let from = &mut old.columns[i];
-            let to = &mut new.columns[i + offset];
-            unsafe {
-                (old_swapped, new_row) = LayoutVec::move_entry(from, to, old_a_row.0);
-            }
-        }
-        if offset == 0 {
-            deleted_column = old.components.len() - 1;
-        }
-
-        old.columns[deleted_column].remove_swap(old_a_row.0);
-        debug_assert!(
-            offset <= 1,
-            "\nOld: {:?}\nNew: {:?}",
-            &old.components,
-            &new.components
-        );
+        Archetype::move_row(old, new, old_a_row);
 
         // update entities in the entity storage
+        let new_row = (new.entities.len() - 1) as u32;
         self.entities
             .set_archetype(e, new_a_id, ArchetypeRow(new_row));
-        new.entities.push(e.id);
-        if old_swapped != old.entities.len() as u32 - 1 {
+        if old_a_row.0 < old.entities.len() as u32 {
             // in this case we need to update the entity we swapped into the hole
-            let eid = old.entities[old_swapped as usize];
+            let eid = old.entities[old_a_row.0 as usize];
             debug_assert_ne!(eid, e.id);
             self.entities
                 .set_archetype_unchecked(eid, old_a_id, old_a_row);
         }
-        old.entities.swap_remove(old_swapped as usize);
+
+        old.columns[removed_column].remove_swap(old_a_row.0);
+
+        debug_assert!({
+            let expected = old.entities.len();
+            old.columns.iter().all(|col| col.len() == expected)
+        });
     }
 }
