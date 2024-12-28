@@ -78,6 +78,15 @@ impl Archetype {
         let e_id = old.entities.swap_remove(row.0 as usize);
         new.entities.push(e_id);
     }
+
+    /// returns true if an entity was swapped to fill the hole
+    pub fn delete_row(&mut self, row: ArchetypeRow) -> bool {
+        self.entities.swap_remove(row.0 as usize);
+        for col in &mut self.columns {
+            col.remove_swap(row.0);
+        }
+        row.0 != self.entities.len() as u32
+    }
 }
 
 #[cfg(test)]

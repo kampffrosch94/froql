@@ -61,6 +61,10 @@ impl World {
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.remove_component(e, cid);
     }
+
+    pub fn destroy(&mut self, e: Entity) {
+        self.bookkeeping.destroy(e);
+    }
 }
 
 #[cfg(test)]
@@ -93,7 +97,7 @@ mod test {
     }
 
     #[test]
-    fn create_delete_get() {
+    fn create_remove_get() {
         struct Pos(i32, i32);
         struct Name(String);
 
@@ -107,6 +111,28 @@ mod test {
 
         world.remove_component::<Pos>(e);
         world.remove_component::<Name>(e);
+
+        let pos = world.get_component::<Pos>(other);
+        let name = world.get_component::<Name>(other);
+        assert_eq!(pos.0, 5);
+        assert_eq!(pos.1, 4);
+        assert_eq!(name.0, "Other");
+    }
+
+    #[test]
+    fn create_destroy_get() {
+        struct Pos(i32, i32);
+        struct Name(String);
+
+        let mut world = World::new();
+        let e = world.create();
+        world.add_component(e, Pos(4, 2));
+        world.add_component(e, Name("Player".to_string()));
+        let other = world.create();
+        world.add_component(other, Pos(5, 4));
+        world.add_component(other, Name("Other".to_string()));
+
+        world.destroy(e);
 
         let pos = world.get_component::<Pos>(other);
         let name = world.get_component::<Name>(other);

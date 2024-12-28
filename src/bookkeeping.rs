@@ -56,6 +56,7 @@ impl Bookkeeping {
 
     #[must_use]
     pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
+        assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
         let a = &self.archetypes[aid.0 as usize];
         let col = a.components.iter().position(|it| *it == cid).unwrap();
@@ -148,5 +149,18 @@ impl Bookkeeping {
             let expected = new.entities.len();
             new.columns.iter().all(|col| col.len() == expected)
         });
+    }
+
+    pub fn destroy(&mut self, e: Entity) {
+        if self.entities.is_alive(e) {
+            let (aid, arow) = self.entities.get_archetype(e);
+            let a = &mut self.archetypes[aid.0 as usize];
+            let swapped = a.delete_row(arow);
+            self.entities.destroy(e);
+            if swapped {
+                let swapped_e = a.entities[arow.0 as usize];
+                self.entities.set_archetype_unchecked(swapped_e, aid, arow);
+            }
+        }
     }
 }

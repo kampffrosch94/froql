@@ -99,11 +99,19 @@ impl EntityStore {
     }
 
     #[doc(hidden)]
+    /// sets archetype without checking/needing a generation
+    /// for internal use only
     pub fn set_archetype_unchecked(&mut self, eid: EntityId, id: ArchetypeId, row: ArchetypeRow) {
         let index = eid.0 as usize;
         let slot = &mut self.slots[index];
         slot.archetype = id;
         slot.row = row;
+    }
+
+    pub fn is_alive(&self, e: Entity) -> bool {
+        let index = e.id.0 as usize;
+        let slot = &self.slots[index];
+        slot.gen == e.gen
     }
 
     pub fn get_archetype(&self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
