@@ -60,6 +60,13 @@ impl RelationVecOutline {
         };
         self.ptr = ptr;
     }
+
+    unsafe fn dealloc(&mut self) {
+        let layout = RelationVecOutline::layout(self.cap);
+        unsafe {
+            alloc::dealloc(self.ptr.as_ptr() as *mut u8, layout);
+        }
+    }
 }
 
 union RelationVecUnion {
@@ -97,7 +104,6 @@ impl RelationVec {
                 for i in 0..self.len as usize {
                     unsafe { outline.write(i, inline.elements[i]) };
                 }
-                unsafe { ManuallyDrop::drop(inline) };
                 self.content = RelationVecUnion {
                     outline: ManuallyDrop::new(outline),
                 };
@@ -133,8 +139,7 @@ impl RelationVec {
                     }
                     let outline = unsafe { &mut self.content.outline };
                     unsafe {
-                        outline.ptr.drop_in_place();
-                        ManuallyDrop::drop(outline);
+                        outline.dealloc();
                     }
                     self.content = RelationVecUnion {
                         inline: ManuallyDrop::new(inline),
@@ -151,14 +156,7 @@ impl Drop for RelationVec {
         if self.len > INLINE_COUNT as u32 {
             unsafe {
                 let outline = &mut self.content.outline;
-                // TODO check this is dropping the whole slice
-                outline.ptr.drop_in_place();
-                ManuallyDrop::drop(outline);
-            }
-        } else {
-            unsafe {
-                let inline = &mut self.content.inline;
-                ManuallyDrop::drop(inline);
+                outline.dealloc();
             }
         }
     }
@@ -236,5 +234,14 @@ mod test {
         vec.remove(20);
         vec.remove(30);
         assert_eq!(&[10, 50, 40], &vec[..]);
+    }
+
+    #[test]
+    fn grow() {
+        let mut vec = RelationVec::new();
+        for i in 0..20 {
+            vec.push(i * 100);
+        }
+        assert_eq!(20, vec.len);
     }
 }
