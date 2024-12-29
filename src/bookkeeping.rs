@@ -4,6 +4,7 @@ use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
     component::{Component, ComponentId},
     entity_store::{Entity, EntityStore},
+    relation_vec::RelationVec,
     util::get_mut_2,
 };
 
@@ -103,7 +104,7 @@ impl Bookkeeping {
         r
     }
 
-    pub fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
+    fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
         // find
         if let Some(id) = self.exact_archetype.get(&c_ids) {
             return *id;
@@ -176,5 +177,68 @@ impl Bookkeeping {
                 self.entities.set_archetype_unchecked(swapped_e, aid, arow);
             }
         }
+    }
+
+    pub fn add_relation(
+        &mut self,
+        origin_cid: ComponentId,
+        target_cid: ComponentId,
+        from: Entity,
+        to: Entity,
+    ) {
+        inner(self, origin_cid, from, to);
+        inner(self, target_cid, to, from);
+        // inner function because adding the necessary component
+        // to Origin and Target works the same, just gotta swap arguments
+        fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {
+            // all relationtypes are repr(transparent) to RelationVec,
+            // so we can just treat pointers to them as RelationVec
+            if this.has_component(e, cid) {
+                let ptr = this.get_component(e, cid) as *mut RelationVec;
+                let rel_vec = unsafe { &mut *ptr };
+                rel_vec.push(other.id.0);
+            } else {
+                let mut rel_vec = RelationVec::new();
+                rel_vec.push(other.id.0);
+                let ptr = this.add_component(e, cid) as *mut RelationVec;
+                unsafe { std::ptr::write(ptr, rel_vec) };
+            }
+        }
+    }
+
+    pub fn remove_relation(
+        &mut self,
+        origin_cid: ComponentId,
+        target_cid: ComponentId,
+        from: Entity,
+        to: Entity,
+    ) {
+        inner(self, origin_cid, from, to);
+        inner(self, target_cid, to, from);
+        // inner function because adding the necessary component
+        // to Origin and Target works the same, just gotta swap arguments
+        fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {
+            // all relationtypes are repr(transparent) to RelationVec,
+            // so we can just treat pointers to them as RelationVec
+            if this.has_component(e, cid) {
+                let ptr = this.get_component(e, cid) as *mut RelationVec;
+                let rel_vec = unsafe { &mut *ptr };
+                rel_vec.remove(other.id.0);
+                if rel_vec.len() == 0 {
+                    this.remove_component(e, cid);
+                }
+            }
+        }
+    }
+
+    pub fn has_relation(&self, origin_cid: ComponentId, from: Entity, to: Entity) -> bool {
+        // all relationtypes are repr(transparent) to RelationVec,
+        // so we can just treat pointers to them as RelationVec
+        if self.has_component(from, origin_cid) {
+            let ptr = self.get_component(from, origin_cid) as *mut RelationVec;
+            let rel_vec = unsafe { &mut *ptr };
+            return rel_vec.contains(&to.id.0);
+        }
+        return false;
     }
 }

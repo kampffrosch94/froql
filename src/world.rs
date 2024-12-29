@@ -18,7 +18,10 @@ impl World {
         }
     }
 
-    pub fn register_component<T: 'static>(&mut self) -> ComponentId {
+    /// Used internally to register both components and relations
+    /// because Relations are a special kind of component
+    /// and Components are meant to be wrapped in `RefCell`
+    fn register_component_inner<T: 'static>(&mut self) -> ComponentId {
         let tid = TypeId::of::<T>();
         if let Some(cid) = self.bookkeeping.get_component_id(tid) {
             return cid;
@@ -29,10 +32,9 @@ impl World {
         return cid;
     }
 
-    pub fn register_relation<T: 'static>(&mut self) {
-        let origin_cid = self.register_component::<RelationOrigin<T>>();
-        let target_cid = self.register_component::<RelationTarget<T>>();
-        todo!();
+    // TODO wrap in refcell
+    pub fn register_component<T: 'static>(&mut self) -> ComponentId {
+        self.register_component_inner::<T>()
     }
 
     pub fn create(&mut self) -> Entity {
@@ -78,6 +80,34 @@ impl World {
 
     pub fn destroy(&mut self, e: Entity) {
         self.bookkeeping.destroy(e);
+    }
+}
+
+// relation stuff in separate impl block
+impl World {
+    pub fn register_relation<T: 'static>(&mut self) {
+        self.register_component_inner::<RelationOrigin<T>>();
+        self.register_component_inner::<RelationTarget<T>>();
+    }
+
+    pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
+        let origin_cid = self.register_component_inner::<RelationOrigin<T>>();
+        let target_cid = self.register_component_inner::<RelationTarget<T>>();
+        self.bookkeeping
+            .add_relation(origin_cid, target_cid, from, to);
+    }
+
+    pub fn has_relation<T: 'static>(&self, from: Entity, to: Entity) -> bool {
+        let o_tid = TypeId::of::<RelationOrigin<T>>();
+        let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
+        self.bookkeeping.has_relation(origin_cid, from, to)
+    }
+
+    pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
+        let origin_cid = self.register_component_inner::<RelationOrigin<T>>();
+        let target_cid = self.register_component_inner::<RelationTarget<T>>();
+        self.bookkeeping
+            .remove_relation(origin_cid, target_cid, from, to);
     }
 }
 
@@ -157,5 +187,26 @@ mod test {
         assert_eq!(pos.0, 5);
         assert_eq!(pos.1, 4);
         assert_eq!(name.0, "Other");
+    }
+
+    #[test]
+    fn relation_simple() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation::<Rel>();
+        let a = world.create();
+        let b = world.create();
+        assert!(!world.has_relation::<Rel>(a, b));
+        world.add_relation::<Rel>(a, b);
+        assert!(world.has_relation::<Rel>(a, b));
+        world.remove_relation::<Rel>(a, b);
+        assert!(!world.has_relation::<Rel>(a, b));
+
+        // removing multiple times is no problem
+        world.remove_relation::<Rel>(a, b);
+        world.remove_relation::<Rel>(a, b);
+        world.remove_relation::<Rel>(a, b);
+        assert!(!world.has_relation::<Rel>(a, b));
     }
 }
