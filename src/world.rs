@@ -54,6 +54,13 @@ impl World {
         }
     }
 
+    #[track_caller]
+    pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
+        let tid = TypeId::of::<T>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        self.bookkeeping.has_component(e, cid)
+    }
+
     // TODO wrap T in Refcell
     #[track_caller]
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
@@ -105,12 +112,16 @@ mod test {
         let e = world.create();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
+        assert!(world.has_component::<Pos>(e));
+        assert!(world.has_component::<Name>(e));
         let other = world.create();
         world.add_component(other, Pos(5, 4));
         world.add_component(other, Name("Other".to_string()));
 
         world.remove_component::<Pos>(e);
         world.remove_component::<Name>(e);
+        assert!(!world.has_component::<Pos>(e));
+        assert!(!world.has_component::<Name>(e));
 
         let pos = world.get_component::<Pos>(other);
         let name = world.get_component::<Name>(other);

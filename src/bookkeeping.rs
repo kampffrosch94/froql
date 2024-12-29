@@ -49,18 +49,23 @@ impl Bookkeeping {
         e
     }
 
-    #[must_use]
     pub fn get_component_id(&self, tid: TypeId) -> Option<ComponentId> {
         self.component_map.get(&tid).copied()
     }
 
-    #[must_use]
     pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
         assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
         let a = &self.archetypes[aid.0 as usize];
         let col = a.components.iter().position(|it| *it == cid).unwrap();
         unsafe { a.columns[col].get(row.0) }
+    }
+
+    pub fn has_component(&self, e: Entity, cid: ComponentId) -> bool {
+        assert!(self.entities.is_alive(e));
+        let (aid, _) = self.entities.get_archetype(e);
+        let comp = &self.components[cid.0 as usize];
+        comp.has_archetype(aid)
     }
 
     // TODO: handle ZSTs differently
@@ -99,18 +104,27 @@ impl Bookkeeping {
     }
 
     pub fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
+        // find
         if let Some(id) = self.exact_archetype.get(&c_ids) {
             return *id;
         }
+
+        // create
+        let new_aid = ArchetypeId(self.archetypes.len() as u32);
+        for cid in &c_ids {
+            let c = &mut self.components[cid.0 as usize];
+            c.insert_archetype(new_aid);
+        }
+
         let components = c_ids
             .iter()
             .map(|id| &self.components[id.0 as usize])
             .collect::<Vec<_>>();
-        let new_id = ArchetypeId(self.archetypes.len() as u32);
+
         let new_archetype = Archetype::new(&components);
         self.archetypes.push(new_archetype);
-        self.exact_archetype.insert(c_ids, new_id);
-        new_id
+        self.exact_archetype.insert(c_ids, new_aid);
+        new_aid
     }
 
     pub fn remove_component(&mut self, e: Entity, cid: ComponentId) {
