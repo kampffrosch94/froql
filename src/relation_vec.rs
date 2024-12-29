@@ -74,7 +74,7 @@ union RelationVecUnion {
     outline: ManuallyDrop<RelationVecOutline>,
 }
 
-struct RelationVec {
+pub struct RelationVec {
     len: u32,
     content: RelationVecUnion,
 }

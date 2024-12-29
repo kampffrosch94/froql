@@ -4,6 +4,7 @@ use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId},
     entity_store::Entity,
+    relation::{RelationOrigin, RelationTarget},
 };
 
 pub struct World {
@@ -26,6 +27,12 @@ impl World {
         self.bookkeeping.components.push(Component::new::<T>(cid));
         self.bookkeeping.component_map.insert(tid, cid);
         return cid;
+    }
+
+    pub fn register_relation<T: 'static>(&mut self) {
+        let origin_cid = self.register_component::<RelationOrigin<T>>();
+        let target_cid = self.register_component::<RelationTarget<T>>();
+        todo!();
     }
 
     pub fn create(&mut self) -> Entity {

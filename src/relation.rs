@@ -1,8 +1,15 @@
 use std::marker::PhantomData;
 
-use crate::entity_store::EntityId;
+use crate::relation_vec::RelationVec;
 
-struct RelationOrigin<T> {
+#[repr(transparent)]
+pub struct RelationOrigin<T> {
     phantom: PhantomData<T>,
-    targets: Vec<EntityId>, // TODO smallvec instead
+    targets: RelationVec,
+}
+
+#[repr(transparent)]
+pub struct RelationTarget<T> {
+    phantom: PhantomData<T>,
+    origins: RelationVec,
 }

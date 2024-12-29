@@ -13,10 +13,10 @@ pub struct Bookkeeping {
     /// Indexed by ComponentId
     pub components: Vec<Component>,
     /// Indexed by ArchetypeId
-    pub archetypes: Vec<Archetype>,
+    archetypes: Vec<Archetype>,
     /// Indexed by EntityId
-    pub entities: EntityStore,
-    ///
+    entities: EntityStore,
+    /// maps to the Archetype which has all the components in the vec and just those
     exact_archetype: HashMap<Vec<ComponentId>, ArchetypeId>,
 }
 

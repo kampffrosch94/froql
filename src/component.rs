@@ -33,4 +33,10 @@ impl Component {
     pub fn has_archetype(&self, aid: ArchetypeId) -> bool {
         self.archetypes.contains(aid.0 as usize)
     }
+
+    pub fn get_archetypes(&self) -> impl Iterator<Item = ArchetypeId> + use<'_> {
+        self.archetypes
+            .iter()
+            .map(|index| ArchetypeId(index as u32))
+    }
 }
