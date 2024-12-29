@@ -11,6 +11,9 @@ use crate::{
 
 /// A struct concerned with the nitty gritty of archetype and component management
 pub struct Bookkeeping {
+    /// maps TypeId to ComponentId
+    /// for relationships only the Origin Relationship ID is returned
+    /// to get the ID for the target use `.flip_target()`
     pub component_map: HashMap<TypeId, ComponentId>,
     /// Indexed by ComponentId
     pub components: Vec<Component>,
@@ -183,13 +186,15 @@ impl Bookkeeping {
 
     pub fn add_relation(
         &mut self,
-        origin_cid: ComponentId,
+        cid: ComponentId,
         target_cid: ComponentId,
         from: Entity,
         to: Entity,
     ) {
-        inner(self, origin_cid, from, to);
-        inner(self, target_cid, to, from);
+        debug_assert!(cid.is_relation());
+        debug_assert!(!cid.is_target());
+        inner(self, cid, from, to);
+        inner(self, cid.flip_target(), to, from);
         // inner function because adding the necessary component
         // to Origin and Target works the same, just gotta swap arguments
         fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {
@@ -210,13 +215,14 @@ impl Bookkeeping {
 
     pub fn remove_relation(
         &mut self,
-        origin_cid: ComponentId,
-        target_cid: ComponentId,
+        cid: ComponentId,
         from: Entity,
         to: Entity,
     ) {
-        inner(self, origin_cid, from, to);
-        inner(self, target_cid, to, from);
+        debug_assert!(cid.is_relation());
+        debug_assert!(!cid.is_target());
+        inner(self, cid, from, to);
+        inner(self, cid.flip_target(), to, from);
         // inner function because adding the necessary component
         // to Origin and Target works the same, just gotta swap arguments
         fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {

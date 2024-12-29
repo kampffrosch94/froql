@@ -132,10 +132,11 @@ impl EntityStore {
         }
     }
 
+    #[track_caller]
     pub fn get_from_id(&self, id: EntityId) -> Entity {
         let index = id.0 as usize;
         let slot = &self.slots[index];
-        assert_eq!(0, slot.gen.0 % 2);
+        assert_eq!(0, slot.gen.0 % 2, "Entity is not alive.");
         Entity { gen: slot.gen, id }
     }
 }

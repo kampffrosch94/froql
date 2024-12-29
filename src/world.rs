@@ -106,10 +106,8 @@ impl World {
     }
 
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<Relation<T>>(false);
-        let target_cid = origin_cid.flip_target();
-        self.bookkeeping
-            .remove_relation(origin_cid, target_cid, from, to);
+        let cid = self.register_component_inner::<Relation<T>>(false);
+        self.bookkeeping.remove_relation(cid, from, to);
     }
 
     pub fn relation_targets<'a, T: 'static>(
@@ -238,6 +236,23 @@ mod test {
         world.remove_relation::<Rel>(a, b);
         world.remove_relation::<Rel>(a, b);
         world.remove_relation::<Rel>(a, b);
+        assert!(!world.has_relation::<Rel>(a, b));
+    }
+
+    #[test]
+    fn relation_entity_destroy() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation::<Rel>();
+        let a = world.create();
+        let b = world.create();
+        assert!(!world.has_relation::<Rel>(a, b));
+        world.add_relation::<Rel>(a, b);
+        assert!(world.has_relation::<Rel>(a, b));
+        assert_eq!(1, world.relation_origins::<Rel>(b).count());
+        world.destroy(a);
+        assert_eq!(0, world.relation_origins::<Rel>(b).count());
         assert!(!world.has_relation::<Rel>(a, b));
     }
 }
