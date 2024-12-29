@@ -4,6 +4,7 @@ use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
     component::{Component, ComponentId},
     entity_store::{Entity, EntityId, EntityStore},
+    layout_vec::LayoutVec,
     relation_vec::RelationVec,
     util::get_mut_2,
 };
@@ -28,7 +29,7 @@ const EMPTY_ARCHETYPE_ID: ArchetypeId = ArchetypeId(0);
 impl Bookkeeping {
     pub fn new() -> Self {
         let mut archetypes = Vec::new();
-        let empty_archetype = Archetype::new(&[]);
+        let empty_archetype = Archetype::new(Vec::new(), Vec::new());
         archetypes.push(empty_archetype);
         let mut exact_archetype = HashMap::new();
         exact_archetype.insert(Vec::new(), ArchetypeId(0));
@@ -117,12 +118,13 @@ impl Bookkeeping {
             c.insert_archetype(new_aid);
         }
 
-        let components = c_ids
+        let columns = c_ids
             .iter()
             .map(|id| &self.components[id.as_index()])
+            .map(|c| LayoutVec::new(c.layout, c.drop_fn.clone()))
             .collect::<Vec<_>>();
 
-        let new_archetype = Archetype::new(&components);
+        let new_archetype = Archetype::new(c_ids.clone(), columns);
         self.archetypes.push(new_archetype);
         self.exact_archetype.insert(c_ids, new_aid);
         new_aid

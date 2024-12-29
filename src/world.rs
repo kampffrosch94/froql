@@ -4,7 +4,7 @@ use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId},
     entity_store::Entity,
-    relation::{RelationOrigin, RelationTarget},
+    relation::Relation,
 };
 
 pub struct World {
@@ -21,12 +21,15 @@ impl World {
     /// Used internally to register both components and relations
     /// because Relations are a special kind of component
     /// and Components are meant to be wrapped in `RefCell`
-    fn register_component_inner<T: 'static>(&mut self) -> ComponentId {
+    fn register_component_inner<T: 'static>(&mut self, is_relation: bool) -> ComponentId {
         let tid = TypeId::of::<T>();
         if let Some(cid) = self.bookkeeping.get_component_id(tid) {
             return cid;
         }
-        let cid = ComponentId::from_usize(self.bookkeeping.components.len());
+        let mut cid = ComponentId::from_usize(self.bookkeeping.components.len());
+        if is_relation {
+            cid = cid.set_relation();
+        }
         self.bookkeeping.components.push(Component::new::<T>(cid));
         self.bookkeeping.component_map.insert(tid, cid);
         return cid;
@@ -34,7 +37,7 @@ impl World {
 
     // TODO wrap in refcell
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
-        self.register_component_inner::<T>()
+        self.register_component_inner::<T>(false)
     }
 
     pub fn create(&mut self) -> Entity {
@@ -86,26 +89,25 @@ impl World {
 // relation stuff in separate impl block
 impl World {
     pub fn register_relation<T: 'static>(&mut self) {
-        self.register_component_inner::<RelationOrigin<T>>();
-        self.register_component_inner::<RelationTarget<T>>();
+        self.register_component_inner::<Relation<T>>(true);
     }
 
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<RelationOrigin<T>>();
-        let target_cid = self.register_component_inner::<RelationTarget<T>>();
+        let origin_cid = self.register_component_inner::<Relation<T>>(true);
+        let target_cid = origin_cid.flip_target();
         self.bookkeeping
             .add_relation(origin_cid, target_cid, from, to);
     }
 
     pub fn has_relation<T: 'static>(&self, from: Entity, to: Entity) -> bool {
-        let o_tid = TypeId::of::<RelationOrigin<T>>();
+        let o_tid = TypeId::of::<Relation<T>>();
         let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
         self.bookkeeping.has_relation(origin_cid, from, to)
     }
 
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<RelationOrigin<T>>();
-        let target_cid = self.register_component_inner::<RelationTarget<T>>();
+        let origin_cid = self.register_component_inner::<Relation<T>>(false);
+        let target_cid = origin_cid.flip_target();
         self.bookkeeping
             .remove_relation(origin_cid, target_cid, from, to);
     }
@@ -114,7 +116,7 @@ impl World {
         &'a self,
         from: Entity,
     ) -> impl Iterator<Item = Entity> + use<'a, T> {
-        let o_tid = TypeId::of::<RelationOrigin<T>>();
+        let o_tid = TypeId::of::<Relation<T>>();
         let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
         self.bookkeeping
             .relation_targets(origin_cid, from)
@@ -126,8 +128,12 @@ impl World {
         &'a self,
         to: Entity,
     ) -> impl Iterator<Item = Entity> + use<'a, T> {
-        let t_tid = TypeId::of::<RelationTarget<T>>();
-        let target_cid = self.bookkeeping.get_component_id(t_tid).unwrap(); // TODO error msg
+        let tid = TypeId::of::<Relation<T>>();
+        let target_cid = self
+            .bookkeeping
+            .get_component_id(tid)
+            .unwrap() // TODO error msg
+            .flip_target();
         self.bookkeeping
             // same logic as with target, just different parameter
             .relation_targets(target_cid, to)

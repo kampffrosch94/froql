@@ -1,10 +1,6 @@
 use std::cell::RefCell;
 
-use crate::{
-    component::{Component, ComponentId},
-    entity_store::EntityId,
-    layout_vec::LayoutVec,
-};
+use crate::{component::ComponentId, entity_store::EntityId, layout_vec::LayoutVec};
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct ArchetypeId(pub u32);
@@ -26,13 +22,9 @@ pub struct Archetype {
 }
 
 impl Archetype {
-    pub fn new(components: &[&Component]) -> Self {
-        debug_assert!(components.is_sorted_by_key(|c| c.id));
-        let columns = components
-            .iter()
-            .map(|c| LayoutVec::new(c.layout, c.drop_fn.clone()))
-            .collect();
-        let components = components.iter().map(|c| c.id).collect();
+    pub fn new(components: Vec<ComponentId>, columns: Vec<LayoutVec>) -> Self {
+        debug_assert!(components.is_sorted());
+        debug_assert_eq!(components.len(), columns.len());
         Archetype {
             components,
             columns,
