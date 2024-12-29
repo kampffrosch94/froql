@@ -26,7 +26,7 @@ impl World {
         if let Some(cid) = self.bookkeeping.get_component_id(tid) {
             return cid;
         }
-        let cid = ComponentId(self.bookkeeping.components.len() as u32);
+        let cid = ComponentId::from_usize(self.bookkeeping.components.len());
         self.bookkeeping.components.push(Component::new::<T>(cid));
         self.bookkeeping.component_map.insert(tid, cid);
         return cid;
@@ -108,6 +108,31 @@ impl World {
         let target_cid = self.register_component_inner::<RelationTarget<T>>();
         self.bookkeeping
             .remove_relation(origin_cid, target_cid, from, to);
+    }
+
+    pub fn relation_targets<'a, T: 'static>(
+        &'a self,
+        from: Entity,
+    ) -> impl Iterator<Item = Entity> + use<'a, T> {
+        let o_tid = TypeId::of::<RelationOrigin<T>>();
+        let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
+        self.bookkeeping
+            .relation_targets(origin_cid, from)
+            .into_iter()
+            .flat_map(|it| it)
+    }
+
+    pub fn relation_origins<'a, T: 'static>(
+        &'a self,
+        to: Entity,
+    ) -> impl Iterator<Item = Entity> + use<'a, T> {
+        let t_tid = TypeId::of::<RelationTarget<T>>();
+        let target_cid = self.bookkeeping.get_component_id(t_tid).unwrap(); // TODO error msg
+        self.bookkeeping
+            // same logic as with target, just different parameter
+            .relation_targets(target_cid, to)
+            .into_iter()
+            .flat_map(|it| it)
     }
 }
 

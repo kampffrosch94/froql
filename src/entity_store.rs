@@ -131,6 +131,13 @@ impl EntityStore {
             self.next_free = index;
         }
     }
+
+    pub fn get_from_id(&self, id: EntityId) -> Entity {
+        let index = id.0 as usize;
+        let slot = &self.slots[index];
+        assert_eq!(0, slot.gen.0 % 2);
+        Entity { gen: slot.gen, id }
+    }
 }
 
 #[cfg(test)]

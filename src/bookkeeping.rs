@@ -3,7 +3,7 @@ use std::{any::TypeId, collections::HashMap};
 use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
     component::{Component, ComponentId},
-    entity_store::{Entity, EntityStore},
+    entity_store::{Entity, EntityId, EntityStore},
     relation_vec::RelationVec,
     util::get_mut_2,
 };
@@ -65,7 +65,7 @@ impl Bookkeeping {
     pub fn has_component(&self, e: Entity, cid: ComponentId) -> bool {
         assert!(self.entities.is_alive(e));
         let (aid, _) = self.entities.get_archetype(e);
-        let comp = &self.components[cid.0 as usize];
+        let comp = &self.components[cid.as_index()];
         comp.has_archetype(aid)
     }
 
@@ -113,13 +113,13 @@ impl Bookkeeping {
         // create
         let new_aid = ArchetypeId(self.archetypes.len() as u32);
         for cid in &c_ids {
-            let c = &mut self.components[cid.0 as usize];
+            let c = &mut self.components[cid.as_index()];
             c.insert_archetype(new_aid);
         }
 
         let components = c_ids
             .iter()
-            .map(|id| &self.components[id.0 as usize])
+            .map(|id| &self.components[id.as_index()])
             .collect::<Vec<_>>();
 
         let new_archetype = Archetype::new(&components);
@@ -240,5 +240,22 @@ impl Bookkeeping {
             return rel_vec.contains(&to.id.0);
         }
         return false;
+    }
+
+    pub fn relation_targets<'a>(
+        &'a self,
+        origin_cid: ComponentId,
+        from: Entity,
+    ) -> Option<impl Iterator<Item = Entity> + use<'a>> {
+        if self.has_component(from, origin_cid) {
+            let ptr = self.get_component(from, origin_cid) as *mut RelationVec;
+            let rel_vec = unsafe { &mut *ptr };
+            return Some(
+                rel_vec
+                    .iter()
+                    .map(|id| self.entities.get_from_id(EntityId(*id))),
+            );
+        }
+        None
     }
 }

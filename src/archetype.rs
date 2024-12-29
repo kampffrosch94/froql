@@ -27,7 +27,7 @@ pub struct Archetype {
 
 impl Archetype {
     pub fn new(components: &[&Component]) -> Self {
-        debug_assert!(components.is_sorted_by_key(|c| c.id.0));
+        debug_assert!(components.is_sorted_by_key(|c| c.id));
         let columns = components
             .iter()
             .map(|c| LayoutVec::new(c.layout, c.drop_fn.clone()))
