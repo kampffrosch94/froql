@@ -67,7 +67,10 @@ impl Bookkeeping {
     }
 
     pub fn has_component(&self, e: Entity, cid: ComponentId) -> bool {
-        assert!(self.entities.is_alive(e));
+        if !self.entities.is_alive(e) {
+            // dead entities have no components
+            return false;
+        }
         let (aid, _) = self.entities.get_archetype(e);
         let comp = &self.components[cid.as_index()];
         comp.has_archetype(aid)
@@ -173,24 +176,50 @@ impl Bookkeeping {
 
     pub fn destroy(&mut self, e: Entity) {
         if self.entities.is_alive(e) {
-            let (aid, arow) = self.entities.get_archetype(e);
-            let a = &mut self.archetypes[aid.0 as usize];
-            let swapped = a.delete_row(arow);
+            let (a_id, a_row) = self.entities.get_archetype(e);
+            let a = &self.archetypes[a_id.0 as usize];
+
+            // first clean up all relationships pointing to this component
+            // or being pointed to from this component
+
+            let mut to_delete = Vec::new(); // just here to avoid borrow checker
+            for (index, cid) in a.components.iter().enumerate() {
+                if cid.is_relation() {
+                    let ptr = unsafe { a.columns[index].get(a_row.0) } as *const RelationVec;
+                    let vec = unsafe { &*ptr };
+                    debug_assert!(vec.len() > 0);
+                    let flipped = cid.flip_target();
+                    for other_id in vec.iter() {
+                        to_delete.push((flipped, EntityId(*other_id)));
+                    }
+                }
+            }
+            for (cid, other_id) in to_delete {
+                let (a_id, a_row) = self.entities.get_archetype_unchecked(other_id);
+                let a = &mut self.archetypes[a_id.0 as usize];
+                let col = a.components.iter().position(|it| *it == cid).unwrap();
+                let ptr = unsafe { a.columns[col].get(a_row.0) } as *mut RelationVec;
+                let rel_vec = unsafe { &mut *ptr };
+                rel_vec.remove(e.id.0);
+                if rel_vec.len() == 0 {
+                    let other = self.entities.get_from_id(other_id);
+                    self.remove_component(other, cid);
+                }
+            }
+
+            // then delete the row from the archetype
+            let a = &mut self.archetypes[a_id.0 as usize];
+            let swapped = a.delete_row(a_row);
             self.entities.destroy(e);
             if swapped {
-                let swapped_e = a.entities[arow.0 as usize];
-                self.entities.set_archetype_unchecked(swapped_e, aid, arow);
+                let swapped_e = a.entities[a_row.0 as usize];
+                self.entities
+                    .set_archetype_unchecked(swapped_e, a_id, a_row);
             }
         }
     }
 
-    pub fn add_relation(
-        &mut self,
-        cid: ComponentId,
-        target_cid: ComponentId,
-        from: Entity,
-        to: Entity,
-    ) {
+    pub fn add_relation(&mut self, cid: ComponentId, from: Entity, to: Entity) {
         debug_assert!(cid.is_relation());
         debug_assert!(!cid.is_target());
         inner(self, cid, from, to);
@@ -213,12 +242,7 @@ impl Bookkeeping {
         }
     }
 
-    pub fn remove_relation(
-        &mut self,
-        cid: ComponentId,
-        from: Entity,
-        to: Entity,
-    ) {
+    pub fn remove_relation(&mut self, cid: ComponentId, from: Entity, to: Entity) {
         debug_assert!(cid.is_relation());
         debug_assert!(!cid.is_target());
         inner(self, cid, from, to);

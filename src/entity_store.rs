@@ -4,6 +4,11 @@ use crate::archetype::{ArchetypeId, ArchetypeRow};
 pub struct EntityId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EntityGeneration(pub u32);
+impl EntityGeneration {
+    fn is_alive(self) -> bool {
+        self.0 % 2 == 1
+    }
+}
 
 #[derive(Clone, Copy, Debug)]
 pub struct Entity {
@@ -38,7 +43,7 @@ impl EntitySlot {
     }
 
     fn is_empty(&self) -> bool {
-        self.gen.0 % 2 == 0
+        !self.gen.is_alive()
     }
 
     fn next_free(&self) -> usize {
@@ -121,6 +126,14 @@ impl EntityStore {
         (slot.archetype, slot.row)
     }
 
+    #[track_caller]
+    pub fn get_archetype_unchecked(&self, id: EntityId) -> (ArchetypeId, ArchetypeRow) {
+        let index = id.0 as usize;
+        let slot = &self.slots[index];
+        assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
+        (slot.archetype, slot.row)
+    }
+
     pub fn destroy(&mut self, e: Entity) {
         let index = e.id.0 as usize;
         if let Some(slot) = self.slots.get_mut(index) {
@@ -136,7 +149,7 @@ impl EntityStore {
     pub fn get_from_id(&self, id: EntityId) -> Entity {
         let index = id.0 as usize;
         let slot = &self.slots[index];
-        assert_eq!(0, slot.gen.0 % 2, "Entity is not alive.");
+        assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
         Entity { gen: slot.gen, id }
     }
 }

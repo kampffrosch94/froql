@@ -94,9 +94,7 @@ impl World {
 
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
         let origin_cid = self.register_component_inner::<Relation<T>>(true);
-        let target_cid = origin_cid.flip_target();
-        self.bookkeeping
-            .add_relation(origin_cid, target_cid, from, to);
+        self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
     pub fn has_relation<T: 'static>(&self, from: Entity, to: Entity) -> bool {
