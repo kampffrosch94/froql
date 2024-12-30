@@ -76,6 +76,7 @@ impl World {
             cell.borrow()
         } else {
             // if we don't panic here we can't return a Ref<T> in the other branch
+            // with `generic_const_exprs` this could be a compile time error
             panic!("Can't get reference to ZST component.")
         }
     }
@@ -90,6 +91,7 @@ impl World {
             cell.borrow_mut()
         } else {
             // if we don't panic here we can't return a Ref<T> in the other branch
+            // with `generic_const_exprs` this could be a compile time error
             panic!("Can't get reference to ZST component.")
         }
     }
