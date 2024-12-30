@@ -73,7 +73,7 @@ impl Bookkeeping {
         }
         let (aid, _) = self.entities.get_archetype(e);
         let comp = &self.components[cid.as_index()];
-        comp.has_archetype(aid)
+        comp.has_archetype(aid, cid)
     }
 
     // TODO: handle ZSTs differently
@@ -121,7 +121,7 @@ impl Bookkeeping {
         let new_aid = ArchetypeId(self.archetypes.len() as u32);
         for cid in &c_ids {
             let c = &mut self.components[cid.as_index()];
-            c.insert_archetype(new_aid);
+            c.insert_archetype(new_aid, *cid);
         }
 
         let columns = c_ids
@@ -270,6 +270,7 @@ impl Bookkeeping {
     pub fn has_relation(&self, origin_cid: ComponentId, from: Entity, to: Entity) -> bool {
         // all relationtypes are repr(transparent) to RelationVec,
         // so we can just treat pointers to them as RelationVec
+        debug_assert!(!origin_cid.is_target());
         if self.has_component(from, origin_cid) {
             let ptr = self.get_component(from, origin_cid) as *mut RelationVec;
             let rel_vec = unsafe { &mut *ptr };

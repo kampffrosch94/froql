@@ -143,7 +143,7 @@ impl World {
 
 #[cfg(test)]
 mod test {
-    use crate::component::EXCLUSIVE;
+    use crate::component::{EXCLUSIVE, SYMMETRIC};
 
     use super::*;
 
@@ -276,5 +276,32 @@ mod test {
         world.add_relation::<Rel>(a, c);
         assert!(world.has_relation::<Rel>(a, c));
         assert!(!world.has_relation::<Rel>(a, b));
+    }
+
+    #[test]
+    fn relation_asymmetric() {
+        enum Rel {}
+        let mut world = World::new();
+        world.register_relation_flags::<Rel>(0);
+        let a = world.create();
+        let b = world.create();
+        world.add_relation::<Rel>(a, b);
+        assert!(world.has_relation::<Rel>(a, b));
+        assert!(!world.has_relation::<Rel>(b, a));
+    }
+
+    #[test]
+    fn relation_symmetric() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation_flags::<Rel>(SYMMETRIC);
+        let a = world.create();
+        let b = world.create();
+        assert!(!world.has_relation::<Rel>(a, b));
+        assert!(!world.has_relation::<Rel>(b, a));
+        world.add_relation::<Rel>(a, b);
+        assert!(world.has_relation::<Rel>(a, b));
+        assert!(world.has_relation::<Rel>(b, a));
     }
 }

@@ -24,6 +24,11 @@ const IS_TARGET: u32 = RELATION >> 1;
 /// A parent can still have multiple children though.
 pub const EXCLUSIVE: u32 = RELATION >> 2;
 
+/// Marks symmetric relationships.
+/// A relation is symmetric if `Rel(a,b)` implies `Rel(b,a).
+// this means we don't have to distinguish between origin and target in the storage
+pub const SYMMETRIC: u32 = RELATION >> 2;
+
 impl ComponentId {
     /// 24 bit ought to be enough component ids
     /// the rest is reserved for flags
@@ -57,7 +62,12 @@ impl ComponentId {
 
     #[must_use]
     pub fn flip_target(self) -> Self {
-        Self(self.0 ^ IS_TARGET)
+        if self.is_symmetric() {
+            // if the relation is symmetric we don't need to distinguish between origin&target
+            self
+        } else {
+            Self(self.0 ^ IS_TARGET)
+        }
     }
 
     pub fn is_target(&self) -> bool {
@@ -72,6 +82,16 @@ impl ComponentId {
     /// only returns true for the relation origin
     pub fn is_exclusive(&self) -> bool {
         (self.0 & EXCLUSIVE) > 0 && !self.is_target()
+    }
+
+    #[must_use]
+    pub fn set_symmetric(self) -> Self {
+        Self(self.0 ^ SYMMETRIC)
+    }
+
+    /// only returns true for the relation origin
+    pub fn is_symmetric(&self) -> bool {
+        (self.0 & SYMMETRIC) > 0
     }
 
     #[track_caller]
@@ -94,6 +114,8 @@ pub struct Component {
     pub drop_fn: Box<fn(*mut u8)>,
     /// keeps track of what archetypes have this component
     archetypes: Box<BitSet>,
+    /// if this component is a relationship target we need to track archetypes separately
+    target_archetypes: Box<BitSet>,
 }
 
 impl Component {
@@ -104,15 +126,24 @@ impl Component {
             drop_fn,
             id,
             archetypes: Box::new(BitSet::new()),
+            target_archetypes: Box::new(BitSet::new()),
         }
     }
 
-    pub fn insert_archetype(&mut self, aid: ArchetypeId) {
-        self.archetypes.insert(aid.0 as usize);
+    pub fn insert_archetype(&mut self, aid: ArchetypeId, cid: ComponentId) {
+        if cid.is_target() {
+            self.target_archetypes.insert(aid.0 as usize);
+        } else {
+            self.archetypes.insert(aid.0 as usize);
+        }
     }
 
-    pub fn has_archetype(&self, aid: ArchetypeId) -> bool {
-        self.archetypes.contains(aid.0 as usize)
+    pub fn has_archetype(&self, aid: ArchetypeId, cid: ComponentId) -> bool {
+        if cid.is_target() {
+            self.target_archetypes.contains(aid.0 as usize)
+        } else {
+            self.archetypes.contains(aid.0 as usize)
+        }
     }
 
     pub fn get_archetypes(&self) -> impl Iterator<Item = ArchetypeId> + use<'_> {
