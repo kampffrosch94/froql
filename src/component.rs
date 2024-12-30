@@ -27,7 +27,7 @@ pub const EXCLUSIVE: u32 = RELATION >> 2;
 /// Marks symmetric relationships.
 /// A relation is symmetric if `Rel(a,b)` implies `Rel(b,a).
 // this means we don't have to distinguish between origin and target in the storage
-pub const SYMMETRIC: u32 = RELATION >> 2;
+pub const SYMMETRIC: u32 = RELATION >> 3;
 
 /// Mark a relationship with cascading destruction.
 /// When an origin in a cascading destruction relation gets destroyed,
@@ -35,7 +35,7 @@ pub const SYMMETRIC: u32 = RELATION >> 2;
 ///
 /// For example if the relation `Contains(faction, npc)` is cascading
 /// then once the faction is destroyed all NPCs belonging to it are also destroyed.
-pub const CASCADING_DESTRUCT: u32 = RELATION >> 2;
+pub const CASCADING_DESTRUCT: u32 = RELATION >> 4;
 
 impl ComponentId {
     /// 24 bit ought to be enough component ids
@@ -70,6 +70,7 @@ impl ComponentId {
 
     #[must_use]
     pub fn flip_target(self) -> Self {
+        debug_assert!(self.is_relation());
         if self.is_symmetric() {
             // if the relation is symmetric we don't need to distinguish between origin&target
             self
@@ -79,36 +80,39 @@ impl ComponentId {
     }
 
     pub fn is_target(&self) -> bool {
-        (self.0 & IS_TARGET) > 0
+        self.is_relation() && (self.0 & IS_TARGET) > 0
     }
 
     #[must_use]
     pub fn set_exclusive(self) -> Self {
+        debug_assert!(self.is_relation());
         Self(self.0 ^ EXCLUSIVE)
     }
 
     /// only returns true for the relation origin
     pub fn is_exclusive(&self) -> bool {
-        (self.0 & EXCLUSIVE) > 0 && !self.is_target()
+        self.is_relation() && (self.0 & EXCLUSIVE) > 0 && !self.is_target()
     }
 
     #[must_use]
     pub fn set_cascading(self) -> Self {
+        debug_assert!(self.is_relation());
         Self(self.0 ^ CASCADING_DESTRUCT)
     }
 
     pub fn is_cascading(&self) -> bool {
-        (self.0 & CASCADING_DESTRUCT) > 0
+        self.is_relation() && (self.0 & CASCADING_DESTRUCT) > 0
     }
 
     #[must_use]
     pub fn set_symmetric(self) -> Self {
+        debug_assert!(self.is_relation());
         Self(self.0 ^ SYMMETRIC)
     }
 
     /// only returns true for the relation origin
     pub fn is_symmetric(&self) -> bool {
-        (self.0 & SYMMETRIC) > 0
+        self.is_relation() && (self.0 & SYMMETRIC) > 0
     }
 
     #[track_caller]
