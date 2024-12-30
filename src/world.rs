@@ -2,7 +2,7 @@ use std::{any::TypeId, mem};
 
 use crate::{
     bookkeeping::Bookkeeping,
-    component::{Component, ComponentId, IS_RELATION},
+    component::{Component, ComponentId, RELATION},
     entity_store::Entity,
     relation::Relation,
 };
@@ -87,16 +87,16 @@ impl World {
 // relation stuff in separate impl block
 impl World {
     pub fn register_relation<T: 'static>(&mut self) {
-        self.register_component_inner::<Relation<T>>(IS_RELATION);
+        self.register_component_inner::<Relation<T>>(RELATION);
     }
 
     pub fn register_relation_flags<T: 'static>(&mut self, flags: u32) {
         // TODO: error if component is already registered
-        self.register_component_inner::<Relation<T>>(flags | IS_RELATION);
+        self.register_component_inner::<Relation<T>>(flags | RELATION);
     }
 
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<Relation<T>>(IS_RELATION);
+        let origin_cid = self.register_component_inner::<Relation<T>>(RELATION);
         self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
@@ -107,7 +107,7 @@ impl World {
     }
 
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let cid = self.register_component_inner::<Relation<T>>(IS_RELATION);
+        let cid = self.register_component_inner::<Relation<T>>(RELATION);
         self.bookkeeping.remove_relation(cid, from, to);
     }
 
@@ -143,6 +143,8 @@ impl World {
 
 #[cfg(test)]
 mod test {
+    use crate::component::EXCLUSIVE;
+
     use super::*;
 
     #[test]
@@ -254,6 +256,25 @@ mod test {
         assert_eq!(1, world.relation_origins::<Rel>(b).count());
         world.destroy(a);
         assert_eq!(0, world.relation_origins::<Rel>(b).count());
+        assert!(!world.has_relation::<Rel>(a, b));
+    }
+
+    #[test]
+    fn relation_exlusive() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation_flags::<Rel>(EXCLUSIVE);
+        let a = world.create();
+        let b = world.create();
+        let c = world.create();
+        assert!(!world.has_relation::<Rel>(a, b));
+        assert!(!world.has_relation::<Rel>(a, c));
+        world.add_relation::<Rel>(a, b);
+        assert!(world.has_relation::<Rel>(a, b));
+        assert!(!world.has_relation::<Rel>(a, c));
+        world.add_relation::<Rel>(a, c);
+        assert!(world.has_relation::<Rel>(a, c));
         assert!(!world.has_relation::<Rel>(a, b));
     }
 }

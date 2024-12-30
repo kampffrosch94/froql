@@ -232,7 +232,11 @@ impl Bookkeeping {
             if this.has_component(e, cid) {
                 let ptr = this.get_component(e, cid) as *mut RelationVec;
                 let rel_vec = unsafe { &mut *ptr };
-                rel_vec.push(other.id.0);
+                if cid.is_exclusive() {
+                    rel_vec[0] = other.id.0;
+                } else {
+                    rel_vec.push(other.id.0);
+                }
             } else {
                 let mut rel_vec = RelationVec::new();
                 rel_vec.push(other.id.0);

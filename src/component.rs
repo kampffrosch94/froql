@@ -10,15 +10,24 @@ pub struct ComponentId(u32);
 
 /// if set -> relation
 /// otherwise -> normal component
-pub const IS_RELATION: u32 = 0b10000000000000000000000000000000;
+pub const RELATION: u32 = 0b10000000000000000000000000000000;
+
+/// if set -> target
+/// otherwise -> origin
+const IS_TARGET: u32 = RELATION >> 1;
+
+/// Marks exclusive relationships.
+/// A relation is exclusive if an origin can only have a single target.
+///
+/// For example if the relation `ChildOf(child, parent)` is exclusive
+/// then a child can only have a single parent.
+/// A parent can still have multiple children though.
+pub const EXCLUSIVE: u32 = RELATION >> 2;
 
 impl ComponentId {
     /// 24 bit ought to be enough component ids
     /// the rest is reserved for flags
     const MASK: u32 = 0b00000000111111111111111111111111;
-    /// if set -> target
-    /// otherwise -> origin
-    const IS_TARGET: u32 = IS_RELATION >> 1;
 
     pub fn new(id: u32) -> Self {
         debug_assert!(id <= Self::MASK);
@@ -27,29 +36,42 @@ impl ComponentId {
 
     // TODO newtype wrapper so users can't set none existent flags
     #[must_use]
+    #[track_caller]
     pub fn set_flags(self, flags: u32) -> Self {
         assert_eq!(
             flags,
             flags & !Self::MASK,
-            "There are none flag bits in the flag. {flags:#x}"
+            "There are none flag bits in the flags. {flags:#x}"
         );
         Self(self.0 | flags)
     }
 
+    #[must_use]
     pub fn set_relation(self) -> Self {
-        Self(self.0 | IS_RELATION)
+        Self(self.0 | RELATION)
     }
 
     pub fn is_relation(&self) -> bool {
-        (self.0 & IS_RELATION) > 0
+        (self.0 & RELATION) > 0
     }
 
+    #[must_use]
     pub fn flip_target(self) -> Self {
-        Self(self.0 ^ Self::IS_TARGET)
+        Self(self.0 ^ IS_TARGET)
     }
 
     pub fn is_target(&self) -> bool {
-        (self.0 & Self::IS_TARGET) > 0
+        (self.0 & IS_TARGET) > 0
+    }
+
+    #[must_use]
+    pub fn set_exclusive(self) -> Self {
+        Self(self.0 ^ EXCLUSIVE)
+    }
+
+    /// only returns true for the relation origin
+    pub fn is_exclusive(&self) -> bool {
+        (self.0 & EXCLUSIVE) > 0 && !self.is_target()
     }
 
     #[track_caller]
