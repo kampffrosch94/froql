@@ -1,6 +1,6 @@
 use std::{
     any::TypeId,
-    cell::{Ref, RefCell},
+    cell::{Ref, RefCell, RefMut},
 };
 
 use crate::{
@@ -74,6 +74,20 @@ impl World {
             let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
             let cell = unsafe { &*ptr };
             cell.borrow()
+        } else {
+            // if we don't panic here we can't return a Ref<T> in the other branch
+            panic!("Can't get reference to ZST component.")
+        }
+    }
+
+    #[track_caller]
+    pub fn get_component_mut<T: 'static>(&self, e: Entity) -> RefMut<T> {
+        if size_of::<T>() > 0 {
+            let tid = TypeId::of::<RefCell<T>>();
+            let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+            let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
+            let cell = unsafe { &*ptr };
+            cell.borrow_mut()
         } else {
             // if we don't panic here we can't return a Ref<T> in the other branch
             panic!("Can't get reference to ZST component.")
@@ -242,6 +256,28 @@ mod test {
         assert_eq!(pos.0, 5);
         assert_eq!(pos.1, 4);
         assert_eq!(name.0, "Other");
+    }
+
+    #[test]
+    fn component_mut() {
+        struct Pos(i32, i32);
+
+        let mut world = World::new();
+        let e = world.create();
+        world.add_component(e, Pos(4, 2));
+        let pos = world.get_component::<Pos>(e);
+        assert_eq!(pos.0, 4);
+        assert_eq!(pos.1, 2);
+        drop(pos); // need to release ref
+
+        let mut pos = world.get_component_mut::<Pos>(e);
+        pos.0 = 20;
+        pos.1 = 30;
+        drop(pos); // need to release refmut
+
+        let pos = world.get_component::<Pos>(e);
+        assert_eq!(pos.0, 20);
+        assert_eq!(pos.1, 30);
     }
 
     #[test]
