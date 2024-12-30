@@ -1,4 +1,7 @@
-use std::{any::TypeId, mem};
+use std::{
+    any::TypeId,
+    cell::{Ref, RefCell},
+};
 
 use crate::{
     bookkeeping::Bookkeeping,
@@ -33,9 +36,12 @@ impl World {
         return cid;
     }
 
-    // TODO wrap in refcell
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
-        self.register_component_inner::<T>(0)
+        if size_of::<T>() > 0 {
+            self.register_component_inner::<RefCell<T>>(0)
+        } else {
+            self.register_component_inner::<T>(0)
+        }
     }
 
     pub fn create(&mut self) -> Entity {
@@ -46,13 +52,13 @@ impl World {
         self.bookkeeping.is_alive(e)
     }
 
-    // TODO wrap T in Refcell
     pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
         let cid = self.register_component::<T>();
+
         if size_of::<T>() > 0 {
-            let ptr = self.bookkeeping.add_component(e, cid);
+            let val = RefCell::new(val);
+            let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
             unsafe {
-                let dst = mem::transmute::<*mut u8, *mut T>(ptr);
                 std::ptr::write(dst, val);
             }
         } else {
@@ -60,29 +66,38 @@ impl World {
         }
     }
 
-    // TODO wrap T in Refcell
     #[track_caller]
-    pub fn get_component<T: 'static>(&self, e: Entity) -> &T {
-        let tid = TypeId::of::<T>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
-        let ptr = self.bookkeeping.get_component(e, cid);
-        unsafe {
-            let dst = mem::transmute::<*mut u8, *const T>(ptr);
-            &*dst
+    pub fn get_component<T: 'static>(&self, e: Entity) -> Ref<T> {
+        if size_of::<T>() > 0 {
+            let tid = TypeId::of::<RefCell<T>>();
+            let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+            let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
+            let cell = unsafe { &*ptr };
+            cell.borrow()
+        } else {
+            // if we don't panic here we can't return a Ref<T> in the other branch
+            panic!("Can't get reference to ZST component.")
         }
     }
 
     #[track_caller]
     pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
-        let tid = TypeId::of::<T>();
+        let tid: TypeId = if size_of::<T>() > 0 {
+            TypeId::of::<RefCell<T>>()
+        } else {
+            TypeId::of::<T>()
+        };
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.has_component(e, cid)
     }
 
-    // TODO wrap T in Refcell
     #[track_caller]
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
-        let tid = TypeId::of::<T>();
+        let tid: TypeId = if size_of::<T>() > 0 {
+            TypeId::of::<RefCell<T>>()
+        } else {
+            TypeId::of::<T>()
+        };
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.remove_component(e, cid);
     }
