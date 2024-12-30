@@ -8,28 +8,40 @@ type BitSet = hi_sparse_bitset::BitSet<hi_sparse_bitset::config::_128bit>;
 #[repr(transparent)]
 pub struct ComponentId(u32);
 
+/// if set -> relation
+/// otherwise -> normal component
+pub const IS_RELATION: u32 = 0b10000000000000000000000000000000;
+
 impl ComponentId {
     /// 24 bit ought to be enough component ids
     /// the rest is reserved for flags
     const MASK: u32 = 0b00000000111111111111111111111111;
-    /// if set -> relation
-    /// otherwise -> normal component
-    const IS_RELATION: u32 = 0b10000000000000000000000000000000;
     /// if set -> target
     /// otherwise -> origin
-    const IS_TARGET: u32 = Self::IS_RELATION >> 1;
+    const IS_TARGET: u32 = IS_RELATION >> 1;
 
     pub fn new(id: u32) -> Self {
         debug_assert!(id <= Self::MASK);
         Self(id)
     }
 
+    // TODO newtype wrapper so users can't set none existent flags
+    #[must_use]
+    pub fn set_flags(self, flags: u32) -> Self {
+        assert_eq!(
+            flags,
+            flags & !Self::MASK,
+            "There are none flag bits in the flag. {flags:#x}"
+        );
+        Self(self.0 | flags)
+    }
+
     pub fn set_relation(self) -> Self {
-        Self(self.0 | Self::IS_RELATION)
+        Self(self.0 | IS_RELATION)
     }
 
     pub fn is_relation(&self) -> bool {
-        (self.0 & Self::IS_RELATION) > 0
+        (self.0 & IS_RELATION) > 0
     }
 
     pub fn flip_target(self) -> Self {

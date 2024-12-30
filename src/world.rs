@@ -2,7 +2,7 @@ use std::{any::TypeId, mem};
 
 use crate::{
     bookkeeping::Bookkeeping,
-    component::{Component, ComponentId},
+    component::{Component, ComponentId, IS_RELATION},
     entity_store::Entity,
     relation::Relation,
 };
@@ -21,15 +21,13 @@ impl World {
     /// Used internally to register both components and relations
     /// because Relations are a special kind of component
     /// and Components are meant to be wrapped in `RefCell`
-    fn register_component_inner<T: 'static>(&mut self, is_relation: bool) -> ComponentId {
+    fn register_component_inner<T: 'static>(&mut self, flags: u32) -> ComponentId {
         let tid = TypeId::of::<T>();
         if let Some(cid) = self.bookkeeping.get_component_id(tid) {
             return cid;
         }
         let mut cid = ComponentId::from_usize(self.bookkeeping.components.len());
-        if is_relation {
-            cid = cid.set_relation();
-        }
+        cid = cid.set_flags(flags);
         self.bookkeeping.components.push(Component::new::<T>(cid));
         self.bookkeeping.component_map.insert(tid, cid);
         return cid;
@@ -37,7 +35,7 @@ impl World {
 
     // TODO wrap in refcell
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
-        self.register_component_inner::<T>(false)
+        self.register_component_inner::<T>(0)
     }
 
     pub fn create(&mut self) -> Entity {
@@ -89,11 +87,16 @@ impl World {
 // relation stuff in separate impl block
 impl World {
     pub fn register_relation<T: 'static>(&mut self) {
-        self.register_component_inner::<Relation<T>>(true);
+        self.register_component_inner::<Relation<T>>(IS_RELATION);
+    }
+
+    pub fn register_relation_flags<T: 'static>(&mut self, flags: u32) {
+        // TODO: error if component is already registered
+        self.register_component_inner::<Relation<T>>(flags | IS_RELATION);
     }
 
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<Relation<T>>(true);
+        let origin_cid = self.register_component_inner::<Relation<T>>(IS_RELATION);
         self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
@@ -104,7 +107,7 @@ impl World {
     }
 
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let cid = self.register_component_inner::<Relation<T>>(false);
+        let cid = self.register_component_inner::<Relation<T>>(IS_RELATION);
         self.bookkeeping.remove_relation(cid, from, to);
     }
 
