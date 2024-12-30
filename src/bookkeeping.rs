@@ -45,6 +45,10 @@ impl Bookkeeping {
         }
     }
 
+    pub fn is_alive(&self, e: Entity) -> bool {
+        self.entities.is_alive(e)
+    }
+
     pub fn create(&mut self) -> Entity {
         let e = self.entities.create();
         let empty_archetype = &mut self.archetypes[EMPTY_ARCHETYPE_ID.0 as usize];
@@ -183,6 +187,7 @@ impl Bookkeeping {
             // or being pointed to from this component
 
             let mut to_delete = Vec::new(); // just here to avoid borrow checker
+            let mut to_destroy = Vec::new(); // for cascading destruction
             for (index, cid) in a.components.iter().enumerate() {
                 if cid.is_relation() {
                     let ptr = unsafe { a.columns[index].get(a_row.0) } as *const RelationVec;
@@ -191,6 +196,11 @@ impl Bookkeeping {
                     let flipped = cid.flip_target();
                     for other_id in vec.iter() {
                         to_delete.push((flipped, EntityId(*other_id)));
+                    }
+                    if cid.is_cascading() {
+                        for other_id in vec.iter() {
+                            to_destroy.push(EntityId(*other_id));
+                        }
                     }
                 }
             }
@@ -215,6 +225,12 @@ impl Bookkeeping {
                 let swapped_e = a.entities[a_row.0 as usize];
                 self.entities
                     .set_archetype_unchecked(swapped_e, a_id, a_row);
+            }
+
+            // cascading destruction if necessary
+            for other_id in to_destroy {
+                let other_e = self.entities.get_from_id(other_id);
+                self.entities.destroy(other_e);
             }
         }
     }

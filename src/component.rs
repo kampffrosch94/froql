@@ -29,6 +29,14 @@ pub const EXCLUSIVE: u32 = RELATION >> 2;
 // this means we don't have to distinguish between origin and target in the storage
 pub const SYMMETRIC: u32 = RELATION >> 2;
 
+/// Mark a relationship with cascading destruction.
+/// When an origin in a cascading destruction relation gets destroyed,
+/// then all its targets in that relation also get destroyed.
+///
+/// For example if the relation `Contains(faction, npc)` is cascading
+/// then once the faction is destroyed all NPCs belonging to it are also destroyed.
+pub const CASCADING_DESTRUCT: u32 = RELATION >> 2;
+
 impl ComponentId {
     /// 24 bit ought to be enough component ids
     /// the rest is reserved for flags
@@ -82,6 +90,15 @@ impl ComponentId {
     /// only returns true for the relation origin
     pub fn is_exclusive(&self) -> bool {
         (self.0 & EXCLUSIVE) > 0 && !self.is_target()
+    }
+
+    #[must_use]
+    pub fn set_cascading(self) -> Self {
+        Self(self.0 ^ CASCADING_DESTRUCT)
+    }
+
+    pub fn is_cascading(&self) -> bool {
+        (self.0 & CASCADING_DESTRUCT) > 0
     }
 
     #[must_use]

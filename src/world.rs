@@ -42,6 +42,10 @@ impl World {
         self.bookkeeping.create()
     }
 
+    pub fn is_alive(&self, e: Entity) -> bool {
+        self.bookkeeping.is_alive(e)
+    }
+
     // TODO wrap T in Refcell
     pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
         let cid = self.register_component::<T>();
@@ -143,7 +147,7 @@ impl World {
 
 #[cfg(test)]
 mod test {
-    use crate::component::{EXCLUSIVE, SYMMETRIC};
+    use crate::component::{CASCADING_DESTRUCT, EXCLUSIVE, SYMMETRIC};
 
     use super::*;
 
@@ -303,5 +307,24 @@ mod test {
         world.add_relation::<Rel>(a, b);
         assert!(world.has_relation::<Rel>(a, b));
         assert!(world.has_relation::<Rel>(b, a));
+    }
+
+    #[test]
+    fn relation_cascading() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation_flags::<Rel>(CASCADING_DESTRUCT);
+        let a = world.create();
+        let b = world.create();
+        world.add_relation::<Rel>(a, b);
+
+        assert!(world.has_relation::<Rel>(a, b));
+        assert!(world.is_alive(a));
+        assert!(world.is_alive(b));
+
+        world.destroy(a);
+        assert!(!world.is_alive(a));
+        assert!(!world.is_alive(b));
     }
 }
