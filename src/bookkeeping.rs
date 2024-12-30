@@ -80,14 +80,17 @@ impl Bookkeeping {
         comp.has_archetype(aid, cid)
     }
 
-    // TODO: handle ZSTs differently
+    /// for ZSTs use `add_component_zst`
     #[must_use]
     pub fn add_component(&mut self, e: Entity, cid: ComponentId) -> *mut u8 {
+        debug_assert!(self.components[cid.as_index()].layout.size() > 0);
+
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
             e.id,
             self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
         );
+
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
         components.push(cid);
         components.sort();
@@ -115,6 +118,35 @@ impl Bookkeeping {
         r
     }
 
+    pub fn add_component_zst(&mut self, e: Entity, cid: ComponentId) {
+        debug_assert!(self.components[cid.as_index()].layout.size() == 0);
+        let (old_a_id, old_a_row) = self.entities.get_archetype(e);
+        debug_assert_eq!(
+            e.id,
+            self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
+        );
+        let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
+        components.push(cid);
+        components.sort();
+        let new_a_id = self.find_archetype_or_create(components);
+
+        let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
+
+        Archetype::move_row(old, new, old_a_row);
+
+        // update entities in the entity storage
+        let new_row = (new.entities.len() - 1) as u32;
+        self.entities
+            .set_archetype(e, new_a_id, ArchetypeRow(new_row));
+        if old_a_row.0 < old.entities.len() as u32 {
+            // in this case we need to update the entity we swapped into the hole
+            let eid = old.entities[old_a_row.0 as usize];
+            debug_assert_ne!(eid, e.id);
+            self.entities
+                .set_archetype_unchecked(eid, old_a_id, old_a_row);
+        }
+    }
+
     fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
         // find
         if let Some(id) = self.exact_archetype.get(&c_ids) {
@@ -128,18 +160,25 @@ impl Bookkeeping {
             c.insert_archetype(new_aid, *cid);
         }
 
-        let columns = c_ids
+        // the archetype only knows about components that have a size
+        let a_components = c_ids
+            .iter()
+            .filter(|id| self.components[id.as_index()].layout.size() > 0)
+            .cloned()
+            .collect::<Vec<_>>();
+        let columns = a_components
             .iter()
             .map(|id| &self.components[id.as_index()])
             .map(|c| LayoutVec::new(c.layout, c.drop_fn.clone()))
             .collect::<Vec<_>>();
 
-        let new_archetype = Archetype::new(c_ids.clone(), columns);
+        let new_archetype = Archetype::new(a_components, columns);
         self.archetypes.push(new_archetype);
         self.exact_archetype.insert(c_ids, new_aid);
         new_aid
     }
 
+    /// Works for normal components and ZSTs
     pub fn remove_component(&mut self, e: Entity, cid: ComponentId) {
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
@@ -147,14 +186,19 @@ impl Bookkeeping {
             self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
         );
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
-        let removed_column = components.iter().position(|it| *it == cid).unwrap();
+        let removed_column = components.iter().position(|it| *it == cid);
         components.retain(|it| *it != cid);
         let new_a_id = self.find_archetype_or_create(components);
 
         let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
 
         Archetype::move_row(old, new, old_a_row);
-        old.columns[removed_column].remove_swap(old_a_row.0);
+        if let Some(removed_column) = removed_column {
+            debug_assert!(self.components[cid.as_index()].layout.size() > 0);
+            old.columns[removed_column].remove_swap(old_a_row.0);
+        } else {
+            debug_assert!(self.components[cid.as_index()].layout.size() == 0);
+        }
 
         // update entities in the entity storage
         let new_row = (new.entities.len() - 1) as u32;

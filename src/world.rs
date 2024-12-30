@@ -49,10 +49,14 @@ impl World {
     // TODO wrap T in Refcell
     pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
         let cid = self.register_component::<T>();
-        let ptr = self.bookkeeping.add_component(e, cid);
-        unsafe {
-            let dst = mem::transmute::<*mut u8, *mut T>(ptr);
-            std::ptr::write(dst, val);
+        if size_of::<T>() > 0 {
+            let ptr = self.bookkeeping.add_component(e, cid);
+            unsafe {
+                let dst = mem::transmute::<*mut u8, *mut T>(ptr);
+                std::ptr::write(dst, val);
+            }
+        } else {
+            self.bookkeeping.add_component_zst(e, cid);
         }
     }
 
@@ -326,5 +330,19 @@ mod test {
         world.destroy(a);
         assert!(!world.is_alive(a));
         assert!(!world.is_alive(b));
+    }
+
+    #[test]
+    fn zst_component() {
+        struct Comp {}
+
+        let mut world = World::new();
+        world.register_component::<Comp>();
+        let a = world.create();
+        assert!(!world.has_component::<Comp>(a));
+        world.add_component(a, Comp {});
+        assert!(world.has_component::<Comp>(a));
+        world.remove_component::<Comp>(a);
+        assert!(!world.has_component::<Comp>(a));
     }
 }
