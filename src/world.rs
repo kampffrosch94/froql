@@ -420,9 +420,7 @@ mod test {
             let archetypes = bk.components[cid.as_index()].get_archetypes();
             archetypes.flat_map(move |aid| {
                 let a = &bk.archetypes[aid.0 as usize];
-                // TODO move this into util method in archetype
-                let col_index = a.components.iter().position(|it| *it == cid).unwrap();
-                let col = &a.columns[col_index];
+                let col = a.find_column(cid);
                 (0..col.len()).map(|row| unsafe {
                     let ptr = col.get(row) as *const RefCell<CompA>;
                     let c = &*ptr;

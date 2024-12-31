@@ -80,6 +80,13 @@ impl Archetype {
         }
         row.0 != self.entities.len() as u32
     }
+
+    /// returns column this component is in
+    /// PANICS if column is not in the archetype
+    pub fn find_column(&self, cid: ComponentId) -> &LayoutVec {
+        let index = self.components.iter().position(|it| *it == cid).unwrap();
+        &self.columns[index]
+    }
 }
 
 #[cfg(test)]
