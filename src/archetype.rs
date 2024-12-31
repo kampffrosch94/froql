@@ -83,6 +83,9 @@ impl Archetype {
 
     /// returns column this component is in
     /// PANICS if column is not in the archetype
+    // TODO move looking up the column into a hashmap in bookkeeping
+    // similar to ecs_table_record_t in flecs
+    // may also lookup differently depending on column count
     pub fn find_column(&self, cid: ComponentId) -> &LayoutVec {
         let index = self.components.iter().position(|it| *it == cid).unwrap();
         &self.columns[index]

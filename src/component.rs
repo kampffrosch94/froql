@@ -134,9 +134,9 @@ pub struct Component {
     pub layout: Layout,
     pub drop_fn: Box<fn(*mut u8)>,
     /// keeps track of what archetypes have this component
-    pub archetypes: Box<BitSet>,
+    archetypes: Box<BitSet>,
     /// if this component is a relationship target we need to track archetypes separately
-    pub target_archetypes: Box<BitSet>,
+    target_archetypes: Box<BitSet>,
 }
 
 impl Component {
@@ -171,6 +171,14 @@ impl Component {
         self.archetypes
             .iter()
             .map(|index| ArchetypeId(index as u32))
+    }
+
+    pub fn get_archetype_bitset(&self, cid: ComponentId) -> &BitSet {
+        if cid.is_target() {
+            &self.target_archetypes
+        } else {
+            &self.archetypes
+        }
     }
 }
 

@@ -1,5 +1,7 @@
 use std::{any::TypeId, collections::HashMap};
 
+use hi_sparse_bitset::reduce;
+
 use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
     component::{Component, ComponentId},
@@ -222,6 +224,67 @@ impl Bookkeeping {
         });
     }
 
+    pub fn matching_archetypes(
+        &self,
+        with: &[ComponentId],
+        without: &[ComponentId],
+    ) -> Vec<ArchetypeId> {
+        debug_assert!(with.len() + without.len() > 0);
+        use hi_sparse_bitset::ops::{And, Or};
+        if without.is_empty() {
+            // simplest case
+            let with_sets = with
+                .iter()
+                .copied()
+                .map(|cid| self.components[cid.as_index()].get_archetype_bitset(cid));
+            let b_with = reduce(And, with_sets).unwrap();
+            let ids: Vec<_> = b_with
+                .into_iter()
+                .map(|id| ArchetypeId(id as u32))
+                .collect();
+            ids
+        } else if with.is_empty() {
+            // don't think this case is great for performance personally, but 仕方がない
+            let without_sets = without
+                .iter()
+                .copied()
+                .map(|cid| self.components[cid.as_index()].get_archetype_bitset(cid));
+            // union
+            let b_without = reduce(Or, without_sets).unwrap();
+            // invert
+            let result = (0..self.archetypes.len()).filter(|index| !b_without.contains(*index));
+
+            let ids: Vec<_> = result.map(|id| ArchetypeId(id as u32)).collect();
+            ids
+        } else {
+            // general case
+            let with_sets = with
+                .iter()
+                .copied()
+                .map(|cid| self.components[cid.as_index()].get_archetype_bitset(cid));
+            // intersect
+            let b_with = reduce(And, with_sets).unwrap();
+            let without_sets = without
+                .iter()
+                .copied()
+                .map(|cid| self.components[cid.as_index()].get_archetype_bitset(cid));
+            // union
+            let b_without = reduce(Or, without_sets).unwrap();
+
+            // subtract
+            let result = b_with - b_without;
+
+            // returning a vec because otherwise lifetimes get really annoying
+            // and also impl Iterator<..> with a monstrosity of a
+            // type like the sparse bitset produces can't be good for compile times
+            let ids: Vec<_> = result
+                .into_iter()
+                .map(|id| ArchetypeId(id as u32))
+                .collect();
+            ids
+        }
+    }
+
     pub fn destroy(&mut self, e: Entity) {
         if self.entities.is_alive(e) {
             let (a_id, a_row) = self.entities.get_archetype(e);
@@ -339,7 +402,7 @@ impl Bookkeeping {
         return false;
     }
 
-    pub fn relation_targets<'a>(
+    pub fn relation_partners<'a>(
         &'a self,
         origin_cid: ComponentId,
         from: Entity,

@@ -157,7 +157,7 @@ impl World {
         let o_tid = TypeId::of::<Relation<T>>();
         let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
         self.bookkeeping
-            .relation_targets(origin_cid, from)
+            .relation_partners(origin_cid, from)
             .into_iter()
             .flat_map(|it| it)
     }
@@ -174,7 +174,7 @@ impl World {
             .flip_target();
         self.bookkeeping
             // same logic as with target, just different parameter
-            .relation_targets(target_cid, to)
+            .relation_partners(target_cid, to)
             .into_iter()
             .flat_map(|it| it)
     }
@@ -404,7 +404,9 @@ mod test {
     fn manual_query() {
         #[derive(Debug)]
         struct CompA(usize);
+        #[derive(Debug)]
         struct CompB(String);
+        struct CompC {}
 
         let mut world = World::new();
         let a = world.create();
@@ -412,23 +414,33 @@ mod test {
         world.add_component(a, CompB("Hello".to_string()));
         let b = world.create();
         world.add_component(b, CompA(21));
+        let c = world.create();
+        world.add_component(c, CompA(42));
+        world.add_component(c, CompB("Hello".to_string()));
+        world.add_component(c, CompC {});
 
         let mut counter = 0;
-        for comp_a in {
+        for (comp_a, comp_b) in {
             let bk = &world.bookkeeping;
-            let cid = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
-            let archetypes = bk.components[cid.as_index()].get_archetypes();
-            archetypes.flat_map(move |aid| {
+            let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
+            let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
+            let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);
+            archetypes.into_iter().flat_map(move |aid| {
                 let a = &bk.archetypes[aid.0 as usize];
-                let col = a.find_column(cid);
-                (0..col.len()).map(|row| unsafe {
-                    let ptr = col.get(row) as *const RefCell<CompA>;
-                    let c = &*ptr;
-                    c.borrow()
+                let col_a = a.find_column(cid_a);
+                let col_b = a.find_column(cid_b);
+                (0..col_a.len()).map(|row| unsafe {
+                    (
+                        (&*(col_a.get(row) as *const RefCell<CompA>)).borrow(),
+                        (&*(col_b.get(row) as *const RefCell<CompB>)).borrow(),
+                    )
                 })
             })
         } {
             println!("{comp_a:?}");
+            println!("{comp_b:?}");
+            assert_eq!(42, comp_a.0);
+            assert_eq!("Hello", &comp_b.0);
             counter += 1;
         }
         assert_eq!(2, counter);

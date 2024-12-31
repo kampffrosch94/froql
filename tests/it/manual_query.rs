@@ -16,6 +16,6 @@ pub enum Relative {}
 #[test]
 fn manual_query_simple() {
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let _a = world.create();
+    let _b = world.create();
 }
