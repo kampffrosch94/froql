@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub struct World {
-    pub bookkeeping: Bookkeeping,
+    pub(crate) bookkeeping: Bookkeeping,
 }
 
 impl World {
@@ -397,5 +397,42 @@ mod test {
         assert!(world.has_component::<Comp>(a));
         world.remove_component::<Comp>(a);
         assert!(!world.has_component::<Comp>(a));
+    }
+
+    // TODO move into integration test
+    #[test]
+    fn manual_query() {
+        #[derive(Debug)]
+        struct CompA(usize);
+        struct CompB(String);
+
+        let mut world = World::new();
+        let a = world.create();
+        world.add_component(a, CompA(42));
+        world.add_component(a, CompB("Hello".to_string()));
+        let b = world.create();
+        world.add_component(b, CompA(21));
+
+        let mut counter = 0;
+        for comp_a in {
+            let bk = &world.bookkeeping;
+            let cid = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
+            let archetypes = bk.components[cid.as_index()].get_archetypes();
+            archetypes.flat_map(move |aid| {
+                let a = &bk.archetypes[aid.0 as usize];
+                // TODO move this into util method in archetype
+                let col_index = a.components.iter().position(|it| *it == cid).unwrap();
+                let col = &a.columns[col_index];
+                (0..col.len()).map(|row| unsafe {
+                    let ptr = col.get(row) as *const RefCell<CompA>;
+                    let c = &*ptr;
+                    c.borrow()
+                })
+            })
+        } {
+            println!("{comp_a:?}");
+            counter += 1;
+        }
+        assert_eq!(2, counter);
     }
 }

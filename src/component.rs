@@ -134,9 +134,9 @@ pub struct Component {
     pub layout: Layout,
     pub drop_fn: Box<fn(*mut u8)>,
     /// keeps track of what archetypes have this component
-    archetypes: Box<BitSet>,
+    pub archetypes: Box<BitSet>,
     /// if this component is a relationship target we need to track archetypes separately
-    target_archetypes: Box<BitSet>,
+    pub target_archetypes: Box<BitSet>,
 }
 
 impl Component {
@@ -192,5 +192,20 @@ mod test {
         assert_eq!(32, ci.as_index());
         assert!(ci.is_relation());
         assert!(ci.is_target());
+    }
+
+    use hi_sparse_bitset::ops::*;
+
+    #[test]
+    fn set_operations() {
+        let mut a = BitSet::new();
+        let mut b = BitSet::new();
+        a.insert(5);
+        a.insert(6);
+        a.insert(7);
+        b.insert(6);
+        let c = hi_sparse_bitset::apply(Sub, &a, &b);
+        let v: Vec<_> = c.iter().collect();
+        assert_eq!(&v, &[5, 7]);
     }
 }

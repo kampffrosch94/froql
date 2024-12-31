@@ -18,11 +18,11 @@ pub struct Bookkeeping {
     /// Indexed by ComponentId
     pub components: Vec<Component>,
     /// Indexed by ArchetypeId
-    archetypes: Vec<Archetype>,
+    pub archetypes: Vec<Archetype>,
     /// Indexed by EntityId
-    entities: EntityStore,
+    pub entities: EntityStore,
     /// maps to the Archetype which has all the components in the vec and just those
-    exact_archetype: HashMap<Vec<ComponentId>, ArchetypeId>,
+    pub exact_archetype: HashMap<Vec<ComponentId>, ArchetypeId>,
 }
 
 const EMPTY_ARCHETYPE_ID: ArchetypeId = ArchetypeId(0);
@@ -214,11 +214,11 @@ impl Bookkeeping {
 
         debug_assert!({
             let expected = old.entities.len();
-            old.columns.iter().all(|col| col.len() == expected)
+            old.columns.iter().all(|col| col.len() == expected as u32)
         });
         debug_assert!({
             let expected = new.entities.len();
-            new.columns.iter().all(|col| col.len() == expected)
+            new.columns.iter().all(|col| col.len() == expected as u32)
         });
     }
 

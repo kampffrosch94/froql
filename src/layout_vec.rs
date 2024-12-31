@@ -30,8 +30,8 @@ impl LayoutVec {
         }
     }
 
-    pub fn len(&self) -> usize {
-        self.len as usize
+    pub fn len(&self) -> u32 {
+        self.len
     }
 
     // mostly from https://doc.rust-lang.org/nomicon/vec/vec-alloc.html
