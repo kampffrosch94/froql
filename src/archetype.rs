@@ -90,6 +90,21 @@ impl Archetype {
         let index = self.components.iter().position(|it| *it == cid).unwrap();
         &self.columns[index]
     }
+
+    // we use an outvar so that we don't have to allocate
+    // ideally the results can live in an array on the stack
+    pub fn find_multiple_columns(&self, cids: &[ComponentId], result_indexes: &mut [usize]) {
+        debug_assert_eq!(cids.len(), result_indexes.len());
+        debug_assert!(cids.is_sorted());
+        let mut j = 0;
+        for i in 0..self.components.len() {
+            if self.components[i] == cids[j] {
+                result_indexes[j] = i;
+                j += 1;
+            }
+        }
+        debug_assert_eq!(cids.len(), j);
+    }
 }
 
 #[cfg(test)]

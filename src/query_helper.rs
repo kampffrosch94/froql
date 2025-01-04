@@ -1,17 +1,20 @@
 use std::{any::TypeId, mem::MaybeUninit};
 
-use crate::{entity_store::{Entity, EntityId}, world::World};
+use crate::{
+    entity_store::{Entity, EntityId},
+    world::World,
+};
 
 pub struct QueryHelper<'a> {
     world: &'a World,
 }
 
-/// RelationType, from, to
+/// RelationType, from_var, to_var
 type Relation = (TypeId, usize, usize);
-/// ComponentType, source
+/// ComponentType, source_var
 type Component = (TypeId, usize);
 
-// OPTIMIZATION: keeep the body of this function as small as possible to save on monomorphisation
+// OPTIMIZATION: keep the body of this function as small as possible to save on monomorphisation
 /// used by the proc macro
 #[allow(unused)]
 pub unsafe fn relation_join_iter_components<'a, const VARS: usize, const COMPS: usize>(
@@ -20,7 +23,7 @@ pub unsafe fn relation_join_iter_components<'a, const VARS: usize, const COMPS: 
     components: [Component; COMPS],
     unequals: &[(usize, usize)],
     uncomponents: &[Component],
-    unrelations: &[Relation], 
+    unrelations: &[Relation],
     prefill: &[(usize, Entity)],
 ) -> impl Iterator<Item = ([Entity; VARS], [*const u8; COMPS])> + use<'a, VARS, COMPS> {
     let join_table: JoinTable<'_, VARS> = JoinTable::new_init(
@@ -52,7 +55,11 @@ pub struct JoinTable<'a, const N: usize> {
 
 impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
     pub fn new(world: &'a World) -> Self {
-        JoinTable { world, filled: [false; COLUMN_COUNT], rows: Vec::new() }
+        JoinTable {
+            world,
+            filled: [false; COLUMN_COUNT],
+            rows: Vec::new(),
+        }
     }
 
     pub fn new_init(
@@ -64,9 +71,14 @@ impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
         _unrelations: &[Relation],
         prefill: &[(usize, Entity)],
     ) -> Self {
+        let bk = &world.bookkeeping;
         let mut join_table = JoinTable::new(world);
         // init
-        match (components.is_empty(), prefill.is_empty(), relations.is_empty()) {
+        match (
+            components.is_empty(),
+            prefill.is_empty(),
+            relations.is_empty(),
+        ) {
             (true, true, true) => {}
             (false, true, true) => {
                 //join_table.init_from_component(components[0]);
@@ -101,5 +113,16 @@ impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
         join_table
     }
 
-
+    pub fn new_no_relation(
+        world: &'a World,
+        components: &[Component],
+        uncomponents: &[Component],
+    ) -> Self {
+        let mut join_table = JoinTable::new(world);
+        //let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
+        //let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
+        //let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);
+        debug_assert!(join_table.filled.iter().all(|filled| *filled));
+        join_table
+    }
 }

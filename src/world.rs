@@ -425,10 +425,14 @@ mod test {
             let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
             let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
             let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);
+            assert_eq!(archetypes.len(), 2);
             archetypes.into_iter().flat_map(move |aid| {
-                let a = &bk.archetypes[aid.0 as usize];
-                let col_a = a.find_column(cid_a);
-                let col_b = a.find_column(cid_b);
+                let arch = &bk.archetypes[aid.0 as usize];
+                let result_indexes = &mut [usize::MAX; 2];
+                arch.find_multiple_columns(&[cid_a, cid_b], result_indexes);
+                let [colindex_a, colindex_b] = result_indexes;
+                let col_a = &arch.columns[*colindex_a];
+                let col_b = &arch.columns[*colindex_b];
                 (0..col_a.len()).map(|row| unsafe {
                     (
                         (&*(col_a.get(row) as *const RefCell<CompA>)).borrow(),
