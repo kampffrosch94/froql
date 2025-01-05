@@ -1,7 +1,7 @@
 use std::{any::TypeId, mem::MaybeUninit};
 
 use crate::{
-    entity_store::{Entity, EntityId},
+    entity_store::Entity,
     world::World,
 };
 
@@ -71,8 +71,8 @@ impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
         _unrelations: &[Relation],
         prefill: &[(usize, Entity)],
     ) -> Self {
-        let bk = &world.bookkeeping;
-        let mut join_table = JoinTable::new(world);
+        let _bk = &world.bookkeeping;
+        let join_table = JoinTable::new(world);
         // init
         match (
             components.is_empty(),
@@ -115,10 +115,10 @@ impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
 
     pub fn new_no_relation(
         world: &'a World,
-        components: &[Component],
-        uncomponents: &[Component],
+        _components: &[Component],
+        _uncomponents: &[Component],
     ) -> Self {
-        let mut join_table = JoinTable::new(world);
+        let join_table = JoinTable::new(world);
         //let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
         //let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
         //let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);

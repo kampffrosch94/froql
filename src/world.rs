@@ -196,7 +196,11 @@ impl World {
 
 #[cfg(test)]
 mod test {
-    use crate::component::{CASCADING_DESTRUCT, EXCLUSIVE, SYMMETRIC};
+    use crate::{
+        archetype::ArchetypeId,
+        component::{CASCADING_DESTRUCT, EXCLUSIVE, SYMMETRIC},
+        relation_vec::RelationVec,
+    };
 
     use super::*;
 
@@ -315,6 +319,21 @@ mod test {
         world.remove_relation::<Rel>(a, b);
         world.remove_relation::<Rel>(a, b);
         assert!(!world.has_relation::<Rel>(a, b));
+    }
+
+    #[test]
+    fn relation_check_one_side() {
+        enum Rel {}
+
+        let mut world = World::new();
+        world.register_relation::<Rel>();
+        let a = world.create();
+        let b = world.create();
+        world.add_relation::<Rel>(a, b);
+        let targets: Vec<Entity> = world.relation_targets::<Rel>(a).collect();
+        assert_eq!(&[b][..], &targets[..]);
+        let origins: Vec<Entity> = world.relation_origins::<Rel>(b).collect();
+        assert_eq!(&[a][..], &origins[..]);
     }
 
     #[test]
@@ -461,6 +480,108 @@ mod test {
             println!("{comp_b:?}");
             assert_eq!(42, comp_a.0);
             assert_eq!("Hello", &comp_b.0);
+            counter += 1;
+        }
+        assert_eq!(2, counter);
+    }
+
+    #[test]
+    fn manual_query_relation() {
+        enum Attack {}
+
+        #[derive(Debug)]
+        struct Unit(String);
+        #[derive(Debug)]
+        struct Health(isize);
+
+        let mut world = World::new();
+        let player = world.create();
+        world.add_component(player, Unit("Player".to_string()));
+        let goblin_a = world.create();
+        world.add_component(goblin_a, Health(10));
+        world.add_component(goblin_a, Unit("Goblin A".to_string()));
+        world.add_relation::<Attack>(player, goblin_a);
+
+        let goblin_b = world.create();
+        world.add_component(goblin_b, Health(10));
+        world.add_component(goblin_b, Unit("Goblin B".to_string()));
+        world.add_relation::<Attack>(player, goblin_b);
+
+        // this should not be matched by the query below
+        // bad example I know, but I need something
+        let trap = world.create();
+        world.add_relation::<Attack>(trap, goblin_b);
+
+        let mut counter = 0;
+
+        // manual query for:
+        // query!(world, Unit(me), Unit(other), Hp(me), Attack(other, me))
+        for (me,other,hp) in {
+            let world: &World = &world;
+            let bk = &world.bookkeeping;
+            let components_me = [
+                world.get_component_id::<Unit>(),
+                world.get_component_id::<Health>(),
+                // We know its a relation in the query
+                // the component id code in world switches on size and wraps in a RefCell
+                // so its not suitable to use for relations
+                bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>())
+                    .flip_target(),
+            ];
+            let components_other = [
+                world.get_component_id::<Unit>(),
+                bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+            ];
+            let archetype_ids_me = bk.matching_archetypes(&components_me, &[]);
+            let archetype_ids_other = bk.matching_archetypes(&components_other, &[]);
+
+            assert_eq!(1, archetype_ids_me.len());
+            assert_eq!(1, archetype_ids_other.len());
+
+            let rel_attack_filter = move |id: ArchetypeId| archetype_ids_other.contains(&id);
+
+            archetype_ids_me.into_iter().flat_map(move |aid| {
+                let arch_me = &bk.archetypes[aid.0 as usize];
+                let mut col_ids_me = [usize::MAX; 3];
+                arch_me.find_multiple_columns(&components_me, &mut col_ids_me);
+                // TODO can we remove this thing after finishing?
+                let closure_clone_1 = rel_attack_filter.clone();
+                (0..(&arch_me.columns[col_ids_me[0]]).len()).flat_map(move |row_me| unsafe {
+                    let rel_attack =
+                        &*((&arch_me.columns[col_ids_me[2]]).get(row_me) as *const RelationVec);
+                    let closure_clone_2 = closure_clone_1.clone();
+                    rel_attack
+                        .iter()
+                        .map(|id| ArchetypeId(*id))
+                        .filter(move |id| closure_clone_2(*id))
+                        .flat_map(move |other_id| {
+                            let arch_other = &bk.archetypes[other_id.0 as usize];
+                            let mut col_ids_other = [usize::MAX; 1];
+                            // don't actually need the relations col here, so can slice it off
+                            arch_other
+                                .find_multiple_columns(&components_other[0..1], &mut col_ids_other);
+                            (0..(&arch_other.columns[col_ids_other[0]]).len()).map(
+                                move |row_other| {
+                                    (
+                                        (&*((&arch_me.columns[col_ids_me[0]]).get(row_me)
+                                            as *const RefCell<Unit>))
+                                            .borrow(),
+                                        (&*((&arch_other.columns[col_ids_other[0]]).get(row_other)
+                                            as *const RefCell<Unit>))
+                                            .borrow(),
+                                        (&*((&arch_me.columns[col_ids_me[1]]).get(row_me)
+                                            as *const RefCell<Health>))
+                                            .borrow(),
+                                    )
+                                },
+                            )
+                        })
+                })
+            })
+        } {
+            dbg!(me);
+            dbg!(other);
+            dbg!(hp);
             counter += 1;
         }
         assert_eq!(2, counter);

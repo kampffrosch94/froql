@@ -10,7 +10,7 @@ impl EntityGeneration {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Entity {
     pub gen: EntityGeneration,
     pub id: EntityId,

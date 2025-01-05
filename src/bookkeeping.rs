@@ -64,6 +64,10 @@ impl Bookkeeping {
         self.component_map.get(&tid).copied()
     }
 
+    pub fn get_component_id_unchecked(&self, tid: TypeId) -> ComponentId {
+        self.component_map.get(&tid).copied().unwrap()
+    }
+
     pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
         assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
@@ -404,11 +408,11 @@ impl Bookkeeping {
 
     pub fn relation_partners<'a>(
         &'a self,
-        origin_cid: ComponentId,
-        from: Entity,
+        relation_cid: ComponentId,
+        e: Entity,
     ) -> Option<impl Iterator<Item = Entity> + use<'a>> {
-        if self.has_component(from, origin_cid) {
-            let ptr = self.get_component(from, origin_cid) as *mut RelationVec;
+        if self.has_component(e, relation_cid) {
+            let ptr = self.get_component(e, relation_cid) as *mut RelationVec;
             let rel_vec = unsafe { &mut *ptr };
             return Some(
                 rel_vec
