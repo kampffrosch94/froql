@@ -101,6 +101,9 @@ impl Archetype {
             if self.components[i] == cids[j] {
                 result_indexes[j] = i;
                 j += 1;
+                if j >= cids.len() {
+                    break;
+                }
             }
         }
         debug_assert_eq!(cids.len(), j);

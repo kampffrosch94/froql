@@ -1,9 +1,6 @@
 use std::{any::TypeId, mem::MaybeUninit};
 
-use crate::{
-    entity_store::Entity,
-    world::World,
-};
+use crate::{entity_store::Entity, world::World};
 
 pub struct QueryHelper<'a> {
     world: &'a World,

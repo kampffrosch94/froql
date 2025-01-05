@@ -199,6 +199,7 @@ mod test {
     use crate::{
         archetype::ArchetypeId,
         component::{CASCADING_DESTRUCT, EXCLUSIVE, SYMMETRIC},
+        entity_store::EntityId,
         relation_vec::RelationVec,
     };
 
@@ -512,11 +513,16 @@ mod test {
         let trap = world.create();
         world.add_relation::<Attack>(trap, goblin_b);
 
+        let origins_a: Vec<Entity> = world.relation_origins::<Attack>(goblin_a).collect();
+        assert_eq!(&[player], origins_a.as_slice());
+        let origins_b: Vec<Entity> = world.relation_origins::<Attack>(goblin_b).collect();
+        assert_eq!(&[player, trap], origins_b.as_slice());
+
         let mut counter = 0;
 
         // manual query for:
         // query!(world, Unit(me), Unit(other), Hp(me), Attack(other, me))
-        for (me,other,hp) in {
+        for (me, other, mut hp) in {
             let world: &World = &world;
             let bk = &world.bookkeeping;
             let components_me = [
@@ -538,22 +544,28 @@ mod test {
             assert_eq!(1, archetype_ids_me.len());
             assert_eq!(1, archetype_ids_other.len());
 
-            let rel_attack_filter = move |id: ArchetypeId| archetype_ids_other.contains(&id);
-
             archetype_ids_me.into_iter().flat_map(move |aid| {
                 let arch_me = &bk.archetypes[aid.0 as usize];
                 let mut col_ids_me = [usize::MAX; 3];
                 arch_me.find_multiple_columns(&components_me, &mut col_ids_me);
-                // TODO can we remove this thing after finishing?
-                let closure_clone_1 = rel_attack_filter.clone();
+                // need to clone before moving
+                let archetype_ids_other = archetype_ids_other.clone();
                 (0..(&arch_me.columns[col_ids_me[0]]).len()).flat_map(move |row_me| unsafe {
                     let rel_attack =
                         &*((&arch_me.columns[col_ids_me[2]]).get(row_me) as *const RelationVec);
-                    let closure_clone_2 = closure_clone_1.clone();
+                    assert!(
+                        rel_attack.len() > 0,
+                        "Entity should not be in archetype if it has no relation"
+                    );
+                    // need to clone before moving - Again :/
+                    let archetype_ids_other = archetype_ids_other.clone();
                     rel_attack
                         .iter()
-                        .map(|id| ArchetypeId(*id))
-                        .filter(move |id| closure_clone_2(*id))
+                        .map(|id_raw| {
+                            let id = EntityId(*id_raw);
+                            bk.entities.get_archetype_unchecked(id).0
+                        })
+                        .filter(move |id: &ArchetypeId| archetype_ids_other.contains(id))
                         .flat_map(move |other_id| {
                             let arch_other = &bk.archetypes[other_id.0 as usize];
                             let mut col_ids_other = [usize::MAX; 1];
@@ -571,7 +583,7 @@ mod test {
                                             .borrow(),
                                         (&*((&arch_me.columns[col_ids_me[1]]).get(row_me)
                                             as *const RefCell<Health>))
-                                            .borrow(),
+                                            .borrow_mut(),
                                     )
                                 },
                             )
@@ -579,9 +591,9 @@ mod test {
                 })
             })
         } {
-            dbg!(me);
-            dbg!(other);
-            dbg!(hp);
+            println!("{me:?} attacked by {other:?}");
+            hp.0 -= 5;
+            println!("Hp now: {hp:?}");
             counter += 1;
         }
         assert_eq!(2, counter);
