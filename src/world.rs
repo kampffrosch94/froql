@@ -44,6 +44,20 @@ impl World {
         }
     }
 
+    // mostly there for use in query
+    #[doc(hidden)]
+    pub fn get_component_id<T: 'static>(&self) -> ComponentId {
+        let tid = if size_of::<T>() > 0 {
+            TypeId::of::<RefCell<T>>()
+        } else {
+            TypeId::of::<T>()
+        };
+        self.bookkeeping
+            .get_component_id(tid)
+            // TODO general error msg handler for T
+            .unwrap_or_else(|| panic!("ComponentType is not registered."))
+    }
+
     pub fn create(&mut self) -> Entity {
         self.bookkeeping.create()
     }
@@ -401,7 +415,7 @@ mod test {
 
     // TODO move into integration test
     #[test]
-    fn manual_query() {
+    fn manual_query_trivial() {
         #[derive(Debug)]
         struct CompA(usize);
         #[derive(Debug)]
@@ -421,22 +435,24 @@ mod test {
 
         let mut counter = 0;
         for (comp_a, comp_b) in {
+            let world: &World = &world;
             let bk = &world.bookkeeping;
-            let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
-            let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
-            let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);
-            assert_eq!(archetypes.len(), 2);
-            archetypes.into_iter().flat_map(move |aid| {
+            let components = [
+                world.get_component_id::<CompA>(),
+                world.get_component_id::<CompB>(),
+            ];
+            let archetype_ids = bk.matching_archetypes(&components, &[]);
+            assert_eq!(archetype_ids.len(), 2);
+            archetype_ids.into_iter().flat_map(move |aid| {
                 let arch = &bk.archetypes[aid.0 as usize];
-                let result_indexes = &mut [usize::MAX; 2];
-                arch.find_multiple_columns(&[cid_a, cid_b], result_indexes);
-                let [colindex_a, colindex_b] = result_indexes;
-                let col_a = &arch.columns[*colindex_a];
-                let col_b = &arch.columns[*colindex_b];
-                (0..col_a.len()).map(|row| unsafe {
+                let mut col_ids = [usize::MAX; 2];
+                arch.find_multiple_columns(&components, &mut col_ids);
+                (0..(&arch.columns[col_ids[0]]).len()).map(move |row| unsafe {
                     (
-                        (&*(col_a.get(row) as *const RefCell<CompA>)).borrow(),
-                        (&*(col_b.get(row) as *const RefCell<CompB>)).borrow(),
+                        (&*((&arch.columns[col_ids[0]]).get(row) as *const RefCell<CompA>))
+                            .borrow(),
+                        (&*((&arch.columns[col_ids[1]]).get(row) as *const RefCell<CompB>))
+                            .borrow(),
                     )
                 })
             })

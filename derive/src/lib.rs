@@ -9,7 +9,7 @@ use macro_error::MacroError;
 use parser::RelationVarKind as RVK;
 use parser::VarKind as VK;
 use parser::{parse_term, Term};
-use proc_macro::{Ident, Literal, Span, TokenStream, TokenTree};
+use proc_macro::{TokenStream, TokenTree};
 
 const ANYVAR: usize = usize::MAX;
 
@@ -19,6 +19,20 @@ pub fn query(input: TokenStream) -> TokenStream {
         Ok(tt) => tt,
         Err(err) => err.to_compile_error(),
     };
+}
+
+/// RelationType, from_var, to_var
+type Relation = (String, isize, isize);
+/// ComponentType, source_var
+type Component = (String, isize);
+
+// we need to preserve the order of the query in the result
+// this is why we put result entities and components in the same vec via enum
+enum Accessor {
+    /// ComponentType, index_in_result_array
+    Component(String, usize),
+    /// var index in result
+    EntityVar(isize),
 }
 
 struct VariableStore {
@@ -60,20 +74,19 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         panic!("Expected , after world");
     };
 
-    let _someident = Ident::new("something", Span::call_site());
-    let _somelit = Literal::i32_unsuffixed(2);
     let mut buffer: Vec<TokenTree> = Vec::with_capacity(10);
     let mut variables = VariableStore::new();
 
-    let mut components = Vec::new();
+    let mut components: Vec<Component> = Vec::new();
+    let mut uncomponents: Vec<Component> = Vec::new();
+    let mut accessors: Vec<Accessor> = Vec::new();
+
     let mut unequals = Vec::new();
-    let mut uncomponents = Vec::new();
-    let mut accessors = Vec::new();
     let mut relations = Vec::new();
     let mut unrelations = Vec::new();
     let mut prefills = HashSet::new();
 
-    let mut comp_access_count = 0;
+    let mut comp_access_count: usize = 0;
 
     loop {
         let next = iter.next();
@@ -94,18 +107,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                             prefills.insert((var, var_name.clone()));
                         }
                     }
-                    components.push(format!("(TypeId::of::<{ty}>(), {var})"));
-                    accessors.push(format!(
-                        "
-                            (unsafe {{
-                                &*std::mem::transmute::<
-                                    *const RefCell<ErasedType>,
-                                    *const RefCell<{ty}>,
-                                >(component_ptrs[{comp_access_count}])
-                            }})
-                            .borrow()
-                            "
-                    ));
+                    components.push((ty, var));
+                    accessors.push(Accessor::Component(ty, comp_access_count));
                     comp_access_count += 1;
                 }
                 Term::MutComponentVar(ty, ref varkind @ VK::Var(ref var_name))
@@ -117,18 +120,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                             prefills.insert((var, var_name.clone()));
                         }
                     }
-                    components.push(format!("(TypeId::of::<{ty}>(), {var})"));
-                    accessors.push(format!(
-                        "
-                            (unsafe {{
-                                &*std::mem::transmute::<
-                                    *const RefCell<ErasedType>,
-                                    *const RefCell<{ty}>,
-                                >(component_ptrs[{comp_access_count}])
-                            }})
-                            .borrow_mut()
-                            "
-                    ));
+                    components.push((ty, var));
+                    accessors.push(Accessor::Component(ty, comp_access_count));
                     comp_access_count += 1;
                 }
                 Term::NoOutComponentVar(ty, ref varkind @ VK::Var(ref var_name))
@@ -141,11 +134,11 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                             prefills.insert((var, var_name.clone()));
                         }
                     }
-                    components.push(format!("(TypeId::of::<{ty}>(), {var})"));
+                    components.push((ty, var));
                 }
                 Term::OutVar(var) => {
                     let var = variables.var_number(var);
-                    accessors.push(format!("EntityViewDeferred::new(world, _row[{var}])"));
+                    accessors.push(Accessor::EntityVar(var));
                 }
                 Term::ConstraintUnequal(
                     ref ta @ VK::Var(ref var_a),
@@ -178,7 +171,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 }
                 Term::Uncomponent(ty, var) => {
                     let var = variables.var_number(var);
-                    uncomponents.push(format!("(TypeId::of::<{ty}>(), {var})"));
+                    uncomponents.push((ty, var));
                 }
                 Term::Relation(ty, RVK::Var(var_a), RVK::Var(var_b)) => {
                     let a = variables.var_number(var_a);
@@ -292,13 +285,35 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         }
     }
 
+    assert_eq!(unequals.len(), 0);
+    assert_eq!(accessors.len(), 0);
+    assert_eq!(relations.len(), 0);
+    assert_eq!(unrelations.len(), 0);
+    assert_eq!(prefills.len(), 0);
+
+    let components = components.join(", ");
+    let uncomponents = uncomponents.join(", ");
+    let accessors = accessors.join(",\n");
     let column_count = variables.variables.len();
     let component_count = components.len();
-    let components = components.join(", ");
+
+    /*
+    accessors.push(format!("EntityViewDeferred::new(world, _row[{var}])"));
+    accessors.push(format!(
+        "
+            (unsafe {{
+                &*std::mem::transmute::<
+                    *const RefCell<ErasedType>,
+                    *const RefCell<{ty}>,
+                >(component_ptrs[{comp_access_count}])
+            }})
+            .borrow_mut()
+            "
+    ));
+    */
+
     let relations = relations.join(", ");
-    let accessors = accessors.join(",\n");
     let unequals = unequals.join(", ");
-    let uncomponents = uncomponents.join(", ");
     let unrelations = unrelations.join(", ");
     let prefills = prefills
         .into_iter()

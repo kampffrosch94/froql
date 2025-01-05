@@ -40,7 +40,7 @@ pub enum Term {
     /// Type, Variable
     MutComponentVar(String, VarKind),
     /// Type, Variable
-    /// but this won't be in the output tuple
+    /// but this Component won't be in the output tuple
     NoOutComponentVar(String, VarKind),
     /// Type, Variable, Variable
     Relation(String, RelationVarKind, RelationVarKind),
