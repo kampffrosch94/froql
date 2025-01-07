@@ -1,6 +1,10 @@
-use std::any::TypeId;
+use std::{any::TypeId, ptr::NonNull};
 
-use crate::{entity_store::Entity, world::World};
+use crate::{
+    archetype::{ArchetypeId, ArchetypeRow},
+    entity_store::{Entity, EntityGeneration, EntityId},
+    world::World,
+};
 
 pub struct QueryHelper<'a> {
     world: &'a World,
@@ -53,19 +57,43 @@ pub struct JoinTable<'a, const VAR_COUNT: usize, const COMP_COUNT: usize> {
     pub rows: Vec<([Entity; VAR_COUNT], [*const u8; COMP_COUNT])>,
 }
 
-pub struct QueryWorker<'world, const VAR_COUNT: usize, const COMP_COUNT: usize> {
-    pub world: &'world World,
-    pub result_entities: [Entity; VAR_COUNT],
-    pub result_components: [*const u8; COMP_COUNT],
+pub struct QueryWorker<'a> {
+    pub world: &'a World,
+    pub result_entities: &'a mut [(ArchetypeId, ArchetypeRow)],
+    pub result_components: &'a mut [NonNull<u8>],
+    pub ops: &'a mut [Op<'a>],
 }
 
-impl<'world, const VAR_COUNT: usize, const COMP_COUNT: usize>
-    QueryWorker<'world, VAR_COUNT, COMP_COUNT>
-{
+impl<'a> QueryWorker<'a> {
     // returns true if it produced a new result
     // returns false if execution can not continue
-    pub fn process() -> bool {
-
+    pub fn process(&mut self) -> bool {
         false
     }
+}
+
+pub enum Op<'a> {
+    GrabArchetype(&'a mut u32),
+    GrabRow(&'a mut u32),
+}
+
+fn foobar() {
+    let world = World::new();
+
+    let mut result_entities = [(ArchetypeId(u32::MAX), ArchetypeRow(u32::MAX)); 2];
+    let mut result_component = [NonNull::dangling(); 4];
+    let mut state = 32;
+    let mut ops = [Op::GrabRow(&mut state)];
+    let mut worker = QueryWorker {
+        world: &world,
+        result_entities: &mut result_entities,
+        result_components: &mut result_component,
+        ops: &mut ops,
+    };
+    while worker.process() {
+        dbg!(&worker.result_entities[0]);
+    }
+}
+
+fn grab_archetype() {
 }
