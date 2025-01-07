@@ -1,4 +1,4 @@
-use std::{any::TypeId, mem::MaybeUninit};
+use std::any::TypeId;
 
 use crate::{entity_store::Entity, world::World};
 
@@ -11,6 +11,7 @@ type Relation = (TypeId, usize, usize);
 /// ComponentType, source_var
 type Component = (TypeId, usize);
 
+/*
 // OPTIMIZATION: keep the body of this function as small as possible to save on monomorphisation
 /// used by the proc macro
 #[allow(unused)]
@@ -42,84 +43,44 @@ pub unsafe fn relation_join_iter_components<'a, const VARS: usize, const COMPS: 
         Some((row, result.map(|entry| unsafe { entry.assume_init() })))
     })
 }
+*/
 
 /// Temporary structure which helps with non trivial multi relationship joins
-pub struct JoinTable<'a, const N: usize> {
+pub struct JoinTable<'a, const VAR_COUNT: usize, const COMP_COUNT: usize> {
     pub world: &'a World,
-    pub filled: [bool; N],
-    pub rows: Vec<[Entity; N]>,
+    /// says which variables are already resolved
+    pub filled: [bool; VAR_COUNT],
+    pub rows: Vec<([Entity; VAR_COUNT], [*const u8; COMP_COUNT])>,
 }
 
-impl<'a, const COLUMN_COUNT: usize> JoinTable<'a, { COLUMN_COUNT }> {
-    pub fn new(world: &'a World) -> Self {
-        JoinTable {
-            world,
-            filled: [false; COLUMN_COUNT],
-            rows: Vec::new(),
-        }
-    }
+struct QueryWorker<'world, const VAR_COUNT: usize, const COMP_COUNT: usize> {
+    world: &'world World,
+    result: ([Entity; VAR_COUNT], [*const u8; COMP_COUNT]),
+}
 
-    pub fn new_init(
-        world: &'a World,
-        relations: &[Relation],
-        components: &[Component],
-        _unequals: &[(usize, usize)],
-        _uncomponents: &[Component], // Not needed anymore
-        _unrelations: &[Relation],
-        prefill: &[(usize, Entity)],
-    ) -> Self {
-        let _bk = &world.bookkeeping;
-        let join_table = JoinTable::new(world);
-        // init
-        match (
-            components.is_empty(),
-            prefill.is_empty(),
-            relations.is_empty(),
-        ) {
-            (true, true, true) => {}
-            (false, true, true) => {
-                //join_table.init_from_component(components[0]);
-                //join_table.join_components(&components[1..]);
-                if COLUMN_COUNT > 1 {
-                    unimplemented!("Cross Joins are not supported.")
-                }
-                todo!();
-            }
-            (_, true, false) => {
-                //let joins = compute_join_order(&relations);
-                //join_table.init_from_relation(joins[0]);
-                //join_table.join_relations(&joins[1..]);
-                todo!();
-            }
-            (_, false, true) => {
-                //join_table.prefill_columns(prefill);
-                //join_table.join_components(&components);
-                todo!();
-            }
-            (_, false, false) => {
-                //let joins = compute_join_order(&relations);
-                //join_table.prefill_columns(prefill);
-                //join_table.join_relations(&joins);
-                todo!();
-            }
-        }
-        //join_table.join_uncomponents(&uncomponents);
-        //join_table.join_unrelations(&unrelations);
-        //join_table.remove_by_constraint_unequals(unequals);
-        debug_assert!(join_table.filled.iter().all(|filled| *filled));
-        join_table
-    }
+struct QueryIterator<'world, 'me, const VAR_COUNT: usize, const COMP_COUNT: usize> {
+    state: &'me mut QueryWorker<'world, VAR_COUNT, COMP_COUNT>,
+}
 
-    pub fn new_no_relation(
-        world: &'a World,
-        _components: &[Component],
-        _uncomponents: &[Component],
-    ) -> Self {
-        let join_table = JoinTable::new(world);
-        //let cid_a = bk.get_component_id(TypeId::of::<RefCell<CompA>>()).unwrap();
-        //let cid_b = bk.get_component_id(TypeId::of::<RefCell<CompB>>()).unwrap();
-        //let archetypes = bk.matching_archetypes(&[cid_a, cid_b], &[]);
-        debug_assert!(join_table.filled.iter().all(|filled| *filled));
-        join_table
+impl<'world, 'me, const VAR_COUNT: usize, const COMP_COUNT: usize> Iterator
+    for QueryIterator<'world, 'me, VAR_COUNT, COMP_COUNT>
+{
+    type Item<'a> = &'a ([Entity; VAR_COUNT], [*const u8; COMP_COUNT]);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let r = &self.state.result;
+        let r = unsafe { std::mem::transmute(r) };
+        Some(r)
     }
+}
+
+fn foobar() {
+    let world = World::new();
+    let mut state = QueryWorker {
+        world: &world,
+        result: ([], []),
+    };
+    let mut iterator = QueryIterator { state: &mut state };
+    let a = iterator.next();
+    let b = iterator.next();
 }
