@@ -53,34 +53,19 @@ pub struct JoinTable<'a, const VAR_COUNT: usize, const COMP_COUNT: usize> {
     pub rows: Vec<([Entity; VAR_COUNT], [*const u8; COMP_COUNT])>,
 }
 
-struct QueryWorker<'world, const VAR_COUNT: usize, const COMP_COUNT: usize> {
-    world: &'world World,
-    result: ([Entity; VAR_COUNT], [*const u8; COMP_COUNT]),
+pub struct QueryWorker<'world, const VAR_COUNT: usize, const COMP_COUNT: usize> {
+    pub world: &'world World,
+    pub result_entities: [Entity; VAR_COUNT],
+    pub result_components: [*const u8; COMP_COUNT],
 }
 
-struct QueryIterator<'world, 'me, const VAR_COUNT: usize, const COMP_COUNT: usize> {
-    state: &'me mut QueryWorker<'world, VAR_COUNT, COMP_COUNT>,
-}
-
-impl<'world, 'me, const VAR_COUNT: usize, const COMP_COUNT: usize> Iterator
-    for QueryIterator<'world, 'me, VAR_COUNT, COMP_COUNT>
+impl<'world, const VAR_COUNT: usize, const COMP_COUNT: usize>
+    QueryWorker<'world, VAR_COUNT, COMP_COUNT>
 {
-    type Item<'a> = &'a ([Entity; VAR_COUNT], [*const u8; COMP_COUNT]);
+    // returns true if it produced a new result
+    // returns false if execution can not continue
+    pub fn process() -> bool {
 
-    fn next(&mut self) -> Option<Self::Item> {
-        let r = &self.state.result;
-        let r = unsafe { std::mem::transmute(r) };
-        Some(r)
+        false
     }
-}
-
-fn foobar() {
-    let world = World::new();
-    let mut state = QueryWorker {
-        world: &world,
-        result: ([], []),
-    };
-    let mut iterator = QueryIterator { state: &mut state };
-    let a = iterator.next();
-    let b = iterator.next();
 }
