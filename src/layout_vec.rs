@@ -30,6 +30,10 @@ impl LayoutVec {
         }
     }
 
+    pub fn element_size(&self) -> usize {
+        self.element_size as usize
+    }
+
     pub fn len(&self) -> u32 {
         self.len
     }
