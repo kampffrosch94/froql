@@ -1,0 +1,3 @@
+* TODO CI setup
+** Insta
+set ~export CI=true~ in CI
