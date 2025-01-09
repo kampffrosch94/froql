@@ -1,0 +1,16 @@
+---
+source: src/generator.rs
+expression: "generate_fsm_context(&vars,&components, &relations)"
+---
+// result set
+const VAR_COUNT: usize = 2;
+let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
+let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+
+// general context for statemachine
+let mut current_step = 0;
+let mut a_max_rows = [0; VAR_COUNT];
+let mut a_next_indexes = [usize::MAX; VAR_COUNT];
+let mut col_indexes = [usize::MAX; 5];
+
+let mut rel_index_2 = 0;

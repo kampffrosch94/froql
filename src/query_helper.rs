@@ -278,7 +278,6 @@ mod test {
 
             // result set
             const VAR_COUNT: usize = 2;
-            const REL_COUNT: usize = 1;
             let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
             let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
 

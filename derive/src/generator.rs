@@ -41,6 +41,31 @@ fn generate_archetype_sets(
     result
 }
 
+
+fn generate_fsm_context(
+    vars: &[isize],
+    component: &[Component],
+    relations: &[Relation],
+) -> String {
+    let var_count = vars.len();
+    let col_count = component.len() + relations.len() * 2;
+    let mut result = format!("
+// result set
+const VAR_COUNT: usize = {var_count};
+let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
+let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+
+// general context for statemachine
+let mut current_step = 0;
+let mut a_max_rows = [0; VAR_COUNT];
+let mut a_next_indexes = [usize::MAX; VAR_COUNT];
+let mut col_indexes = [usize::MAX; {col_count}];
+
+let mut rel_index_2 = 0; <================= TODO
+");
+    result
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -59,5 +84,13 @@ mod test {
         let relations = [];
         let vars = vec![0];
         insta::assert_snapshot!(generate_archetype_sets(&vars, &components, &relations));
+    }
+
+    #[test]
+    fn test_generate_result_set() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let relations = vec![("Attack".into(), 1, 0)];
+        let vars = vec![0, 1];
+        insta::assert_snapshot!(generate_fsm_context(&vars,&components, &relations));
     }
 }
