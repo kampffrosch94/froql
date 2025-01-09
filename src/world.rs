@@ -528,9 +528,6 @@ mod test {
             let components_me = [
                 world.get_component_id::<Unit>(),
                 world.get_component_id::<Health>(),
-                // We know its a relation in the query
-                // the component id code in world switches on size and wraps in a RefCell
-                // so its not suitable to use for relations
                 bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>())
                     .flip_target(),
             ];

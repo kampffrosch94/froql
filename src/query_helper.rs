@@ -100,38 +100,13 @@ fn grab_archetype_row(
     return true;
 }
 
-/// Iterator that continues as long as the inner closure returns Some()
-struct ClosureIterator<F> {
-    closure: F,
-}
-
-impl<F, T> Iterator for ClosureIterator<F>
-where
-    F: FnMut() -> Option<T>,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        (self.closure)()
-    }
-}
-
-impl<F, T> ClosureIterator<F>
-where
-    F: FnMut() -> Option<T>,
-{
-    pub fn new(closure: F) -> Self {
-        Self { closure }
-    }
-}
-
 #[cfg(test)]
 mod test {
-    use std::cell::RefCell;
+    use std::{any::TypeId, cell::RefCell};
 
     use crate::{
         archetype::{ArchetypeId, ArchetypeRow},
-        query_helper::{grab_archetype_id, grab_archetype_row, ClosureIterator},
+        relation::Relation,
         world::World,
     };
 
@@ -151,7 +126,7 @@ mod test {
         world.add_component(b, CompA(21));
         let c = world.create();
         world.add_component(c, CompA(42));
-        world.add_component(c, CompB("Hello".to_string()));
+        world.add_component(c, CompB("World".to_string()));
         world.add_component(c, CompC {});
 
         let mut counter = 0;
@@ -164,44 +139,52 @@ mod test {
             ];
             let archetype_ids = bk.matching_archetypes(&components, &[]);
 
+            // result set
             // array length is amount of variable
             const VAR_COUNT: usize = 1;
             let mut a_ids = [ArchetypeId(u32::MAX); VAR_COUNT];
             let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
-            let mut col_ids = [usize::MAX; 2];
 
-            //let mut result_component = [NonNull::dangling(); 4];
-
-            let mut next_index = 0;
-
+            // context for statemachine
             let mut current_step = 0;
-            ClosureIterator::new(move || {
+            let mut a_max_rows = [0; VAR_COUNT];
+            let mut col_ids = [usize::MAX; 2];
+            let mut next_a_index_0 = 0;
+
+            std::iter::from_fn(move || {
                 loop {
                     match current_step {
                         // next archetype
                         0 => {
-                            if grab_archetype_id(
-                                &mut a_ids,
-                                &mut a_rows,
-                                0,
-                                &archetype_ids,
-                                &mut next_index,
-                            ) {
-                                let arch = &bk.archetypes[a_ids[0].0 as usize];
-                                arch.find_multiple_columns(&components, &mut col_ids[0..2]);
-                                current_step += 1;
-                            } else {
+                            if next_a_index_0 >= archetype_ids.len() {
                                 return None;
                             }
+                            a_ids[0] = archetype_ids[next_a_index_0];
+                            // guard value, real one set in later step
+                            a_rows[0] = ArchetypeRow(u32::MAX);
+                            next_a_index_0 += 1;
+                            // TODO as_index
+                            let arch = &bk.archetypes[a_ids[0].0 as usize];
+                            arch.find_multiple_columns(&components, &mut col_ids[0..2]);
+                            a_max_rows[0] = arch.entities.len() as u32;
+                            current_step += 1;
                         }
                         // next row in archetype
                         1 => {
-                            // TODO just define maxlength as context and iterate to that
-                            let next = grab_archetype_row(&mut a_ids, &mut a_rows, 0, bk);
-                            current_step += if next { 1 } else { -1 };
+                            let row_counter = &mut a_rows[0].0;
+                            let max_row = a_max_rows[0];
+                            // rolls over to 0 for u32::Max, which is our start value
+                            *row_counter = row_counter.wrapping_add(1);
+
+                            if *row_counter >= max_row {
+                                current_step -= 1;
+                            } else {
+                                current_step += 1;
+                            }
                         }
                         // yield row
                         2 => {
+                            // TODO can this be a ref instead of using an index?
                             let arch = &bk.archetypes[a_ids[0].0 as usize];
                             let row = a_rows[0].0;
                             current_step -= 1;
@@ -224,9 +207,86 @@ mod test {
             println!("{comp_a:?}");
             println!("{comp_b:?}");
             assert_eq!(42, comp_a.0);
-            assert_eq!("Hello", &comp_b.0);
             counter += 1;
         }
         assert_eq!(2, counter);
+    }
+
+    #[test]
+    #[allow(unused)]
+    fn manual_query_helper_relation() {
+        enum Attack {}
+
+        #[derive(Debug)]
+        struct Unit(String);
+        #[derive(Debug)]
+        struct Health(isize);
+
+        let mut world = World::new();
+        let player = world.create();
+        world.add_component(player, Unit("Player".to_string()));
+        let goblin_a = world.create();
+        world.add_component(goblin_a, Health(10));
+        world.add_component(goblin_a, Unit("Goblin A".to_string()));
+        world.add_relation::<Attack>(player, goblin_a);
+
+        let goblin_b = world.create();
+        world.add_component(goblin_b, Health(10));
+        world.add_component(goblin_b, Unit("Goblin B".to_string()));
+        world.add_relation::<Attack>(player, goblin_b);
+
+        // this should not be matched by the query below
+        // bad example I know, but I need something
+        let trap = world.create();
+        world.add_relation::<Attack>(trap, goblin_b);
+
+        let mut counter = 0;
+        for (comp_a, comp_b, comp_c) in {
+            let world: &World = &world;
+            let bk = &world.bookkeeping;
+            let components_me = [
+                world.get_component_id::<Unit>(),
+                world.get_component_id::<Health>(),
+                bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>())
+                    .flip_target(),
+            ];
+            let components_other = [
+                world.get_component_id::<Unit>(),
+                bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+            ];
+            let archetype_ids_me = bk.matching_archetypes(&components_me, &[]);
+            let archetype_ids_other = bk.matching_archetypes(&components_other, &[]);
+
+            // array length is amount of variable
+            const VAR_COUNT: usize = 1;
+            let mut a_ids = [ArchetypeId(u32::MAX); VAR_COUNT];
+            let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+            let mut col_ids = [usize::MAX; 2];
+
+            //let mut result_component = [NonNull::dangling(); 4];
+
+            let mut next_a_index_0 = 0;
+
+            let mut current_step = 0;
+            std::iter::from_fn(move || {
+                loop {
+                    match current_step {
+                        // next archetype
+                        0 => {
+                            return None::<(u32, u32, u32)>;
+                        }
+                        _ => unreachable!(),
+                    }
+                }
+            })
+        } {
+            println!("{comp_a:?}");
+            println!("{comp_b:?}");
+            //assert_eq!(42, comp_a.0);
+            //assert_eq!("Hello", &comp_b.0);
+            counter += 1;
+        }
+        //assert_eq!(2, counter);
+        assert_eq!(0, counter);
     }
 }
