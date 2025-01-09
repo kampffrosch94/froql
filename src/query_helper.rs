@@ -138,7 +138,6 @@ mod test {
                 world.get_component_id::<CompB>(),
             ];
             let archetype_ids = bk.matching_archetypes(&components, &[]);
-            assert!(archetype_ids.len() >= 1, "TODO early return");
 
             // result set
             const VAR_COUNT: usize = 1;
@@ -185,7 +184,6 @@ mod test {
                         }
                         // yield row
                         2 => {
-                            // TODO can this be a ref instead of using an index?
                             let arch = a_refs[0];
                             let row = a_rows[0].0;
                             current_step -= 1;
