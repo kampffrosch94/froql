@@ -102,7 +102,7 @@ fn grab_archetype_row(
 
 #[cfg(test)]
 mod test {
-    use std::{any::TypeId, cell::RefCell};
+    use std::{any::TypeId, cell::RefCell, ops::Range};
 
     use crate::{
         archetype::{ArchetypeId, ArchetypeRow},
@@ -148,7 +148,8 @@ mod test {
             let mut current_step = 0;
             let mut a_max_rows = [0; VAR_COUNT];
             let mut col_ids = [usize::MAX; 2];
-            let mut next_a_index_0 = 0;
+            // gets rolled over to 0 by wrapping_add
+            let mut a_next_indexes = [usize::MAX; VAR_COUNT];
             let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 
             std::iter::from_fn(move || {
@@ -156,23 +157,31 @@ mod test {
                     match current_step {
                         // next archetype
                         0 => {
-                            if next_a_index_0 >= archetype_ids.len() {
+                            const CURRENT_VAR: usize = 0;
+                            const CURRENT_VAR_COMPONENTS: Range<usize> = 0..2;
+                            let next_index = &mut a_next_indexes[CURRENT_VAR];
+                            *next_index = next_index.wrapping_add(1);
+                            if *next_index >= archetype_ids.len() {
                                 return None;
                             }
-                            a_ids[0] = archetype_ids[next_a_index_0];
+                            a_ids[CURRENT_VAR] = archetype_ids[*next_index];
+
                             // gets rolled over to 0 by wrapping_add
                             a_rows[0] = ArchetypeRow(u32::MAX);
-                            next_a_index_0 += 1;
-                            let a_ref = &mut a_refs[0];
-                            *a_ref = &bk.archetypes[a_ids[0].as_index()];
-                            a_ref.find_multiple_columns(&components, &mut col_ids[0..2]);
+                            let a_ref = &mut a_refs[CURRENT_VAR];
+                            *a_ref = &bk.archetypes[a_ids[CURRENT_VAR].as_index()];
+                            a_ref.find_multiple_columns(
+                                &components,
+                                &mut col_ids[CURRENT_VAR_COMPONENTS],
+                            );
                             a_max_rows[0] = a_ref.entities.len() as u32;
                             current_step += 1;
                         }
                         // next row in archetype
                         1 => {
-                            let row_counter = &mut a_rows[0].0;
-                            let max_row = a_max_rows[0];
+                            const CURRENT_VAR: usize = 0;
+                            let row_counter = &mut a_rows[CURRENT_VAR].0;
+                            let max_row = a_max_rows[CURRENT_VAR];
                             // rolls over to 0 for u32::MAX, which is our start value
                             *row_counter = row_counter.wrapping_add(1);
 
