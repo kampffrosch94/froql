@@ -1,0 +1,12 @@
+---
+source: src/generator.rs
+expression: "generate_archetype_sets(&vars, &components, &relations)"
+---
+let components_0 = [
+    world.get_component_id::<Pos>(),
+    world.get_component_id::<Speed>(),
+];
+
+let archetype_id_sets = [
+    bk.matching_archetypes(&components_0, &[]),
+];

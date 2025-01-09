@@ -1,6 +1,4 @@
-use proc_macro::{
-    Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree,
-};
+use proc_macro::{Delimiter, Group, Ident, Literal, Punct, Spacing, Span, TokenStream, TokenTree};
 
 // mostly taken from syn
 pub struct MacroError {
@@ -13,13 +11,21 @@ impl MacroError {
     pub fn slice(arr: &[TokenTree], message: String) -> Self {
         let end = arr.last().expect(&message).span();
         let start = arr[0].span();
-        Self { start, end, message }
+        Self {
+            start,
+            end,
+            message,
+        }
     }
 
     pub fn start_end(start: &TokenTree, end: &TokenTree, message: String) -> Self {
         let start = start.span();
         let end = end.span();
-        Self { start, end, message }
+        Self {
+            start,
+            end,
+            message,
+        }
     }
 
     pub fn to_compile_error(&self) -> TokenStream {

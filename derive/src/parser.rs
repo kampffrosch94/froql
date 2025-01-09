@@ -59,9 +59,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
     use TokenTree as TT;
     if tokens.len() == 1 {
         return match &tokens[0] {
-            TT::Ident(ty) => {
-                Ok(Term::ComponentVar(ty.to_string(), VK::Var("this".to_string())))
-            }
+            TT::Ident(ty) => Ok(Term::ComponentVar(
+                ty.to_string(),
+                VK::Var("this".to_string()),
+            )),
             x => error!(tokens, "Expected Component, got {x:?}"),
         };
     }
@@ -87,7 +88,9 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             x @ (TT::Ident(ty), TT::Group(group)) => {
                 let ty = ty.to_string();
                 let mut iter = group.stream().into_iter();
-                let first = iter.next().expect("Expected type for Component or Relation");
+                let first = iter
+                    .next()
+                    .expect("Expected type for Component or Relation");
                 let second = iter.next(); // TODO inline
                 let third = iter.next();
                 let fourth = iter.next();
@@ -101,12 +104,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         }
                         Ok(Term::ComponentVar(ty, VK::InVar(var.to_string())))
                     }
-                    (
-                        TT::Ident(rel_a),
-                        Some(TT::Punct(comma)),
-                        Some(TT::Ident(rel_b)),
-                        None,
-                    ) => {
+                    (TT::Ident(rel_a), Some(TT::Punct(comma)), Some(TT::Ident(rel_b)), None) => {
                         if !(comma.as_char() == ',') {
                             error_single!(second.as_ref().unwrap(), "Expected ','");
                         }
@@ -152,7 +150,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                             RVK::InVar(rel_b.to_string()),
                         ))
                     }
-                    _ => error!(tokens, "expected Component(var) or Relation(a,b), got {x:?}"),
+                    _ => error!(
+                        tokens,
+                        "expected Component(var) or Relation(a,b), got {x:?}"
+                    ),
                 }
             }
             (TT::Punct(punct), TT::Ident(ident)) => match punct.as_char() {
@@ -289,7 +290,11 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 }
             }
             _ => {
-                error!(tokens, "expected <mut|_|!> Component(var), got {tokens:?} {}", line!())
+                error!(
+                    tokens,
+                    "expected <mut|_|!> Component(var), got {tokens:?} {}",
+                    line!()
+                )
             }
         };
     }

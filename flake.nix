@@ -51,6 +51,7 @@
             cargo-machete
             cargo-expand
             cargo-criterion
+            cargo-insta
           ];
         };
       });

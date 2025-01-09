@@ -1,0 +1,19 @@
+---
+source: src/generator.rs
+expression: "generate_archetype_sets(&vars, &components, &relations)"
+---
+let components_0 = [
+    world.get_component_id::<Unit>(),
+    world.get_component_id::<Health>(),
+    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()).flip_target(),
+];
+
+let components_1 = [
+    world.get_component_id::<Unit>(),
+    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+];
+
+let archetype_id_sets = [
+    bk.matching_archetypes(&components_0, &[]),
+    bk.matching_archetypes(&components_1, &[]),
+];

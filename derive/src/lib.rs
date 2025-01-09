@@ -1,5 +1,7 @@
+#![allow(unused)] // TODO remove once cleaned up
 extern crate proc_macro;
 
+mod generator;
 mod macro_error;
 mod parser;
 
@@ -22,9 +24,9 @@ pub fn query(input: TokenStream) -> TokenStream {
 }
 
 /// RelationType, from_var, to_var
-type Relation = (String, isize, isize);
+pub(crate) type Relation = (String, isize, isize);
 /// ComponentType, source_var
-type Component = (String, isize);
+pub(crate) type Component = (String, isize);
 
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
