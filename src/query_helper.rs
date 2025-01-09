@@ -138,9 +138,9 @@ mod test {
                 world.get_component_id::<CompB>(),
             ];
             let archetype_ids = bk.matching_archetypes(&components, &[]);
+            assert!(archetype_ids.len() >= 1, "TODO early return");
 
             // result set
-            // array length is amount of variable
             const VAR_COUNT: usize = 1;
             let mut a_ids = [ArchetypeId(u32::MAX); VAR_COUNT];
             let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
@@ -150,6 +150,7 @@ mod test {
             let mut a_max_rows = [0; VAR_COUNT];
             let mut col_ids = [usize::MAX; 2];
             let mut next_a_index_0 = 0;
+            let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 
             std::iter::from_fn(move || {
                 loop {
@@ -160,20 +161,20 @@ mod test {
                                 return None;
                             }
                             a_ids[0] = archetype_ids[next_a_index_0];
-                            // guard value, real one set in later step
+                            // gets rolled over to 0 by wrapping_add
                             a_rows[0] = ArchetypeRow(u32::MAX);
                             next_a_index_0 += 1;
-                            // TODO as_index
-                            let arch = &bk.archetypes[a_ids[0].0 as usize];
-                            arch.find_multiple_columns(&components, &mut col_ids[0..2]);
-                            a_max_rows[0] = arch.entities.len() as u32;
+                            let a_ref = &mut a_refs[0];
+                            *a_ref = &bk.archetypes[a_ids[0].as_index()];
+                            a_ref.find_multiple_columns(&components, &mut col_ids[0..2]);
+                            a_max_rows[0] = a_ref.entities.len() as u32;
                             current_step += 1;
                         }
                         // next row in archetype
                         1 => {
                             let row_counter = &mut a_rows[0].0;
                             let max_row = a_max_rows[0];
-                            // rolls over to 0 for u32::Max, which is our start value
+                            // rolls over to 0 for u32::MAX, which is our start value
                             *row_counter = row_counter.wrapping_add(1);
 
                             if *row_counter >= max_row {
@@ -185,7 +186,7 @@ mod test {
                         // yield row
                         2 => {
                             // TODO can this be a ref instead of using an index?
-                            let arch = &bk.archetypes[a_ids[0].0 as usize];
+                            let arch = a_refs[0];
                             let row = a_rows[0].0;
                             current_step -= 1;
                             return Some(unsafe {

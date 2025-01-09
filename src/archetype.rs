@@ -9,6 +9,12 @@ pub struct ArchetypeRow(pub u32);
 #[derive(Clone, Copy, Debug)]
 pub struct ArchetypeColumn(pub u32);
 
+impl ArchetypeId {
+    pub fn as_index(&self) -> usize {
+        self.0 as usize
+    }
+}
+
 /// Standin for erased types
 pub enum Erased {}
 pub type ErasedPointer = *const RefCell<Erased>;
