@@ -107,7 +107,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                             prefills.insert((var, var_name.clone()));
                         }
                     }
-                    components.push((ty, var));
+                    components.push((ty.clone(), var));
                     accessors.push(Accessor::Component(ty, comp_access_count));
                     comp_access_count += 1;
                 }
@@ -120,7 +120,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                             prefills.insert((var, var_name.clone()));
                         }
                     }
-                    components.push((ty, var));
+                    components.push((ty.clone(), var));
                     accessors.push(Accessor::Component(ty, comp_access_count));
                     comp_access_count += 1;
                 }
@@ -291,9 +291,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     assert_eq!(unrelations.len(), 0);
     assert_eq!(prefills.len(), 0);
 
-    let components = components.join(", ");
-    let uncomponents = uncomponents.join(", ");
-    let accessors = accessors.join(",\n");
     let column_count = variables.variables.len();
     let component_count = components.len();
 
@@ -325,26 +322,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         "
 {{
     let world: &World = &{world};
-    let relations = [
-        {relations}
-    ];
-
-    let components = [
-        {components}
-    ];
-
-    let unequals = [ {unequals} ];
-    let uncomponents = [ {uncomponents} ];
-    let unrelations = [ {unrelations} ];
-    let prefills = [ {prefills} ];
-
-    unsafe {{ relation_join_iter_components::<{column_count}, {component_count}>
-    (&world, &relations, components, &unequals, &uncomponents, &unrelations, &prefills) }}
-        .map(|(_row, component_ptrs)| {{
-            (
-            {accessors}
-            )
-        }})
 }}
 "
     );
