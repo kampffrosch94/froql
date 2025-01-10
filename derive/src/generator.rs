@@ -1,14 +1,13 @@
 use crate::{Component, Relation};
 
 fn generate_archetype_sets(
+    result: &mut String,
     vars: &[isize],
     component: &[Component],
     relations: &[Relation],
-) -> String {
+) {
     assert_ne!(0, component.len() + relations.len());
     assert_ne!(0, vars.len());
-
-    let mut result = String::new();
 
     for var in vars {
         result.push_str(&format!("let components_{var} = ["));
@@ -38,18 +37,18 @@ fn generate_archetype_sets(
         ));
     }
     result.push_str("];\n\n");
-    result
 }
 
-
 fn generate_fsm_context(
+    result: &mut String,
     vars: &[isize],
     component: &[Component],
     relations: &[Relation],
-) -> String {
+) {
     let var_count = vars.len();
     let col_count = component.len() + relations.len() * 2;
-    let mut result = format!("
+    result.push_str(&format!(
+        "
 // result set
 const VAR_COUNT: usize = {var_count};
 let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
@@ -61,9 +60,10 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; {col_count}];
 
+// context for this specific statemachine
 let mut rel_index_2 = 0; <================= TODO
-");
-    result
+"
+    ));
 }
 
 #[cfg(test)]
@@ -75,7 +75,11 @@ mod test {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
         let vars = vec![0, 1];
-        insta::assert_snapshot!(generate_archetype_sets(&vars, &components, &relations));
+        let mut result = String::new();
+        insta::assert_snapshot!({
+            generate_archetype_sets(&mut result, &vars, &components, &relations);
+            result
+        });
     }
 
     #[test]
@@ -83,7 +87,11 @@ mod test {
         let components = vec![("Pos".into(), 0), ("Speed".into(), 0)];
         let relations = [];
         let vars = vec![0];
-        insta::assert_snapshot!(generate_archetype_sets(&vars, &components, &relations));
+        let mut result = String::new();
+        insta::assert_snapshot!({
+            generate_archetype_sets(&mut result, &vars, &components, &relations);
+            result
+        });
     }
 
     #[test]
@@ -91,6 +99,10 @@ mod test {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
         let vars = vec![0, 1];
-        insta::assert_snapshot!(generate_fsm_context(&vars,&components, &relations));
+        let mut result = String::new();
+        insta::assert_snapshot!({
+            generate_fsm_context(&mut result, &vars, &components, &relations);
+            result
+        });
     }
 }

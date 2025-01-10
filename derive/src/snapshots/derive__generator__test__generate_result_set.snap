@@ -1,6 +1,6 @@
 ---
 source: src/generator.rs
-expression: "generate_fsm_context(&vars,&components, &relations)"
+expression: "{ generate_fsm_context(&mut result, &vars, &components, &relations); result }"
 ---
 // result set
 const VAR_COUNT: usize = 2;
@@ -13,4 +13,5 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
-let mut rel_index_2 = 0;
+// context for this specific statemachine
+let mut rel_index_2 = 0; <================= TODO
