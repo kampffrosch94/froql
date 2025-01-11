@@ -46,6 +46,7 @@ fn generate_archetype_sets(
         ));
     }
     result.push_str("];\n\n");
+    return Vec::new();
 }
 
 fn generate_fsm_context(
