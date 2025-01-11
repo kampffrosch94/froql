@@ -59,11 +59,26 @@ let mut current_step = 0;
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; {col_count}];
-
-// context for this specific statemachine
-let mut rel_index_2 = 0; <================= TODO
 "
     ));
+}
+
+fn generate_resumeable_query_closure(
+    result: &mut String,
+    vars: &[isize],
+    component: &[Component],
+    relations: &[Relation],
+) {
+    result.push_str(
+        "
+// context for this specific statemachine
+let mut rel_index_2 = 0; <================= TODO
+
+std::iter::fstd::iter::from_fn(move || { loop { match current_step {
+    _ => unreachable!(),
+}}})
+",
+    );
 }
 
 #[cfg(test)]
@@ -102,6 +117,18 @@ mod test {
         let mut result = String::new();
         insta::assert_snapshot!({
             generate_fsm_context(&mut result, &vars, &components, &relations);
+            result
+        });
+    }
+
+    #[test]
+    fn test_generate_resumeable_query_closure() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let relations = vec![("Attack".into(), 1, 0)];
+        let vars = vec![0, 1];
+        let mut result = String::new();
+        insta::assert_snapshot!({
+            generate_resumeable_query_closure(&mut result, &vars, &components, &relations);
             result
         });
     }

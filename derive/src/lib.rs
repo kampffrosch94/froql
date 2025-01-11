@@ -1,4 +1,3 @@
-#![allow(unused)] // TODO remove once cleaned up
 extern crate proc_macro;
 
 mod generator;
@@ -59,6 +58,7 @@ impl VariableStore {
     }
 }
 
+#[allow(unused)] // TODO remove once cleaned up
 fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     //dbg!(&input);
 

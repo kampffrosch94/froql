@@ -12,6 +12,3 @@ let mut current_step = 0;
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
-
-// context for this specific statemachine
-let mut rel_index_2 = 0; <================= TODO
