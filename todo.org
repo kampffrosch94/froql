@@ -1,3 +1,9 @@
+* TODO query generation
+** Queries involving ZSTs
+- ZST are not stored in archetype
+  - need to search for them when creating archetype sets
+  - don't need them in output array, can just create from NonNull::dangling()
 * TODO CI setup
 ** Insta
 set ~export CI=true~ in CI
+

@@ -1,17 +1,26 @@
+use std::{collections::HashMap, ops::Range};
+
 use crate::{Component, Relation};
+
+struct VarInfo {
+    /// other var index, index for relation component
+    related_with: HashMap<isize, usize>,
+    /// indexes in component array
+    component_range: Range<usize>,
+}
 
 fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
-    component: &[Component],
+    components: &[Component],
     relations: &[Relation],
-) {
-    assert_ne!(0, component.len() + relations.len());
+) -> Vec<VarInfo> {
+    assert_ne!(0, components.len() + relations.len());
     assert_ne!(0, vars.len());
 
     for var in vars {
         result.push_str(&format!("let components_{var} = ["));
-        for (ty, _) in component.iter().filter(|(_, id)| id == var) {
+        for (ty, _) in components.iter().filter(|(_, id)| id == var) {
             result.push_str(&format!("\n    world.get_component_id::<{ty}>(),"));
         }
         // relation from
@@ -42,11 +51,11 @@ fn generate_archetype_sets(
 fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
-    component: &[Component],
+    components: &[Component],
     relations: &[Relation],
 ) {
     let var_count = vars.len();
-    let col_count = component.len() + relations.len() * 2;
+    let col_count = components.len() + relations.len() * 2;
     result.push_str(&format!(
         "
 // result set
@@ -66,7 +75,7 @@ let mut col_indexes = [usize::MAX; {col_count}];
 fn generate_resumeable_query_closure(
     result: &mut String,
     vars: &[isize],
-    component: &[Component],
+    components: &[Component],
     relations: &[Relation],
 ) {
     result.push_str(
@@ -79,6 +88,28 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {
 }}})
 ",
     );
+}
+
+pub fn compute_join_order(relations: &[Relation]) -> Vec<Relation> {
+    let mut joined: Vec<Relation> = Vec::new();
+    let mut avail: Vec<Relation> = Vec::from(relations);
+    joined.push(avail.pop().unwrap());
+    for _ in 0..avail.len() {
+        let new = avail.iter().position(|(_, c, d)| {
+            joined
+                .iter()
+                .any(|(_, a, b)| b == c || a == c || a == d || b == d)
+        });
+        if let Some(pos) = new {
+            // surely there is a better way to go about this
+            // prototype code atm
+            let rel = avail.remove(pos);
+            joined.push(rel);
+        } else {
+            panic!("Cross joins are not supported. Use nested queries instead.");
+        }
+    }
+    return joined;
 }
 
 #[cfg(test)]
@@ -131,5 +162,20 @@ mod test {
             generate_resumeable_query_closure(&mut result, &vars, &components, &relations);
             result
         });
+    }
+
+    #[test]
+    fn test_compute_join_order() {
+        let relations = vec![("Attack".into(), 1, 0), ("Bla".into(), 0, 1)];
+        let joined = compute_join_order(&relations);
+        let s = joined
+            .iter()
+            .map(|(ty, from, to)| format!("({ty}, {from}, {to})"))
+            .collect::<Vec<_>>()
+            .join("\n");
+        insta::assert_snapshot!(s, @r#"
+        (Bla, 0, 1)
+        (Attack, 1, 0)
+        "#);
     }
 }
