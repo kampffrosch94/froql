@@ -2,6 +2,7 @@
 use std::collections::BTreeMap;
 // TODO remove once finished
 use std::fmt::Debug;
+use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
 use crate::{Accessor, Component, Relation};
@@ -164,7 +165,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
 }}
 "
         ));
-        // TODO get row from first
+        // get row from first archetype
         append.push_str(&format!(
             "
 // next row in archetype
@@ -246,27 +247,44 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
 
     // yield row
     count += 1;
-    append.push_str(&format!(
+    write!(
+        &mut append,
         "
 // yield row
 {count} => {{
     current_step -= 1;
     return Some(unsafe {{
-        (
-            (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
-                as *const RefCell<Unit>))
-                .borrow(),
-            (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
-                as *const RefCell<Unit>))
-                .borrow(),
-            (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
-                as *const RefCell<Health>))
-                .borrow_mut(),
+        ("
+    )
+    .unwrap();
+    for accessor in accessors {
+        // TODO access mut
+        match accessor {
+            Accessor::Component(ty, var) => {
+                let col = infos[*var as usize].components[ty];
+                write!(
+                    &mut append,
+                    "
+            (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
+                as *const RefCell<{ty}>))
+                .borrow(),"
+                )
+                .unwrap();
+            }
+            Accessor::EntityVar(_) => {
+                todo!();
+            }
+        }
+    }
+    write!(
+        &mut append,
+        "
         )
     }});
 }}
 "
-    ));
+    )
+    .unwrap();
 
     // close the scope
     append.push_str(

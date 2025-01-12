@@ -30,8 +30,8 @@ pub(crate) type Component = (String, isize);
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
 pub(crate) enum Accessor {
-    /// ComponentType, index_in_result_array
-    Component(String, usize),
+    /// ComponentType, index_in_result_array, var
+    Component(String, isize),
     /// var index in result
     EntityVar(isize),
 }
@@ -88,8 +88,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut unrelations = Vec::new();
     let mut prefills = HashSet::new();
 
-    let mut comp_access_count: usize = 0;
-
     loop {
         let next = iter.next();
 
@@ -110,8 +108,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                     }
                     components.push((ty.clone(), var));
-                    accessors.push(Accessor::Component(ty, comp_access_count));
-                    comp_access_count += 1;
+                    accessors.push(Accessor::Component(ty, var));
                 }
                 Term::MutComponentVar(ty, ref varkind @ VK::Var(ref var_name))
                 | Term::MutComponentVar(ty, ref varkind @ VK::InVar(ref var_name)) => {
@@ -123,8 +120,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                     }
                     components.push((ty.clone(), var));
-                    accessors.push(Accessor::Component(ty, comp_access_count));
-                    comp_access_count += 1;
+                    accessors.push(Accessor::Component(ty, var));
                 }
                 Term::NoOutComponentVar(ty, ref varkind @ VK::Var(ref var_name))
                 | Term::NoOutComponentVar(ty, ref varkind @ VK::InVar(ref var_name)) => {
