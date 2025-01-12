@@ -196,6 +196,8 @@ impl World {
 
 #[cfg(test)]
 mod test {
+    use derive::query;
+
     use crate::{
         archetype::ArchetypeId,
         component::{CASCADING_DESTRUCT, EXCLUSIVE, SYMMETRIC},
@@ -588,6 +590,53 @@ mod test {
                 })
             })
         } {
+            println!("{me:?} attacked by {other:?}");
+            hp.0 -= 5;
+            println!("Hp now: {hp:?}");
+            counter += 1;
+        }
+        assert_eq!(2, counter);
+    }
+
+    #[test]
+    fn proc_query_relation() {
+        enum Attack {}
+
+        #[derive(Debug)]
+        struct Unit(String);
+        #[derive(Debug)]
+        struct Health(isize);
+
+        let mut world = World::new();
+        let player = world.create();
+        world.add_component(player, Unit("Player".to_string()));
+        let goblin_a = world.create();
+        world.add_component(goblin_a, Health(10));
+        world.add_component(goblin_a, Unit("Goblin A".to_string()));
+        world.add_relation::<Attack>(player, goblin_a);
+
+        let goblin_b = world.create();
+        world.add_component(goblin_b, Health(10));
+        world.add_component(goblin_b, Unit("Goblin B".to_string()));
+        world.add_relation::<Attack>(player, goblin_b);
+
+        // this should not be matched by the query below
+        // bad example I know, but I need something
+        let trap = world.create();
+        world.add_relation::<Attack>(trap, goblin_b);
+
+        let origins_a: Vec<Entity> = world.relation_origins::<Attack>(goblin_a).collect();
+        assert_eq!(&[player], origins_a.as_slice());
+        let origins_b: Vec<Entity> = world.relation_origins::<Attack>(goblin_b).collect();
+        assert_eq!(&[player, trap], origins_b.as_slice());
+
+        let mut counter = 0;
+
+        // manual query for:
+        // query!(world, Unit(me), Unit(other), Hp(me), Attack(other, me))
+        use crate::archetype::ArchetypeRow;
+        for (me, other, mut hp) in query!(world, Unit(me), Unit(other),
+                                          mut Health(me), Attack(other, me)) {
             println!("{me:?} attacked by {other:?}");
             hp.0 -= 5;
             println!("Hp now: {hp:?}");

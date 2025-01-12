@@ -291,15 +291,14 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     }
 
     assert_eq!(unequals.len(), 0);
-    assert_eq!(accessors.len(), 0);
-    assert_eq!(relations.len(), 0);
     assert_eq!(unrelations.len(), 0);
     assert_eq!(prefills.len(), 0);
 
     let mut result = String::new();
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
-    let infos = generate_archetype_sets(&mut String::new(), &vars, &components, &relations);
+    let infos = generate_archetype_sets(&mut result, &vars, &components, &relations);
+    generate_fsm_context(&mut result, &vars, &components, &relations);
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 
     let output = format!(

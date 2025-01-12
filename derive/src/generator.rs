@@ -94,7 +94,7 @@ pub(crate) fn generate_archetype_sets(
     return infos;
 }
 
-fn generate_fsm_context(
+pub(crate) fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
     components: &[Component],
@@ -132,7 +132,7 @@ pub(crate) fn generate_resumable_query_closure(
 
     append.push_str(
         "
-std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
+::std::iter::from_fn(move || { loop { match current_step {",
     );
 
     // select first archetype
@@ -143,7 +143,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
             "
 0 => {{
     const CURRENT_VAR: usize = {first};
-    const CURRENT_VAR_COMPONENTS: Range<usize> = {start}..{end};
+    const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = {start}..{end};
     let next_index = &mut a_next_indexes[CURRENT_VAR];
     let archetype_ids = &archetype_id_sets[CURRENT_VAR];
     *next_index = next_index.wrapping_add(1);
@@ -157,7 +157,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
     let a_ref = &mut a_refs[CURRENT_VAR];
     *a_ref = &bk.archetypes[next_id.as_index()];
     a_ref.find_multiple_columns(
-        &components_me,
+        &components_{first},
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
@@ -202,7 +202,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
     const CURRENT_VAR: usize = {old};
     const REL_VAR: usize = {new};
     const RELATION_COMP_INDEX: usize = {comp};
-    const REL_VAR_COMPONENTS: Range<usize> = {start}..{end};
+    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = {start}..{end};
     let row = a_rows[CURRENT_VAR].0;
     let col = col_indexes[RELATION_COMP_INDEX];
     let arch = &a_refs[CURRENT_VAR];
@@ -227,7 +227,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
             let a_ref = &mut a_refs[REL_VAR];
             *a_ref = &bk.archetypes[aid.as_index()];
             a_ref.find_multiple_columns(
-                &components_other,
+                &components_{new},
                 &mut col_indexes[REL_VAR_COMPONENTS],
             );
             a_rows[REL_VAR] = arow;

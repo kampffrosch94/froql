@@ -4,10 +4,10 @@ expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos,
 ---
 let mut rel_index_2 = 0;
 
-std::iter::fstd::iter::from_fn(move || { loop { match current_step {
+::std::iter::from_fn(move || { loop { match current_step {
 0 => {
     const CURRENT_VAR: usize = 0;
-    const CURRENT_VAR_COMPONENTS: Range<usize> = 0..3;
+    const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..3;
     let next_index = &mut a_next_indexes[CURRENT_VAR];
     let archetype_ids = &archetype_id_sets[CURRENT_VAR];
     *next_index = next_index.wrapping_add(1);
@@ -21,7 +21,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {
     let a_ref = &mut a_refs[CURRENT_VAR];
     *a_ref = &bk.archetypes[next_id.as_index()];
     a_ref.find_multiple_columns(
-        &components_me,
+        &components_0,
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
@@ -48,7 +48,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {
     const CURRENT_VAR: usize = 0;
     const REL_VAR: usize = 1;
     const RELATION_COMP_INDEX: usize = 2;
-    const REL_VAR_COMPONENTS: Range<usize> = 3..5;
+    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 3..5;
     let row = a_rows[CURRENT_VAR].0;
     let col = col_indexes[RELATION_COMP_INDEX];
     let arch = &a_refs[CURRENT_VAR];
@@ -73,7 +73,7 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {
             let a_ref = &mut a_refs[REL_VAR];
             *a_ref = &bk.archetypes[aid.as_index()];
             a_ref.find_multiple_columns(
-                &components_other,
+                &components_1,
                 &mut col_indexes[REL_VAR_COMPONENTS],
             );
             a_rows[REL_VAR] = arow;
