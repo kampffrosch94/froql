@@ -271,6 +271,17 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
                 )
                 .unwrap();
             }
+            Accessor::ComponentMut(ty, var) => {
+                let col = infos[*var as usize].components[ty];
+                write!(
+                    &mut append,
+                    "
+            (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
+                as *const RefCell<{ty}>))
+                .borrow_mut(),"
+                )
+                .unwrap();
+            }
             Accessor::EntityVar(_) => {
                 todo!();
             }
@@ -492,7 +503,7 @@ mod test {
         let accessors = vec![
             Accessor::Component("Unit".to_string(), 0),
             Accessor::Component("Unit".to_string(), 1),
-            Accessor::Component("Health".to_string(), 0),
+            Accessor::ComponentMut("Health".to_string(), 0),
         ];
         let vars = vec![0, 1];
         let mut result = String::new();

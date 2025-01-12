@@ -32,6 +32,8 @@ pub(crate) type Component = (String, isize);
 pub(crate) enum Accessor {
     /// ComponentType, index_in_result_array, var
     Component(String, isize),
+    /// ComponentType, index_in_result_array, var
+    ComponentMut(String, isize),
     /// var index in result
     EntityVar(isize),
 }
@@ -120,7 +122,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                     }
                     components.push((ty.clone(), var));
-                    accessors.push(Accessor::Component(ty, var));
+                    accessors.push(Accessor::ComponentMut(ty, var));
                 }
                 Term::NoOutComponentVar(ty, ref varkind @ VK::Var(ref var_name))
                 | Term::NoOutComponentVar(ty, ref varkind @ VK::InVar(ref var_name)) => {
