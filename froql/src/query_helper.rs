@@ -375,20 +375,16 @@ mod test {
                         }
                         // yield row
                         3 => {
-                            let arch_me = a_refs[0];
-                            let arch_other = a_refs[1];
-                            let row_me = a_rows[0].0;
-                            let row_other = a_rows[1].0;
                             current_step -= 1;
                             return Some(unsafe {
                                 (
-                                    (&*((&arch_me.columns[col_indexes[0]]).get(row_me)
+                                    (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
                                         as *const RefCell<Unit>))
                                         .borrow(),
-                                    (&*((&arch_other.columns[col_indexes[3]]).get(row_other)
+                                    (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
                                         as *const RefCell<Unit>))
                                         .borrow(),
-                                    (&*((&arch_me.columns[col_indexes[1]]).get(row_me)
+                                    (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
                                         as *const RefCell<Health>))
                                         .borrow_mut(),
                                 )

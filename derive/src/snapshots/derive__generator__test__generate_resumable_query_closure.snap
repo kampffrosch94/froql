@@ -1,6 +1,6 @@
 ---
 source: derive/src/generator.rs
-expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &components,\n    &relations); result\n}"
+expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
 ---
 let mut rel_index_2 = 0;
 
@@ -81,6 +81,24 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {
             current_step += 1;
         }
     }
+}
+
+// yield row
+3 => {
+    current_step -= 1;
+    return Some(unsafe {
+        (
+            (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
+                as *const RefCell<Unit>))
+                .borrow(),
+            (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
+                as *const RefCell<Unit>))
+                .borrow(),
+            (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
+                as *const RefCell<Health>))
+                .borrow_mut(),
+        )
+    });
 }
 
 _ => unreachable!(),

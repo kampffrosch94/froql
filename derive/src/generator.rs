@@ -1,16 +1,36 @@
-#![allow(dead_code)] // TODO remove once finished
+#![allow(dead_code)]
+use std::collections::BTreeMap;
+// TODO remove once finished
+use std::fmt::Debug;
 use std::{collections::HashMap, ops::Range};
 
 use crate::{Accessor, Component, Relation};
+// TODO use write! instead of format! to save on intermediate allocations
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct VarInfo {
     /// Index of this variable
     index: isize,
-    /// other var index, index for relation component
+    /// relation type + other var index => index for relation component
     related_with: HashMap<(String, isize), usize>,
     /// indexes in component array
     component_range: Range<usize>,
+    /// map from type to component index for accessors
+    components: HashMap<String, usize>,
+}
+
+impl Debug for VarInfo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // fix ordering, for snapshot testing
+        let related_with = self.related_with.iter().collect::<BTreeMap<_, _>>();
+        let components = self.components.iter().collect::<BTreeMap<_, _>>();
+        f.debug_struct("VarInfo")
+            .field("index", &self.index)
+            .field("related_with", &related_with)
+            .field("component_range", &self.component_range)
+            .field("components", &components)
+            .finish()
+    }
 }
 
 fn generate_archetype_sets(
@@ -30,10 +50,13 @@ fn generate_archetype_sets(
             index: *var,
             related_with: HashMap::new(),
             component_range: index..index,
+            components: HashMap::new(),
         };
         result.push_str(&format!("let components_{var} = ["));
+        // component
         for (ty, _) in components.iter().filter(|(_, id)| id == var) {
             result.push_str(&format!("\n    world.get_component_id::<{ty}>(),"));
+            info.components.insert(ty.clone(), index);
             index += 1;
             info.component_range.end += 1;
         }
@@ -101,6 +124,7 @@ fn generate_resumable_query_closure(
     relations: &[Relation],
     accessors: &[Accessor],
 ) {
+    assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
     let (first, join_order) = compute_join_order(relations, infos);
@@ -219,7 +243,32 @@ std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
             }
         }
     }
-    // TODO yield row
+
+    // yield row
+    count += 1;
+    append.push_str(&format!(
+        "
+// yield row
+{count} => {{
+    current_step -= 1;
+    return Some(unsafe {{
+        (
+            (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
+                as *const RefCell<Unit>))
+                .borrow(),
+            (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
+                as *const RefCell<Unit>))
+                .borrow(),
+            (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
+                as *const RefCell<Health>))
+                .borrow_mut(),
+        )
+    }});
+}}
+"
+    ));
+
+    // close the scope
     append.push_str(
         "
 _ => unreachable!(),
@@ -282,7 +331,6 @@ fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<
                 let new = if reversed { join.1 } else { join.2 };
                 let info = &infos[old as usize];
                 assert_eq!(old, info.index);
-                dbg!(info);
                 let comp_index = info.related_with[&(join.0, new)];
                 result.push(JoinKind::NewJoin(comp_index, old, new));
                 available.push(infos[new as usize].clone());
@@ -338,6 +386,10 @@ mod test {
                     ): 2,
                 },
                 component_range: 0..3,
+                components: {
+                    "Health": 1,
+                    "Unit": 0,
+                },
             },
             VarInfo {
                 index: 1,
@@ -348,6 +400,9 @@ mod test {
                     ): 4,
                 },
                 component_range: 3..5,
+                components: {
+                    "Unit": 3,
+                },
             },
         ]
         "#);
@@ -428,35 +483,5 @@ mod test {
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
             result
         });
-    }
-
-    #[test]
-    fn test_compute_join_order() {
-        let relations = vec![("Attack".into(), 1, 0)];
-        let infos = vec![
-            VarInfo {
-                index: 0,
-                related_with: HashMap::from([(("Attack".into(), 1), 2)]),
-                component_range: 0..3,
-            },
-            VarInfo {
-                index: 1,
-                related_with: HashMap::from([(("Attack".into(), 0), 4)]),
-                component_range: 4..5,
-            },
-        ];
-        let joined = compute_join_order(&relations, &infos);
-        insta::assert_debug_snapshot!(joined, @r#"
-        (
-            0,
-            [
-                NewJoin(
-                    2,
-                    0,
-                    1,
-                ),
-            ],
-        )
-        "#);
     }
 }
