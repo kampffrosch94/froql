@@ -1,7 +1,7 @@
 #![allow(dead_code)] // TODO remove once finished
 use std::{collections::HashMap, ops::Range};
 
-use crate::{Component, Relation};
+use crate::{Accessor, Component, Relation};
 
 #[derive(Debug, Clone)]
 pub struct VarInfo {
@@ -98,8 +98,8 @@ fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
     infos: &[VarInfo],
-    components: &[Component],
     relations: &[Relation],
+    accessors: &[Accessor],
 ) {
     let prepend = result;
     let mut append = String::new();
@@ -297,6 +297,7 @@ fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::Accessor;
 
     #[test]
     fn test_generate_archetype_id_sets_relation() {
@@ -415,11 +416,16 @@ mod test {
     fn test_generate_resumable_query_closure() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
+        let accessors = vec![
+            Accessor::Component("Unit".to_string(), 0),
+            Accessor::Component("Unit".to_string(), 1),
+            Accessor::Component("Health".to_string(), 0),
+        ];
         let vars = vec![0, 1];
         let mut result = String::new();
         let infos = generate_archetype_sets(&mut String::new(), &vars, &components, &relations);
         insta::assert_snapshot!({
-            generate_resumable_query_closure(&mut result, &vars, &infos, &components, &relations);
+            generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
             result
         });
     }

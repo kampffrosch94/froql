@@ -29,8 +29,7 @@ pub(crate) type Component = (String, isize);
 
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
-#[allow(dead_code)]
-enum Accessor {
+pub(crate) enum Accessor {
     /// ComponentType, index_in_result_array
     Component(String, usize),
     /// var index in result
