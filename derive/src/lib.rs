@@ -6,13 +6,14 @@ mod parser;
 
 use std::collections::{HashMap, HashSet};
 
+use crate::generator::*;
 use macro_error::MacroError;
 use parser::RelationVarKind as RVK;
 use parser::VarKind as VK;
 use parser::{parse_term, Term};
 use proc_macro::{TokenStream, TokenTree};
 
-const ANYVAR: usize = usize::MAX;
+const ANYVAR: isize = isize::MAX;
 
 #[proc_macro]
 pub fn query(input: TokenStream) -> TokenStream {
@@ -84,9 +85,9 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut components: Vec<Component> = Vec::new();
     let mut uncomponents: Vec<Component> = Vec::new();
     let mut accessors: Vec<Accessor> = Vec::new();
+    let mut relations: Vec<Relation> = Vec::new();
 
     let mut unequals = Vec::new();
-    let mut relations = Vec::new();
     let mut unrelations = Vec::new();
     let mut prefills = HashSet::new();
 
@@ -176,12 +177,12 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::Var(var_a), RVK::Var(var_b)) => {
                     let a = variables.var_number(var_a);
                     let b = variables.var_number(var_b);
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
                 }
                 Term::Relation(ty, RVK::InVar(var_a), RVK::Var(var_b)) => {
                     let a = variables.var_number(&var_a);
                     let b = variables.var_number(var_b);
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
                     prefills.insert((a, var_a));
                 }
                 Term::Relation(_, RVK::InVar(_), RVK::InVar(_)) => {
@@ -191,30 +192,34 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::Var(var_a), RVK::InVar(var_b)) => {
                     let a = variables.var_number(var_a);
                     let b = variables.var_number(&var_b);
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
                     prefills.insert((b, var_b));
                 }
                 Term::Relation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
                     let b = ANYVAR;
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    todo!();
+                    relations.push((ty, a, b));
                 }
                 Term::Relation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(&var_a);
                     let b = ANYVAR;
                     prefills.insert((a, var_a));
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
+                    todo!();
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(var_b);
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
+                    todo!();
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
                     prefills.insert((b, var_b));
-                    relations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    relations.push((ty, a, b));
+                    todo!();
                 }
                 Term::Relation(_ty, RVK::AnyVar, RVK::AnyVar) => {
                     panic!("Rel(_,_) does not make sense.");
@@ -291,37 +296,19 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     assert_eq!(unrelations.len(), 0);
     assert_eq!(prefills.len(), 0);
 
-    let column_count = variables.variables.len();
-    let component_count = components.len();
-
-    /*
-    accessors.push(format!("EntityViewDeferred::new(world, _row[{var}])"));
-    accessors.push(format!(
-        "
-            (unsafe {{
-                &*std::mem::transmute::<
-                    *const RefCell<ErasedType>,
-                    *const RefCell<{ty}>,
-                >(component_ptrs[{comp_access_count}])
-            }})
-            .borrow_mut()
-            "
-    ));
-    */
-
-    let relations = relations.join(", ");
-    let unequals = unequals.join(", ");
-    let unrelations = unrelations.join(", ");
-    let prefills = prefills
-        .into_iter()
-        .map(|(var, name)| format!("({var}, {name}.into())"))
-        .collect::<Vec<String>>()
-        .join(", ");
+    let mut result = String::new();
+    let mut vars: Vec<_> = variables.variables.into_values().collect();
+    vars.sort();
+    let infos = generate_archetype_sets(&mut String::new(), &vars, &components, &relations);
+    generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 
     let output = format!(
         "
 {{
-    let world: &World = &{world};
+let world: &World = &{world};
+let bk = &world.bookkeeping;
+
+{result}
 }}
 "
     );

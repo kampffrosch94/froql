@@ -34,7 +34,7 @@ impl Debug for VarInfo {
     }
 }
 
-fn generate_archetype_sets(
+pub(crate) fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
     components: &[Component],
@@ -118,7 +118,7 @@ let mut col_indexes = [usize::MAX; {col_count}];
     ));
 }
 
-fn generate_resumable_query_closure(
+pub(crate) fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
     infos: &[VarInfo],
