@@ -101,16 +101,133 @@ fn generate_resumable_query_closure(
     components: &[Component],
     relations: &[Relation],
 ) {
-    result.push_str(
-        "
-// context for this specific statemachine
-let mut rel_index_2 = 0; <================= TODO
+    let prepend = result;
+    let mut append = String::new();
+    let (first, join_order) = compute_join_order(relations, infos);
 
-std::iter::fstd::iter::from_fn(move || { loop { match current_step {
-    _ => unreachable!(),
+    append.push_str(
+        "
+std::iter::fstd::iter::from_fn(move || { loop { match current_step {",
+    );
+
+    // select first archetype
+    {
+        let first_info = &infos[first as usize];
+        let Range { start, end } = &first_info.component_range;
+        append.push_str(&format!(
+            "
+0 => {{
+    const CURRENT_VAR: usize = {first};
+    const CURRENT_VAR_COMPONENTS: Range<usize> = {start}..{end};
+    let next_index = &mut a_next_indexes[CURRENT_VAR];
+    let archetype_ids = &archetype_id_sets[CURRENT_VAR];
+    *next_index = next_index.wrapping_add(1);
+    if *next_index >= archetype_ids.len() {{
+        return None;
+    }}
+    let next_id = archetype_ids[*next_index];
+
+    // gets rolled over to 0 by wrapping_add
+    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+    let a_ref = &mut a_refs[CURRENT_VAR];
+    *a_ref = &bk.archetypes[next_id.as_index()];
+    a_ref.find_multiple_columns(
+        &components_me,
+        &mut col_indexes[CURRENT_VAR_COMPONENTS],
+    );
+    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+    current_step += 1;
+}}
+"
+        ));
+        // TODO get row from first
+        append.push_str(&format!(
+            "
+// next row in archetype
+1 => {{
+    const CURRENT_VAR: usize = {first};
+    let row_counter = &mut a_rows[CURRENT_VAR].0;
+    let max_row = a_max_rows[CURRENT_VAR];
+    // rolls over to 0 for u32::MAX, which is our start value
+    *row_counter = row_counter.wrapping_add(1);
+
+    if *row_counter >= max_row {{
+        current_step -= 1;
+    }} else {{
+        current_step += 1;
+    }}
+}}
+"
+        ));
+    }
+    let mut count = 1;
+    // follow relations/constraints
+    for step in join_order {
+        count += 1;
+        match step {
+            JoinKind::NewJoin(comp, old, new) => {
+                let new_info = &infos[new as usize];
+                let Range { start, end } = &new_info.component_range;
+                // TODO prepend state for current join
+                prepend.push_str(&format!("\nlet mut rel_index_{count} = 0;"));
+                append.push_str(&format!(
+                    "
+// follow relation
+{count} => {{
+    const CURRENT_VAR: usize = {old};
+    const REL_VAR: usize = {new};
+    const RELATION_COMP_INDEX: usize = {comp};
+    const REL_VAR_COMPONENTS: Range<usize> = {start}..{end};
+    let row = a_rows[CURRENT_VAR].0;
+    let col = col_indexes[RELATION_COMP_INDEX];
+    let arch = &a_refs[CURRENT_VAR];
+    debug_assert_eq!(
+        arch.columns[col].element_size(),
+        size_of::<RelationVec>()
+    );
+    let ptr = unsafe {{ arch.columns[col].get(row) }} as *const RelationVec;
+    let rel_vec = unsafe {{ &*ptr }};
+    debug_assert!(rel_vec.len() > 0);
+    if rel_index_{count} >= rel_vec.len() {{
+        rel_index_{count} = 0;
+        current_step -= 1;
+    }} else {{
+        // get aid/row for entity in relation
+        let id = EntityId(rel_vec[rel_index_{count} as usize]);
+        let (aid, arow) = bk.entities.get_archetype_unchecked(id);
+        rel_index_{count} += 1;
+
+        // if in target archetype set => go to next step
+        if archetype_id_sets[REL_VAR].contains(&aid) {{
+            let a_ref = &mut a_refs[REL_VAR];
+            *a_ref = &bk.archetypes[aid.as_index()];
+            a_ref.find_multiple_columns(
+                &components_other,
+                &mut col_indexes[REL_VAR_COMPONENTS],
+            );
+            a_rows[REL_VAR] = arow;
+
+            current_step += 1;
+        }}
+    }}
+}}
+",
+                ));
+            }
+            JoinKind::RelationConstraint(_, _, _) => {
+                todo!();
+            }
+        }
+    }
+    // TODO yield row
+    append.push_str(
+        "
+_ => unreachable!(),
 }}})
 ",
     );
+    prepend.push_str("\n");
+    prepend.push_str(&append);
 }
 
 #[derive(Debug)]
@@ -121,7 +238,7 @@ enum JoinKind {
     RelationConstraint(usize, isize, isize),
 }
 
-pub fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<JoinKind>) {
+fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<JoinKind>) {
     // TODO figure out the variable to start with
     // I think its a decent metric to use the most constrained variable first
     let first = infos
@@ -161,8 +278,8 @@ pub fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, 
             };
             if let Some(join) = next_join {
                 let reversed = available.iter().any(|it| it.index == join.2);
-                let old = if reversed {join.2} else {join.1};
-                let new = if reversed {join.1} else {join.2};
+                let old = if reversed { join.2 } else { join.1 };
+                let new = if reversed { join.1 } else { join.2 };
                 let info = &infos[old as usize];
                 assert_eq!(old, info.index);
                 dbg!(info);
@@ -302,17 +419,9 @@ mod test {
         let mut result = String::new();
         let infos = generate_archetype_sets(&mut String::new(), &vars, &components, &relations);
         insta::assert_snapshot!({
-            generate_resumable_query_closure(&mut result, &vars,
-                                              &infos,&components, &relations);
+            generate_resumable_query_closure(&mut result, &vars, &infos, &components, &relations);
             result
-        }, @r#"
-        // context for this specific statemachine
-        let mut rel_index_2 = 0; <================= TODO
-
-        std::iter::fstd::iter::from_fn(move || { loop { match current_step {
-            _ => unreachable!(),
-        }}})
-        "#);
+        });
     }
 
     #[test]
