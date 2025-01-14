@@ -75,8 +75,8 @@ impl Bookkeeping {
         assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
         let a = &self.archetypes[aid.0 as usize];
-        let col = a.components.iter().position(|it| *it == cid).unwrap();
-        unsafe { a.columns[col].get(row.0) }
+        let col = a.find_column(cid);
+        unsafe { col.get(row.0) }
     }
 
     pub fn has_component(&self, e: Entity, cid: ComponentId) -> bool {

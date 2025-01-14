@@ -11,5 +11,5 @@ pub mod relation_vec;
 mod util;
 pub mod world;
 pub use derive::query;
-mod entity_builder;
-mod entity_view;
+mod entity_view_deferred;
+mod entity_view_mut;

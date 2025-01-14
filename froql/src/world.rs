@@ -7,6 +7,7 @@ use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId, RELATION},
     entity_store::Entity,
+    entity_view_mut::EntityViewMut,
     relation::Relation,
 };
 
@@ -60,6 +61,13 @@ impl World {
 
     pub fn create(&mut self) -> Entity {
         self.bookkeeping.create()
+    }
+
+    pub fn create_mut(&mut self) -> EntityViewMut {
+        EntityViewMut {
+            id: self.bookkeeping.create(),
+            world: self,
+        }
     }
 
     pub fn is_alive(&self, e: Entity) -> bool {
