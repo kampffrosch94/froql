@@ -673,4 +673,35 @@ mod test {
         }
         assert_eq!(2, counter);
     }
+
+    #[test]
+    fn proc_query_uncomponent() {
+        #[derive(Debug)]
+        struct CompA(usize);
+        #[derive(Debug)]
+        struct CompB(String);
+        struct CompC {}
+
+        let mut world = World::new();
+        let a = world.create();
+        world.add_component(a, CompA(42));
+        world.add_component(a, CompB("Hello".to_string()));
+        let b = world.create();
+        world.add_component(b, CompA(42));
+        world.add_component(b, CompB("Hello".to_string()));
+        world.add_component(b, CompC {});
+        let c = world.create();
+        world.add_component(c, CompA(42));
+        world.add_component(c, CompB("Hello".to_string()));
+
+        let mut counter = 0;
+        for (comp_a, comp_b) in query!(world, CompA, CompB, !CompC) {
+            println!("{comp_a:?}");
+            println!("{comp_b:?}");
+            assert_eq!(42, comp_a.0);
+            assert_eq!("Hello", &comp_b.0);
+            counter += 1;
+        }
+        assert_eq!(2, counter);
+    }
 }

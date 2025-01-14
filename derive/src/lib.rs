@@ -297,7 +297,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut result = String::new();
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
-    let infos = generate_archetype_sets(&mut result, &vars, &components, &relations);
+    let infos = generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
     generate_fsm_context(&mut result, &vars, &components, &relations);
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 

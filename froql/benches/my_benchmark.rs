@@ -1,10 +1,10 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use derive::query;
-use fast_queries::relation_vec::RelationVec;
-use fast_queries::relation::Relation;
-use fast_queries::*;
-use fast_queries::entity_store::EntityId;
 use fast_queries::archetype::ArchetypeRow;
+use fast_queries::entity_store::EntityId;
+use fast_queries::relation::Relation;
+use fast_queries::relation_vec::RelationVec;
+use fast_queries::*;
 use std::any::TypeId;
 
 use std::hint::black_box;

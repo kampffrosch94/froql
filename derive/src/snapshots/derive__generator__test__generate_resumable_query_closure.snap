@@ -2,6 +2,34 @@
 source: derive/src/generator.rs
 expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
 ---
+let components_0 = [
+    world.get_component_id::<Unit>(),
+    world.get_component_id::<Health>(),
+    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()).flip_target(),
+];
+
+let components_1 = [
+    world.get_component_id::<Unit>(),
+    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+];
+
+let archetype_id_sets = [
+    bk.matching_archetypes(&components_0, &[]),
+    bk.matching_archetypes(&components_1, &[]),
+];
+
+
+// result set
+const VAR_COUNT: usize = 2;
+let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
+let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+
+// general context for statemachine
+let mut current_step = 0;
+let mut a_max_rows = [0; VAR_COUNT];
+let mut a_next_indexes = [usize::MAX; VAR_COUNT];
+let mut col_indexes = [usize::MAX; 5];
+
 let mut rel_index_2 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {

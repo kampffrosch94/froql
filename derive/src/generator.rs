@@ -39,6 +39,7 @@ pub(crate) fn generate_archetype_sets(
     vars: &[isize],
     components: &[Component],
     relations: &[Relation],
+    uncomponents: &[Component],
 ) -> Vec<VarInfo> {
     assert_ne!(0, components.len() + relations.len());
     assert_ne!(0, vars.len());
@@ -84,13 +85,31 @@ pub(crate) fn generate_archetype_sets(
         infos.push(info);
     }
 
-    result.push_str("let archetype_id_sets = [\n");
-    for var in vars {
-        result.push_str(&format!(
-            "    bk.matching_archetypes(&components_{var}, &[]),\n"
-        ));
+    if uncomponents.is_empty() {
+        result.push_str("let archetype_id_sets = [\n");
+        for var in vars {
+            result.push_str(&format!(
+                "    bk.matching_archetypes(&components_{var}, &[]),\n"
+            ));
+        }
+        result.push_str("];\n\n");
+    } else {
+        for var in vars {
+            result.push_str(&format!("let uncomponents_{var} = ["));
+            // component
+            for (ty, _) in uncomponents.iter().filter(|(_, id)| id == var) {
+                result.push_str(&format!("\n    world.get_component_id::<{ty}>(),"));
+            }
+            result.push_str("\n];\n\n");
+        }
+        result.push_str("let archetype_id_sets = [\n");
+        for var in vars {
+            result.push_str(&format!(
+                "    bk.matching_archetypes(&components_{var}, &uncomponents_{var}),\n"
+            ));
+        }
+        result.push_str("];\n\n");
     }
-    result.push_str("];\n\n");
     return infos;
 }
 
@@ -102,6 +121,7 @@ pub(crate) fn generate_fsm_context(
 ) {
     let var_count = vars.len();
     let col_count = components.len() + relations.len() * 2;
+    // TODO unify into struct to save on generated lines
     result.push_str(&format!(
         "
 // result set
@@ -130,6 +150,7 @@ pub(crate) fn generate_resumable_query_closure(
     let mut append = String::new();
     let (first, join_order) = compute_join_order(relations, infos);
 
+    // TODO save on constants by directly applying the var
     append.push_str(
         "
 ::std::iter::from_fn(move || { loop { match current_step {",
@@ -380,11 +401,13 @@ mod test {
     fn test_generate_archetype_id_sets_relation() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
+        let uncomponents = vec![("Bird".into(), 0), ("Fish".into(), 0), ("Bird".into(), 1)];
         let vars = vec![0, 1];
         let mut result = String::new();
         let infos;
         insta::assert_snapshot!({
-            infos = generate_archetype_sets(&mut result, &vars, &components, &relations);
+            infos = generate_archetype_sets(&mut result, &vars, &components, &relations,
+                                            &uncomponents);
             result
         }, @r#"
         let components_0 = [
@@ -398,9 +421,18 @@ mod test {
             bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
         ];
 
+        let uncomponents_0 = [
+            world.get_component_id::<Bird>(),
+            world.get_component_id::<Fish>(),
+        ];
+
+        let uncomponents_1 = [
+            world.get_component_id::<Bird>(),
+        ];
+
         let archetype_id_sets = [
-            bk.matching_archetypes(&components_0, &[]),
-            bk.matching_archetypes(&components_1, &[]),
+            bk.matching_archetypes(&components_0, &uncomponents_0),
+            bk.matching_archetypes(&components_1, &uncomponents_1),
         ];
         "#);
 
@@ -454,11 +486,12 @@ mod test {
     #[test]
     fn test_generate_archetype_id_sets_trivial() {
         let components = vec![("Pos".into(), 0), ("Speed".into(), 0)];
+        let uncomponents = vec![];
         let relations = [];
         let vars = vec![0];
         let mut result = String::new();
         insta::assert_snapshot!({
-            generate_archetype_sets(&mut result, &vars, &components, &relations);
+            generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
             result
         }, @r#"
         let components_0 = [
@@ -499,6 +532,7 @@ mod test {
     #[test]
     fn test_generate_resumable_query_closure() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
             Accessor::Component("Unit".to_string(), 0),
@@ -507,7 +541,9 @@ mod test {
         ];
         let vars = vec![0, 1];
         let mut result = String::new();
-        let infos = generate_archetype_sets(&mut String::new(), &vars, &components, &relations);
+        let infos =
+            generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
+        generate_fsm_context(&mut result, &vars, &components, &relations);
         insta::assert_snapshot!({
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
             result
