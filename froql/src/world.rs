@@ -736,15 +736,20 @@ mod test {
         world.add_component(c, CompC {});
 
         let mut counter = 0;
+        let mut c_counter = 0;
         for (this, comp_a, comp_b) in query!(world, &this, CompA, CompB) {
             println!("{comp_a:?}");
             println!("{comp_b:?}");
             assert_eq!(42, comp_a.0);
             assert_eq!("Hello", &comp_b.0);
+            assert!(this.has::<CompA>());
+            if this.has::<CompC>() {
+                println!("I have CompC");
+                c_counter += 1;
+            }
             counter += 1;
         }
         assert_eq!(2, counter);
+        assert_eq!(1, c_counter);
     }
-
 }
-
