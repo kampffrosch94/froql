@@ -261,7 +261,7 @@ pub(crate) fn generate_resumable_query_closure(
                 ));
             }
             JoinKind::RelationConstraint(_, _, _) => {
-                todo!();
+                todo!("RelationConstraints");
             }
         }
     }
@@ -303,8 +303,15 @@ pub(crate) fn generate_resumable_query_closure(
                 )
                 .unwrap();
             }
-            Accessor::EntityVar(_) => {
-                todo!();
+            Accessor::OutVar(var) => {
+                // TODO lookup archetype and row and just return the entity from there lol
+                write!(
+                    &mut append,
+                    "
+            EntityViewDeferred::from_id_unchecked(world,
+                                a_refs[{var}].entities[a_rows[{var}].0 as usize]),"
+                )
+                .unwrap();
             }
         }
     }
@@ -535,6 +542,7 @@ mod test {
         let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
+            Accessor::OutVar(0),
             Accessor::Component("Unit".to_string(), 0),
             Accessor::Component("Unit".to_string(), 1),
             Accessor::ComponentMut("Health".to_string(), 0),

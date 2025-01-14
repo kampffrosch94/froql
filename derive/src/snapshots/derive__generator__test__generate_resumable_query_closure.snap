@@ -116,6 +116,8 @@ let mut rel_index_2 = 0;
     current_step -= 1;
     return Some(unsafe {
         (
+            EntityViewDeferred::from_id_unchecked(world,
+                                a_refs[0].entities[a_rows[0].0 as usize]),
             (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
                 as *const RefCell<Unit>))
                 .borrow(),

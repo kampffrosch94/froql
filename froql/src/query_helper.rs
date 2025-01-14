@@ -7,99 +7,6 @@ use crate::{
     world::World,
 };
 
-pub struct QueryHelper<'a> {
-    world: &'a World,
-}
-
-/// RelationType, from_var, to_var
-type Relation = (TypeId, usize, usize);
-/// ComponentType, source_var
-type Component = (TypeId, usize);
-
-/*
-// OPTIMIZATION: keep the body of this function as small as possible to save on monomorphisation
-/// used by the proc macro
-#[allow(unused)]
-pub unsafe fn relation_join_iter_components<'a, const VARS: usize, const COMPS: usize>(
-    world: &'a World,
-    relations: &[Relation],
-    components: [Component; COMPS],
-    unequals: &[(usize, usize)],
-    uncomponents: &[Component],
-    unrelations: &[Relation],
-    prefill: &[(usize, Entity)],
-) -> impl Iterator<Item = ([Entity; VARS], [*const u8; COMPS])> + use<'a, VARS, COMPS> {
-    let join_table: JoinTable<'_, VARS> = JoinTable::new_init(
-        world,
-        relations,
-        &components,
-        unequals,
-        uncomponents,
-        unrelations,
-        prefill,
-    );
-    join_table.rows.into_iter().filter_map(move |row| {
-        let mut result = [MaybeUninit::<*const u8>::uninit(); COMPS];
-        for i in 0..COMPS {
-            let (tid, id) = components[i];
-            let res = unsafe { Some(todo!()) }?;
-            result[i].write(res);
-        }
-        Some((row, result.map(|entry| unsafe { entry.assume_init() })))
-    })
-}
-*/
-
-/// Temporary structure which helps with non trivial multi relationship joins
-pub struct JoinTable<'a, const VAR_COUNT: usize, const COMP_COUNT: usize> {
-    pub world: &'a World,
-    /// says which variables are already resolved
-    pub filled: [bool; VAR_COUNT],
-    pub rows: Vec<([Entity; VAR_COUNT], [*const u8; COMP_COUNT])>,
-}
-
-pub struct ResultData<'a> {
-    pub var_archetype_id: &'a mut [ArchetypeId],
-    pub var_archetype_row: &'a mut [ArchetypeRow],
-    pub result_components: &'a mut [NonNull<u8>],
-    pub col_ids: &'a mut [usize],
-}
-
-pub fn grab_archetype_id(
-    var_archetype_id: &mut [ArchetypeId],
-    var_archetype_row: &mut [ArchetypeRow],
-    variable: usize,
-    archetype_set: &Vec<ArchetypeId>,
-    next_index: &mut usize, // needs to start with 0 before first call
-) -> bool {
-    if *next_index >= archetype_set.len() {
-        return false;
-    }
-    var_archetype_id[variable] = archetype_set[*next_index];
-    var_archetype_row[variable] = ArchetypeRow(u32::MAX);
-    *next_index += 1;
-    return true;
-}
-
-fn grab_archetype_row(
-    var_archetype_id: &mut [ArchetypeId],
-    var_archetype_row: &mut [ArchetypeRow],
-    variable: usize,
-    bk: &Bookkeeping,
-) -> bool {
-    let var_row = &mut var_archetype_row[variable];
-    let var_a = &var_archetype_id[variable];
-    if var_row.0 == u32::MAX {
-        var_row.0 = 0;
-    } else {
-        var_row.0 += 1;
-    }
-    if var_row.0 as usize >= bk.archetypes[var_a.0 as usize].entities.len() {
-        return false;
-    }
-    return true;
-}
-
 #[cfg(test)]
 mod test {
     use std::{any::TypeId, cell::RefCell, ops::Range};
@@ -253,8 +160,8 @@ mod test {
         let mut counter = 0;
 
         // manual query for:
-        // query!(world, Unit(me), Unit(other), Hp(me), Attack(other, me))
-        for (me, other, mut hp) in {
+        // query!(world, &me, Unit(me), Unit(other), Hp(me), Attack(other, me))
+        for (me, unit_me, unit_other, mut hp) in {
             let world: &World = &world;
             let bk = &world.bookkeeping;
             let components_me = [
@@ -378,6 +285,9 @@ mod test {
                             current_step -= 1;
                             return Some(unsafe {
                                 (
+                                    crate::entity_view_deferred::EntityViewDeferred::
+                                    from_id_unchecked(world,
+                                                      a_refs[0].entities[a_rows[0].0 as usize]),
                                     (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
                                         as *const RefCell<Unit>))
                                         .borrow(),
@@ -396,7 +306,7 @@ mod test {
             })
         } {
             println!("\nHp before: {hp:?}");
-            println!("{me:?} attacked by {other:?}");
+            println!("{unit_me:?} attacked by {unit_other:?}");
             hp.0 -= 5;
             println!("Hp now: {hp:?}");
             counter += 1;

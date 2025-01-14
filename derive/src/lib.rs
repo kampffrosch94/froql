@@ -36,7 +36,7 @@ pub(crate) enum Accessor {
     /// ComponentType, index_in_result_array, var
     ComponentMut(String, isize),
     /// var index in result
-    EntityVar(isize),
+    OutVar(isize),
 }
 
 struct VariableStore {
@@ -139,7 +139,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 }
                 Term::OutVar(var) => {
                     let var = variables.var_number(var);
-                    accessors.push(Accessor::EntityVar(var));
+                    accessors.push(Accessor::OutVar(var));
                 }
                 Term::ConstraintUnequal(
                     ref ta @ VK::Var(ref var_a),
@@ -198,7 +198,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
                     let b = ANYVAR;
-                    todo!();
+                    todo!("Relation Var AnyVar");
                     relations.push((ty, a, b));
                 }
                 Term::Relation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
@@ -206,20 +206,20 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let b = ANYVAR;
                     prefills.insert((a, var_a));
                     relations.push((ty, a, b));
-                    todo!();
+                    todo!("Relation Invar AnyVar");
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(var_b);
                     relations.push((ty, a, b));
-                    todo!();
+                    todo!("Relation AnyVar Var");
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
                     prefills.insert((b, var_b));
                     relations.push((ty, a, b));
-                    todo!();
+                    todo!("Relation AnyVar InVar");
                 }
                 Term::Relation(_ty, RVK::AnyVar, RVK::AnyVar) => {
                     panic!("Rel(_,_) does not make sense.");
