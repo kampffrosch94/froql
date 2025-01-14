@@ -11,7 +11,7 @@ use crate::{
 };
 
 pub struct World {
-    pub(crate) bookkeeping: Bookkeeping,
+    pub bookkeeping: Bookkeeping,
 }
 
 impl World {
@@ -598,6 +598,7 @@ mod test {
         assert_eq!(2, counter);
     }
 
+    use crate::archetype::ArchetypeRow; // TODO something about that
     #[test]
     fn proc_query_relation() {
         enum Attack {}
@@ -632,14 +633,42 @@ mod test {
 
         let mut counter = 0;
 
-        // manual query for:
-        // query!(world, Unit(me), Unit(other), Hp(me), Attack(other, me))
-        use crate::archetype::ArchetypeRow;
         for (me, other, mut hp) in query!(world, Unit(me), Unit(other),
-                                          mut Health(me), Attack(other, me)) {
+                                          mut Health(me), Attack(other, me))
+        {
             println!("{me:?} attacked by {other:?}");
             hp.0 -= 5;
             println!("Hp now: {hp:?}");
+            counter += 1;
+        }
+        assert_eq!(2, counter);
+    }
+
+    #[test]
+    fn proc_query_trivial() {
+        #[derive(Debug)]
+        struct CompA(usize);
+        #[derive(Debug)]
+        struct CompB(String);
+        struct CompC {}
+
+        let mut world = World::new();
+        let a = world.create();
+        world.add_component(a, CompA(42));
+        world.add_component(a, CompB("Hello".to_string()));
+        let b = world.create();
+        world.add_component(b, CompA(21));
+        let c = world.create();
+        world.add_component(c, CompA(42));
+        world.add_component(c, CompB("Hello".to_string()));
+        world.add_component(c, CompC {});
+
+        let mut counter = 0;
+        for (comp_a, comp_b) in query!(world, CompA, CompB) {
+            println!("{comp_a:?}");
+            println!("{comp_b:?}");
+            assert_eq!(42, comp_a.0);
+            assert_eq!("Hello", &comp_b.0);
             counter += 1;
         }
         assert_eq!(2, counter);

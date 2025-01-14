@@ -65,7 +65,7 @@ impl Bookkeeping {
     }
 
     pub fn get_component_id_unchecked(&self, tid: TypeId) -> ComponentId {
-        self.component_map.get(&tid).copied().unwrap()
+        self.component_map.get(&tid).copied().expect("TypeId is not registered as Component.")
     }
 
     pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {

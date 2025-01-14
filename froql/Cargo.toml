@@ -6,3 +6,10 @@ edition = "2021"
 [dependencies]
 hi_sparse_bitset = "0.6.1"
 derive = { version = "0.1.0", path = "../derive" }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "my_benchmark"
+harness = false
