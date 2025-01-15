@@ -2,10 +2,21 @@
 ** DONE uncomponents
 CLOSED: [2025-01-14 Tue 11:00]
 also known as negative component constraints
-** NEXT outvars
+** DONE outvars
+CLOSED: [2025-01-15 Wed 04:05]
 ~&this~
 Simple change, but I also want to return entityviews.
 Though I guess I can do that later still.
+** NEXT invars
+~*player~
+I suspect this will be a bit more complicated.
+I'll have to add a route to the code gone that populates the archetypes/rows of invars.
+Should do that as the first step, instead of fetching an archetype from the possible set.
+Also invars don't need to be constrained by an archetype set, so they probably should not
+count for ~VAR_COUNT~ in the same way.
+I might need to diffentiate here.
+** TODO anyvars
+example: ~ChildOf(_, me)~
 ** TODO variable inequality constraints
 Examples:
 - ~a != b~
@@ -14,14 +25,6 @@ Examples:
 Inequality constraints are an additonal step that needs to be inserted in the generator.
 In theory I could check inequalities also the moment I follow an relationship,
 instead of actually creating an additional step :thonk:
-** TODO invars
-~*player~
-I suspect this will be a bit more complicated.
-I'll have to add a route to the code gone that populates the archetypes/rows of invars.
-Should do that as the first step, instead of fetching an archetype from the possible set.
-Also invars don't need to be constrained by an archetype set, so they probably should not
-count for ~VAR_COUNT~ in the same way.
-I might need to diffentiate here.
 ** TODO unrelations
 - ~!Rel(a,b)~
 ** TODO queries involving ZSTs
