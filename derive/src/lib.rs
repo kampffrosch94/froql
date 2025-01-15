@@ -4,7 +4,7 @@ mod generator;
 mod macro_error;
 mod parser;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
 use crate::generator::*;
 use macro_error::MacroError;
@@ -89,7 +89,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
 
     let mut unequals = Vec::new();
     let mut unrelations = Vec::new();
-    let mut prefills = HashSet::new();
+    let mut prefills = HashMap::new();
 
     loop {
         let next = iter.next();
@@ -107,7 +107,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     match varkind {
                         VK::Var(_) => (),
                         VK::InVar(_) => {
-                            prefills.insert((var, var_name.clone()));
+                            // TODO handle override with different name => error
+                            prefills.insert(var, var_name.clone());
                         }
                     }
                     components.push((ty.clone(), var));
@@ -119,7 +120,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     match varkind {
                         VK::Var(_) => (),
                         VK::InVar(_) => {
-                            prefills.insert((var, var_name.clone()));
+                            prefills.insert(var, var_name.clone());
                         }
                     }
                     components.push((ty.clone(), var));
@@ -132,7 +133,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     match varkind {
                         VK::Var(_) => (),
                         VK::InVar(_) => {
-                            prefills.insert((var, var_name.clone()));
+                            prefills.insert(var, var_name.clone());
                         }
                     }
                     components.push((ty, var));
@@ -158,10 +159,10 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let b = variables.var_number(var_b);
                     match (ta, tb) {
                         (VK::InVar(_), VK::Var(_)) => {
-                            prefills.insert((a, var_a.clone()));
+                            prefills.insert(a, var_a.clone());
                         }
                         (VK::Var(_), VK::InVar(_)) => {
-                            prefills.insert((b, var_b.clone()));
+                            prefills.insert(b, var_b.clone());
                         }
                         (VK::Var(_), VK::Var(_)) | (VK::InVar(_), VK::InVar(_)) => (),
                     }
@@ -183,7 +184,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let a = variables.var_number(&var_a);
                     let b = variables.var_number(var_b);
                     relations.push((ty, a, b));
-                    prefills.insert((a, var_a));
+                    prefills.insert(a, var_a);
                 }
                 Term::Relation(_, RVK::InVar(_), RVK::InVar(_)) => {
                     unreachable!("The parser should never get us here.");
@@ -193,7 +194,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let a = variables.var_number(var_a);
                     let b = variables.var_number(&var_b);
                     relations.push((ty, a, b));
-                    prefills.insert((b, var_b));
+                    prefills.insert(b, var_b);
                 }
                 Term::Relation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
@@ -204,7 +205,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(&var_a);
                     let b = ANYVAR;
-                    prefills.insert((a, var_a));
+                    prefills.insert(a, var_a);
                     relations.push((ty, a, b));
                     todo!("Relation Invar AnyVar");
                 }
@@ -217,7 +218,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
-                    prefills.insert((b, var_b));
+                    prefills.insert(b, var_b);
                     relations.push((ty, a, b));
                     todo!("Relation AnyVar InVar");
                 }
@@ -243,10 +244,10 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let b = variables.var_number(var_b);
                     match (term_a, term_b) {
                         (RVK::InVar(_), RVK::Var(_)) => {
-                            prefills.insert((a, var_a.clone()));
+                            prefills.insert(a, var_a.clone());
                         }
                         (RVK::Var(_), RVK::InVar(_)) => {
-                            prefills.insert((b, var_b.clone()));
+                            prefills.insert(b, var_b.clone());
                         }
                         _ => (),
                     }
@@ -260,7 +261,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Unrelation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(&var_a);
                     let b = ANYVAR;
-                    prefills.insert((a, var_a));
+                    prefills.insert(a, var_a);
                     unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
                 }
                 Term::Unrelation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
@@ -271,7 +272,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Unrelation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
-                    prefills.insert((b, var_b));
+                    prefills.insert(b, var_b);
                     unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
                 }
                 Term::Unrelation(_ty, RVK::InVar(_var_a), RVK::InVar(_var_b)) => {
@@ -292,12 +293,18 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
 
     assert_eq!(unequals.len(), 0);
     assert_eq!(unrelations.len(), 0);
-    assert_eq!(prefills.len(), 0);
 
     let mut result = String::new();
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
-    let infos = generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
+    let infos = generate_archetype_sets(
+        &mut result,
+        &vars,
+        &prefills,
+        &components,
+        &relations,
+        &uncomponents,
+    );
     generate_fsm_context(&mut result, &vars, &components, &relations);
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 

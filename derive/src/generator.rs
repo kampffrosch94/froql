@@ -37,6 +37,7 @@ impl Debug for VarInfo {
 pub(crate) fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
+    prefills: &HashMap<isize, String>,
     components: &[Component],
     relations: &[Relation],
     uncomponents: &[Component],
@@ -411,9 +412,10 @@ mod test {
         let uncomponents = vec![("Bird".into(), 0), ("Fish".into(), 0), ("Bird".into(), 1)];
         let vars = vec![0, 1];
         let mut result = String::new();
+        let prefills = HashMap::new();
         let infos;
         insta::assert_snapshot!({
-            infos = generate_archetype_sets(&mut result, &vars, &components, &relations,
+            infos = generate_archetype_sets(&mut result, &vars, &prefills, &components, &relations,
                                             &uncomponents);
             result
         }, @r#"
@@ -496,9 +498,10 @@ mod test {
         let uncomponents = vec![];
         let relations = [];
         let vars = vec![0];
+        let prefills = HashMap::new();
         let mut result = String::new();
         insta::assert_snapshot!({
-            generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
+            generate_archetype_sets(&mut result, &vars, &prefills, &components, &relations, &uncomponents);
             result
         }, @r#"
         let components_0 = [
@@ -549,8 +552,15 @@ mod test {
         ];
         let vars = vec![0, 1];
         let mut result = String::new();
-        let infos =
-            generate_archetype_sets(&mut result, &vars, &components, &relations, &uncomponents);
+        let prefills = HashMap::new();
+        let infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+        );
         generate_fsm_context(&mut result, &vars, &components, &relations);
         insta::assert_snapshot!({
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
