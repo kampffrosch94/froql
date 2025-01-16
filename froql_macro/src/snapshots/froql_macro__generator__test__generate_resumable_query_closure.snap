@@ -1,5 +1,5 @@
 ---
-source: derive/src/generator.rs
+source: froql_macro/src/generator.rs
 expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
 ---
 let components_0 = [
