@@ -1,5 +1,5 @@
 #![allow(dead_code)]
-use fast_queries::world::World;
+use froql::world::World;
 
 pub struct NPC {
     name: String,
