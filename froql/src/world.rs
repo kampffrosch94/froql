@@ -204,7 +204,7 @@ impl World {
 
 #[cfg(test)]
 mod test {
-    use derive::query;
+    use crate::query;
 
     use crate::{
         archetype::ArchetypeId,

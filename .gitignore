@@ -2,4 +2,4 @@
 /.direnv/
 /.envrc
 /.idea/
-/derive/target/
+/froql_macro/target/

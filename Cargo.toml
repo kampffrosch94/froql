@@ -2,7 +2,7 @@
 resolver = "2"
 members = [ 
     "froql", 
-    "derive",
+    "froql_macro",
 ]
 
 [profile.dev.package]

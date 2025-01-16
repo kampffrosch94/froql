@@ -10,6 +10,6 @@ pub mod relation;
 pub mod relation_vec;
 mod util;
 pub mod world;
-pub use derive::query;
+pub use froql_macro::query;
 mod entity_view_deferred;
 mod entity_view_mut;

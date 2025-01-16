@@ -49,6 +49,9 @@ pub(crate) fn generate_archetype_sets(
     let mut index = 0;
 
     for var in vars {
+        if prefills.contains_key(var) {
+            continue;
+        }
         let mut info = VarInfo {
             index: *var,
             related_with: HashMap::new(),

@@ -185,13 +185,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7a81dae078cea95a014a339291cec439d2f232ebe854a9d672b796c6afafa9b7"
 
 [[package]]
-name = "derive"
-version = "0.1.0"
-dependencies = [
- "insta",
-]
-
-[[package]]
 name = "either"
 version = "1.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -204,12 +197,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "34aa73646ffb006b8f5147f3dc182bd4bcb190227ce861fc4a4844bf8e3cb2c0"
 
 [[package]]
-name = "fast_queries"
+name = "froql"
 version = "0.1.0"
 dependencies = [
  "criterion",
- "derive",
+ "froql_macro",
  "hi_sparse_bitset",
+]
+
+[[package]]
+name = "froql_macro"
+version = "0.1.0"
+dependencies = [
+ "insta",
 ]
 
 [[package]]
