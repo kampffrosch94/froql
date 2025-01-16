@@ -51,7 +51,7 @@ fn query_rel(world: &mut World) {
     }
 }
 fn query_rel_empty_body(world: &mut World) {
-    for (mut pos, speed) in query!(world, mut Pos(a), Speed(b), Rel(a,b) ) {}
+    for (_pos, _speed) in query!(world, mut Pos(a), Speed(b), Rel(a,b) ) {}
 }
 
 fn criterion_benchmark(c: &mut Criterion) {

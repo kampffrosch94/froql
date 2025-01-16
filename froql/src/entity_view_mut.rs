@@ -77,6 +77,6 @@ mod test {
     #[test]
     fn basics() {
         let mut world = World::new();
-        let e = world.create_mut();
+        let _e = world.create_mut();
     }
 }

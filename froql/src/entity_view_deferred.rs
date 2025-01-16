@@ -35,20 +35,20 @@ impl<'me> EntityViewDeferred<'me> {
         self.world.get_component_mut::<T>(self.id)
     }
 
-    pub fn add<T: 'static>(self, val: T) -> Self {
+    pub fn add<T: 'static>(self, _val: T) -> Self {
         todo!("Deferred")
     }
 
-    pub fn relate_to<T: 'static>(self, to: Entity) -> Self {
+    pub fn relate_to<T: 'static>(self, _to: Entity) -> Self {
         todo!("Deferred");
         //self.world.add_relation::<T>(self.id, to);
-        self
+        //self
     }
 
-    pub fn relate_from<T: 'static>(self, from: Entity) -> Self {
+    pub fn relate_from<T: 'static>(self, _from: Entity) -> Self {
         todo!("Deferred");
         //self.world.add_relation::<T>(from, self.id);
-        self
+        //self
     }
 
     pub fn is_related_to<T: 'static>(&self, to: Entity) -> bool {
