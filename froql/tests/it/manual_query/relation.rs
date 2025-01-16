@@ -1,6 +1,6 @@
 use froql::{
     archetype::{ArchetypeId, ArchetypeRow},
-    entity_store::EntityId,
+    entity_store::{Entity, EntityId},
     relation::Relation,
     relation_vec::RelationVec,
     world::World,
@@ -117,7 +117,7 @@ fn relation_flatmap() {
 }
 
 #[test]
-fn query_fsm_relation() {
+fn query_fsm_relation_outvar() {
     enum Attack {}
 
     #[derive(Debug)]
@@ -275,6 +275,165 @@ fn query_fsm_relation() {
                                     world,
                                     a_refs[0].entities[a_rows[0].0 as usize],
                                 ),
+                                (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
+                                    as *const RefCell<Unit>))
+                                    .borrow(),
+                                (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
+                                    as *const RefCell<Unit>))
+                                    .borrow(),
+                                (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
+                                    as *const RefCell<Health>))
+                                    .borrow_mut(),
+                            )
+                        });
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        })
+    } {
+        println!("\nHp before: {hp:?}");
+        println!("{unit_me:?} attacked by {unit_other:?}");
+        hp.0 -= 5;
+        println!("Hp now: {hp:?}");
+        counter += 1;
+    }
+    //assert_eq!(2, counter);
+    assert_eq!(2, counter);
+}
+
+#[test]
+fn query_fsm_relation_invar() {
+    enum Attack {}
+
+    #[derive(Debug)]
+    #[allow(dead_code)]
+    struct Unit(String);
+    #[derive(Debug)]
+    struct Health(isize);
+
+    let mut world = World::new();
+
+    // this shall be our invar
+    let player = world.create();
+    world.add_component(player, Unit("Player".to_string()));
+
+    let goblin_a = world.create();
+    world.add_component(goblin_a, Health(10));
+    world.add_component(goblin_a, Unit("Goblin A".to_string()));
+    world.add_relation::<Attack>(player, goblin_a);
+
+    let goblin_b = world.create();
+    world.add_component(goblin_b, Health(10));
+    world.add_component(goblin_b, Unit("Goblin B".to_string()));
+    world.add_relation::<Attack>(player, goblin_b);
+
+    // this should not be matched by the query below
+    // bad example I know, but I need something
+    let trap = world.create();
+    world.add_relation::<Attack>(trap, goblin_b);
+
+    let mut counter = 0;
+
+    // manual query for:
+    // query!(world, &me, Unit(me), Unit(*player), Hp(me), Attack(*player, me))
+    for (unit_me, unit_other, mut hp) in {
+        let invar_other: Entity = player;
+        let world: &World = &world;
+        let bk = &world.bookkeeping;
+        let components_me = [
+            // 0
+            world.get_component_id::<Unit>(),
+            // 1
+            world.get_component_id::<Health>(),
+            // 2
+            bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>())
+                .flip_target(),
+        ];
+        let components_other = [
+            // 3
+            world.get_component_id::<Unit>(),
+            // 4
+            bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+        ];
+        let archetype_ids_me = bk.matching_archetypes(&components_me, &[]);
+        let archetype_ids_other = bk.matching_archetypes(&components_other, &[]);
+        let archetype_id_sets = [archetype_ids_me, archetype_ids_other];
+
+        // result set
+        const VAR_COUNT: usize = 2;
+        let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
+        let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+
+        // context for statemachine
+        let mut col_indexes = [usize::MAX; 5];
+        assert_eq!(
+            col_indexes.len(),
+            components_me.len() + components_other.len()
+        );
+        // gets rolled over to 0 by wrapping_add
+        let mut rel_index_1 = 0;
+
+        // TODO set archetype for invar
+        let (aid, arow) = bk.entities.get_archetype(invar_other);
+        // TODO fill out component IDs for archetype
+        let a_ref = &mut a_refs[1];
+        *a_ref = &bk.archetypes[aid.as_index()];
+        a_ref.find_multiple_columns(&components_other, &mut col_indexes[3..5]);
+        a_rows[1] = arow;
+
+        let mut current_step = 1; // start in step 1, cause 0 ist just return
+        std::iter::from_fn(move || {
+            loop {
+                match current_step {
+                    // next archetype
+                    0 => {
+                        return None;
+                    }
+                    // follow relation
+                    1 => {
+                        const CURRENT_VAR: usize = 1;
+                        const REL_VAR: usize = 0;
+                        const RELATION_COMP_INDEX: usize = 4;
+                        const REL_VAR_COMPONENTS: Range<usize> = 0..3;
+                        let row = a_rows[CURRENT_VAR].0;
+                        let col = col_indexes[RELATION_COMP_INDEX];
+                        let arch = &a_refs[CURRENT_VAR];
+                        debug_assert_eq!(
+                            arch.columns[col].element_size(),
+                            size_of::<RelationVec>()
+                        );
+                        let ptr = unsafe { arch.columns[col].get(row) } as *const RelationVec;
+                        let rel_vec = unsafe { &*ptr };
+                        debug_assert!(rel_vec.len() > 0);
+                        if rel_index_1 >= rel_vec.len() {
+                            rel_index_1 = 0;
+                            current_step -= 1;
+                        } else {
+                            // get aid/row for entity in relation
+                            let id = EntityId(rel_vec[rel_index_1 as usize]);
+                            let (aid, arow) = bk.entities.get_archetype_unchecked(id);
+                            rel_index_1 += 1;
+
+                            // if in target archetype set => go to next step
+                            if archetype_id_sets[REL_VAR].contains(&aid) {
+                                let a_ref = &mut a_refs[REL_VAR];
+                                *a_ref = &bk.archetypes[aid.as_index()];
+                                a_ref.find_multiple_columns(
+                                    &components_me,
+                                    &mut col_indexes[REL_VAR_COMPONENTS],
+                                );
+                                a_rows[REL_VAR] = arow;
+
+                                current_step += 1;
+                            }
+                        }
+                    }
+                    // yield row
+                    2 => {
+                        current_step -= 1;
+                        return Some(unsafe {
+                            (
                                 (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
                                     as *const RefCell<Unit>))
                                     .borrow(),
