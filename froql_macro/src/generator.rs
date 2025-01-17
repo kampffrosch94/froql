@@ -34,6 +34,20 @@ impl Debug for VarInfo {
     }
 }
 
+pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<isize, String>) {
+    // vec + sort for determinism
+    let mut v = prefills.iter().collect::<Vec<_>>();
+    v.sort();
+
+    for (index, name) in v {
+        write!(
+            result,
+            "
+let invar_{index} = {name};"
+        ).unwrap();
+    }
+}
+
 pub(crate) fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
@@ -493,6 +507,37 @@ mod test {
             ],
         )
         "#);
+    }
+
+    #[test]
+    fn test_generate_invar_captures() {
+        let mut result = String::new();
+        let mut prefills = HashMap::new();
+        prefills.insert(1, "player".to_string());
+        prefills.insert(2, "somebody".to_string());
+        insta::assert_snapshot!({
+            generate_invar_captures(&mut result, &prefills);
+            result
+        }, @r#"
+        let invar_1 = player;
+        let invar_2 = somebody;
+        "#);
+
+        let mut result = String::new();
+        let mut prefills = HashMap::new();
+        prefills.insert(1, "player".to_string());
+        insta::assert_snapshot!({
+            generate_invar_captures(&mut result, &prefills);
+            result
+        }, @"let invar_1 = player;");
+
+        // empty
+        let mut result = String::new();
+        let prefills = HashMap::new();
+        assert_eq!({
+            generate_invar_captures(&mut result, &prefills);
+            result
+        }, "");
     }
 
     #[test]

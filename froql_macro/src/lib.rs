@@ -12,6 +12,7 @@ use parser::RelationVarKind as RVK;
 use parser::VarKind as VK;
 use parser::{parse_term, Term};
 use proc_macro::{TokenStream, TokenTree};
+use std::fmt::Write;
 
 const ANYVAR: isize = isize::MAX;
 
@@ -295,6 +296,19 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     assert_eq!(unrelations.len(), 0);
 
     let mut result = String::new();
+
+    result.push_str("{");
+
+    generate_invar_captures(&mut result, &prefills);
+
+    write!(
+        &mut result,
+        "
+let world: &World = &{world};
+let bk = &world.bookkeeping;
+"
+    );
+
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
     let infos = generate_archetype_sets(
@@ -308,19 +322,14 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     generate_fsm_context(&mut result, &vars, &components, &relations);
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 
-    let output = format!(
+    write!(
+        &mut result,
         "
-{{
-let world: &World = &{world};
-let bk = &world.bookkeeping;
-
-{result}
-}}
-"
+}}"
     );
 
     //eprintln!("{}", &output);
-    Ok(output.parse().unwrap())
+    Ok(result.parse().unwrap())
 }
 
 /// the parser treats the identifier _ of anyvars as normal variable names

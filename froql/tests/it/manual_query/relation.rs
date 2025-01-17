@@ -374,13 +374,15 @@ fn query_fsm_relation_invar() {
         // gets rolled over to 0 by wrapping_add
         let mut rel_index_1 = 0;
 
-        // TODO set archetype for invar
-        let (aid, arow) = bk.entities.get_archetype(invar_other);
-        // TODO fill out component IDs for archetype
-        let a_ref = &mut a_refs[1];
-        *a_ref = &bk.archetypes[aid.as_index()];
-        a_ref.find_multiple_columns(&components_other, &mut col_indexes[3..5]);
-        a_rows[1] = arow;
+        // set archetype for invar
+        // then fill out component IDs for archetype of invar
+        {
+            let (aid, arow) = bk.entities.get_archetype(invar_other);
+            let a_ref = &mut a_refs[1];
+            *a_ref = &bk.archetypes[aid.as_index()];
+            a_ref.find_multiple_columns(&components_other, &mut col_indexes[3..5]);
+            a_rows[1] = arow;
+        }
 
         let mut current_step = 1; // start in step 1, cause 0 ist just return
         std::iter::from_fn(move || {
