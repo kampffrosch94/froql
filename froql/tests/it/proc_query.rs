@@ -204,3 +204,39 @@ fn proc_query_relation_invar() {
     }
     assert_eq!(2, counter);
 }
+
+#[test]
+fn proc_query_relation_anyvar() {
+    enum Attack {}
+
+    #[derive(Debug)]
+    #[allow(dead_code)] // used only for debug output
+    struct Unit(String);
+
+    let mut world = World::new();
+    let player = world.create();
+    world.add_component(player, Unit("Player".to_string()));
+
+    let goblin_a = world.create();
+    world.add_component(goblin_a, Unit("Goblin A".to_string()));
+    world.add_relation::<Attack>(player, goblin_a);
+
+    let goblin_b = world.create();
+    world.add_component(goblin_b, Unit("Goblin B".to_string()));
+    world.add_relation::<Attack>(player, goblin_b);
+
+    let trap = world.create();
+    world.add_relation::<Attack>(trap, goblin_b);
+
+    let mut counter = 0;
+
+    for (me,) in query!(world, Unit(me), Attack(_, me)) {
+        println!("{me:?} is attacked by something.");
+        counter += 1;
+    }
+    // even though there are a total of 3 attacks, we only iterate twice
+    // I think that is desireable, since we only care about the attacked here
+    // of which there are only two
+    // we would get 3 iteration if we used a normal var instead of _
+    assert_eq!(2, counter);
+}

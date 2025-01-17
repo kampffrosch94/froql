@@ -14,7 +14,7 @@ use parser::{parse_term, Term};
 use proc_macro::{TokenStream, TokenTree};
 use std::fmt::Write;
 
-const ANYVAR: isize = isize::MAX;
+pub(crate) const ANYVAR: isize = isize::MAX;
 
 #[proc_macro]
 pub fn query(input: TokenStream) -> TokenStream {
@@ -200,7 +200,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::Relation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
                     let b = ANYVAR;
-                    todo!("Relation Var AnyVar");
                     relations.push((ty, a, b));
                 }
                 Term::Relation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
@@ -208,23 +207,20 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let b = ANYVAR;
                     prefills.insert(a, var_a);
                     relations.push((ty, a, b));
-                    todo!("Relation Invar AnyVar");
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(var_b);
                     relations.push((ty, a, b));
-                    todo!("Relation AnyVar Var");
                 }
                 Term::Relation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
                     prefills.insert(b, var_b);
                     relations.push((ty, a, b));
-                    todo!("Relation AnyVar InVar");
                 }
                 Term::Relation(_ty, RVK::AnyVar, RVK::AnyVar) => {
-                    panic!("Rel(_,_) does not make sense.");
+                    panic!("Relation(_,_) does not make sense.");
                 }
                 Term::Unrelation(
                     ty,

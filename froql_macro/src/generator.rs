@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
+use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 // TODO use write! instead of format! to save on intermediate allocations
 
@@ -442,7 +443,12 @@ fn compute_join_order(
 ) -> (isize, Vec<JoinKind>) {
     let mut result: Vec<JoinKind> = Vec::new();
     let mut available: Vec<VarInfo> = Vec::new();
-    let mut work_left: Vec<Relation> = Vec::from(relations);
+    let mut work_left: Vec<Relation> = relations
+        .iter()
+        .cloned()
+        // anyvars only matter as components for constraining archetype sets
+        .filter(|(_, from, to)| *from != ANYVAR && *to != ANYVAR)
+        .collect();
 
     // figure out what to start with
     if prefills.is_empty() {
