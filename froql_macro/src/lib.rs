@@ -322,11 +322,7 @@ let bk = &world.bookkeeping;
     generate_fsm_context(&mut result, &vars, &components, &relations);
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 
-    write!(
-        &mut result,
-        "
-}}"
-    );
+    result.push_str("\n}");
 
     //eprintln!("{}", &output);
     Ok(result.parse().unwrap())
