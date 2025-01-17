@@ -12,11 +12,10 @@ Though I guess I can do that later still.
 I suspect this will be a bit more complicated.
 I'll have to add a route to the code gone that populates the archetypes/rows of invars.
 Should do that as the first step, instead of fetching an archetype from the possible set.
-Also invars don't need to be constrained by an archetype set, so they probably should not
-count for ~VAR_COUNT~ in the same way.
-I might need to diffentiate here.
 ** TODO anyvars
-example: ~ChildOf(_, me)~
+- example: ~ChildOf(_, me)~
+They only constrain the component set, but don't add any variables.
+Shouldn't be too hard.
 ** TODO variable inequality constraints
 Examples:
 - ~a != b~
@@ -25,12 +24,15 @@ Examples:
 Inequality constraints are an additonal step that needs to be inserted in the generator.
 In theory I could check inequalities also the moment I follow an relationship,
 instead of actually creating an additional step :thonk:
+In the case of invars I might need to check them even earlier.
 ** TODO unrelations
 - ~!Rel(a,b)~
+Should be an additional step that needs to be inserted.
 ** TODO queries involving ZSTs
 - ZST are not stored in archetype
   - need to search for them when creating archetype sets
   - don't need them in output array, can just create from NonNull::dangling()
+  - maybe I should insert checks that outputs are not ZSTs
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component, I think
