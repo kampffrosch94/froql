@@ -7,7 +7,8 @@ CLOSED: [2025-01-15 Wed 04:05]
 ~&this~
 Simple change, but I also want to return entityviews.
 Though I guess I can do that later still.
-** NEXT invars
+** DONE invars
+CLOSED: [2025-01-17 Fri 14:41]
 ~*player~
 I suspect this will be a bit more complicated.
 I'll have to add a route to the code gone that populates the archetypes/rows of invars.
@@ -16,12 +17,13 @@ Should do that as the first step, instead of fetching an archetype from the poss
 - [X] capture invars
 - [X] generate component sets for invars
 - [X] prefill archetypes from invars
-- [ ] branch generator depending on if invars are used
+- [X] branch generator depending on if invars are used
   + step 0 and 1 can be replaced by one that just returns None
   + we need to start at step 1 then (follow Relations)
   + join order needs invars as already set instead of picking the most constrained var
 
-** TODO anyvars
+** DONE anyvars
+CLOSED: [2025-01-17 Fri 14:41]
 - example: ~ChildOf(_, me)~
 They only constrain the component set, but don't add any variables.
 Shouldn't be too hard.
@@ -34,19 +36,21 @@ Inequality constraints are an additonal step that needs to be inserted in the ge
 In theory I could check inequalities also the moment I follow an relationship,
 instead of actually creating an additional step :thonk:
 In the case of invars I might need to check them even earlier.
+-> easiest to just add another step though
+-> should be part of the join order
 ** TODO unrelations
 - ~!Rel(a,b)~
 Should be an additional step that needs to be inserted.
+** TODO singletons
+- ~mut $TileMap~ and ~$TileMap~
+- singletons should be entities with only one component
+- => need to add them to the component register
+- probably good to add an API for them at the world/bk level before worrying about queries
 ** TODO queries involving ZSTs
 - ZST are not stored in archetype
   - need to search for them when creating archetype sets
   - don't need them in output array, can just create from NonNull::dangling()
   - maybe I should insert checks that outputs are not ZSTs
-** TODO singletons
-- ~mut $TileMap~ and ~$TileMap~
-- singletons should be entities with only one component, I think
-- => need to add them to the component register
-- probably good to add an API for them at the world/bk level before worrying about queries
 * World API
 ** TODO EntityViewMut
 ** TODO EntityViewDeferred
