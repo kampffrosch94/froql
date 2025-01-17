@@ -154,3 +154,53 @@ fn proc_query_outvar() {
     assert_eq!(2, counter);
     assert_eq!(1, c_counter);
 }
+
+#[test]
+fn proc_query_relation_invar() {
+    enum Attack {}
+
+    #[derive(Debug)]
+    #[allow(dead_code)] // used only for debug output
+    struct Unit(String);
+    #[derive(Debug)]
+    struct Health(isize);
+
+    let mut world = World::new();
+    let player = world.create();
+    world.add_component(player, Unit("Player".to_string()));
+    let player2 = world.create();
+    world.add_component(player2, Unit("Player2".to_string()));
+    let goblin_a = world.create();
+    world.add_component(goblin_a, Health(10));
+    world.add_component(goblin_a, Unit("Goblin A".to_string()));
+    world.add_relation::<Attack>(player, goblin_a);
+    world.add_relation::<Attack>(player2, goblin_a);
+
+    let goblin_b = world.create();
+    world.add_component(goblin_b, Health(10));
+    world.add_component(goblin_b, Unit("Goblin B".to_string()));
+    world.add_relation::<Attack>(player, goblin_b);
+    world.add_relation::<Attack>(player2, goblin_b);
+
+    // this should not be matched by the query below
+    // bad example I know, but I need something
+    let trap = world.create();
+    world.add_relation::<Attack>(trap, goblin_b);
+
+    let origins_a: Vec<Entity> = world.relation_origins::<Attack>(goblin_a).collect();
+    assert_eq!(&[player, player2], origins_a.as_slice());
+    let origins_b: Vec<Entity> = world.relation_origins::<Attack>(goblin_b).collect();
+    assert_eq!(&[player, player2, trap], origins_b.as_slice());
+
+    let mut counter = 0;
+
+    for (me, other, mut hp) in query!(world, Unit(me), Unit(player),
+                                          mut Health(me), Attack(*player, me))
+    {
+        println!("{me:?} attacked by {other:?}");
+        hp.0 -= 5;
+        println!("Hp now: {hp:?}");
+        counter += 1;
+    }
+    assert_eq!(2, counter);
+}
