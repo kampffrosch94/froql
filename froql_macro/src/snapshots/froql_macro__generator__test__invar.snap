@@ -1,6 +1,6 @@
 ---
 source: froql_macro/src/generator.rs
-expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
+expression: result
 ---
 let invar_1: Entity = player;
 let components_0 = [
@@ -26,7 +26,7 @@ let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
-let mut current_step = 0;
+let mut current_step = 1;
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
@@ -39,53 +39,19 @@ let mut col_indexes = [usize::MAX; 5];
     a_rows[1] = arow;
 }
 
-let mut rel_index_2 = 0;
+let mut rel_index_1 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {
 0 => {
-    const CURRENT_VAR: usize = 0;
-    const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..3;
-    let next_index = &mut a_next_indexes[CURRENT_VAR];
-    let archetype_ids = &archetype_id_sets[CURRENT_VAR];
-    *next_index = next_index.wrapping_add(1);
-    if *next_index >= archetype_ids.len() {
-        return None;
-    }
-    let next_id = archetype_ids[*next_index];
-
-    // gets rolled over to 0 by wrapping_add
-    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
-    let a_ref = &mut a_refs[CURRENT_VAR];
-    *a_ref = &bk.archetypes[next_id.as_index()];
-    a_ref.find_multiple_columns(
-        &components_0,
-        &mut col_indexes[CURRENT_VAR_COMPONENTS],
-    );
-    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
-    current_step += 1;
-}
-
-// next row in archetype
-1 => {
-    const CURRENT_VAR: usize = 0;
-    let row_counter = &mut a_rows[CURRENT_VAR].0;
-    let max_row = a_max_rows[CURRENT_VAR];
-    // rolls over to 0 for u32::MAX, which is our start value
-    *row_counter = row_counter.wrapping_add(1);
-
-    if *row_counter >= max_row {
-        current_step -= 1;
-    } else {
-        current_step += 1;
-    }
+    return None;
 }
 
 // follow relation
-2 => {
-    const CURRENT_VAR: usize = 0;
-    const REL_VAR: usize = 1;
-    const RELATION_COMP_INDEX: usize = 2;
-    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 3..5;
+1 => {
+    const CURRENT_VAR: usize = 1;
+    const REL_VAR: usize = 0;
+    const RELATION_COMP_INDEX: usize = 4;
+    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..3;
     let row = a_rows[CURRENT_VAR].0;
     let col = col_indexes[RELATION_COMP_INDEX];
     let arch = &a_refs[CURRENT_VAR];
@@ -96,21 +62,21 @@ let mut rel_index_2 = 0;
     let ptr = unsafe { arch.columns[col].get(row) } as *const RelationVec;
     let rel_vec = unsafe { &*ptr };
     debug_assert!(rel_vec.len() > 0);
-    if rel_index_2 >= rel_vec.len() {
-        rel_index_2 = 0;
+    if rel_index_1 >= rel_vec.len() {
+        rel_index_1 = 0;
         current_step -= 1;
     } else {
         // get aid/row for entity in relation
-        let id = EntityId(rel_vec[rel_index_2 as usize]);
+        let id = EntityId(rel_vec[rel_index_1 as usize]);
         let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-        rel_index_2 += 1;
+        rel_index_1 += 1;
 
         // if in target archetype set => go to next step
         if archetype_id_sets[REL_VAR].contains(&aid) {
             let a_ref = &mut a_refs[REL_VAR];
             *a_ref = &bk.archetypes[aid.as_index()];
             a_ref.find_multiple_columns(
-                &components_1,
+                &components_0,
                 &mut col_indexes[REL_VAR_COMPONENTS],
             );
             a_rows[REL_VAR] = arow;
@@ -121,7 +87,7 @@ let mut rel_index_2 = 0;
 }
 
 // yield row
-3 => {
+2 => {
     current_step -= 1;
     return Some(unsafe {
         (

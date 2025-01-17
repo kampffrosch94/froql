@@ -388,7 +388,7 @@ fn query_fsm_relation_invar() {
         std::iter::from_fn(move || {
             loop {
                 match current_step {
-                    // next archetype
+                    // we start at 1, when we get here we are done
                     0 => {
                         return None;
                     }

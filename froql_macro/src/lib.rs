@@ -319,10 +319,17 @@ let bk = &world.bookkeeping;
         &relations,
         &uncomponents,
     );
-    generate_fsm_context(&mut result, &vars, &components, &relations);
+    generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
     generate_invar_archetype_fill(&mut result, &infos, &prefills);
 
-    generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
+    generate_resumable_query_closure(
+        &mut result,
+        &vars,
+        &prefills,
+        &infos,
+        &relations,
+        &accessors,
+    );
 
     result.push_str("\n}");
 

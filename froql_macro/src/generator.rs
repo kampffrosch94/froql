@@ -8,7 +8,7 @@ use std::{collections::HashMap, ops::Range};
 use crate::{Accessor, Component, Relation};
 // TODO use write! instead of format! to save on intermediate allocations
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct VarInfo {
     /// Index of this variable
     index: isize,
@@ -31,6 +31,18 @@ impl Debug for VarInfo {
             .field("component_range", &self.component_range)
             .field("components", &components)
             .finish()
+    }
+}
+
+impl PartialOrd for VarInfo {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        return self.index.partial_cmp(&other.index);
+    }
+}
+
+impl Ord for VarInfo {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        return self.index.cmp(&other.index);
     }
 }
 
@@ -174,12 +186,13 @@ pub(crate) fn generate_archetype_sets(
 pub(crate) fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
+    prefills: &HashMap<isize, String>,
     components: &[Component],
     relations: &[Relation],
 ) {
     let var_count = vars.len();
     let col_count = components.len() + relations.len() * 2;
-    // TODO unify into struct to save on generated lines
+    let start_step = if prefills.is_empty() { 0 } else { 1 };
     result.push_str(&format!(
         "
 // result set
@@ -188,7 +201,7 @@ let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
-let mut current_step = 0;
+let mut current_step = {start_step};
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; {col_count}];
@@ -199,6 +212,7 @@ let mut col_indexes = [usize::MAX; {col_count}];
 pub(crate) fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
+    prefills: &HashMap<isize, String>,
     infos: &[VarInfo],
     relations: &[Relation],
     accessors: &[Accessor],
@@ -206,7 +220,7 @@ pub(crate) fn generate_resumable_query_closure(
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let (first, join_order) = compute_join_order(relations, infos);
+    let (first, join_order) = compute_join_order(relations, infos, prefills);
 
     // TODO save on constants by directly applying the var
     append.push_str(
@@ -214,12 +228,15 @@ pub(crate) fn generate_resumable_query_closure(
 ::std::iter::from_fn(move || { loop { match current_step {",
     );
 
-    // select first archetype
-    {
-        let first_info = &infos[first as usize];
-        let Range { start, end } = &first_info.component_range;
-        append.push_str(&format!(
-            "
+    let mut step_count;
+
+    if prefills.is_empty() {
+        // select first archetype
+        {
+            let first_info = &infos[first as usize];
+            let Range { start, end } = &first_info.component_range;
+            append.push_str(&format!(
+                "
 0 => {{
     const CURRENT_VAR: usize = {first};
     const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = {start}..{end};
@@ -243,10 +260,10 @@ pub(crate) fn generate_resumable_query_closure(
     current_step += 1;
 }}
 "
-        ));
-        // get row from first archetype
-        append.push_str(&format!(
-            "
+            ));
+            // get row from first archetype
+            append.push_str(&format!(
+                "
 // next row in archetype
 1 => {{
     const CURRENT_VAR: usize = {first};
@@ -262,22 +279,38 @@ pub(crate) fn generate_resumable_query_closure(
     }}
 }}
 "
-        ));
+            ));
+        }
+        step_count = 1;
+    } else {
+        // we have invars
+
+        // we start at 1, when we get here we are done
+        write!(
+            append,
+            "
+0 => {{
+    return None;
+}}
+"
+        )
+        .unwrap();
+
+        step_count = 0;
     }
-    let mut count = 1;
     // follow relations/constraints
     for step in join_order {
-        count += 1;
+        step_count += 1;
         match step {
             JoinKind::NewJoin(comp, old, new) => {
                 let new_info = &infos[new as usize];
                 let Range { start, end } = &new_info.component_range;
                 // TODO prepend state for current join
-                prepend.push_str(&format!("\nlet mut rel_index_{count} = 0;"));
+                prepend.push_str(&format!("\nlet mut rel_index_{step_count} = 0;"));
                 append.push_str(&format!(
                     "
 // follow relation
-{count} => {{
+{step_count} => {{
     const CURRENT_VAR: usize = {old};
     const REL_VAR: usize = {new};
     const RELATION_COMP_INDEX: usize = {comp};
@@ -292,14 +325,14 @@ pub(crate) fn generate_resumable_query_closure(
     let ptr = unsafe {{ arch.columns[col].get(row) }} as *const RelationVec;
     let rel_vec = unsafe {{ &*ptr }};
     debug_assert!(rel_vec.len() > 0);
-    if rel_index_{count} >= rel_vec.len() {{
-        rel_index_{count} = 0;
+    if rel_index_{step_count} >= rel_vec.len() {{
+        rel_index_{step_count} = 0;
         current_step -= 1;
     }} else {{
         // get aid/row for entity in relation
-        let id = EntityId(rel_vec[rel_index_{count} as usize]);
+        let id = EntityId(rel_vec[rel_index_{step_count} as usize]);
         let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-        rel_index_{count} += 1;
+        rel_index_{step_count} += 1;
 
         // if in target archetype set => go to next step
         if archetype_id_sets[REL_VAR].contains(&aid) {{
@@ -325,12 +358,12 @@ pub(crate) fn generate_resumable_query_closure(
     }
 
     // yield row
-    count += 1;
+    step_count += 1;
     write!(
         &mut append,
         "
 // yield row
-{count} => {{
+{step_count} => {{
     current_step -= 1;
     return Some(unsafe {{
         ("
@@ -402,20 +435,34 @@ enum JoinKind {
     RelationConstraint(usize, isize, isize),
 }
 
-fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<JoinKind>) {
-    // TODO figure out the variable to start with
-    // I think its a decent metric to use the most constrained variable first
-    let first = infos
-        .iter()
-        .max_by_key(|it| it.component_range.len())
-        .unwrap();
-
+fn compute_join_order(
+    relations: &[Relation],
+    infos: &[VarInfo],
+    prefills: &HashMap<isize, String>,
+) -> (isize, Vec<JoinKind>) {
     let mut result: Vec<JoinKind> = Vec::new();
-    let mut available: Vec<VarInfo> = vec![first.clone()];
+    let mut available: Vec<VarInfo> = Vec::new();
     let mut work_left: Vec<Relation> = Vec::from(relations);
+
+    // figure out what to start with
+    if prefills.is_empty() {
+        // I think its a decent metric to use the most constrained variable first
+        let first = infos
+            .iter()
+            .max_by_key(|it| it.component_range.len())
+            .unwrap();
+        available.push(first.clone());
+    } else {
+        for (var, _) in prefills {
+            available.push(infos[*var as usize].clone());
+            available.sort();
+        }
+    }
+
     // TODO compute join
     for _ in 0..work_left.len() {
         // find next viable for joining and remove it from working list
+        // always handle constraints first, because it may let us skip work
         let next_constraint = {
             let pos = work_left.iter().position(|rel| {
                 available
@@ -454,7 +501,7 @@ fn compute_join_order(relations: &[Relation], infos: &[VarInfo]) -> (isize, Vec<
             }
         }
     }
-    return (first.index, result);
+    return (available[0].index, result);
 }
 
 #[cfg(test)]
@@ -534,7 +581,7 @@ mod test {
         ]
         "#);
 
-        let join_order = compute_join_order(&relations, &infos);
+        let join_order = compute_join_order(&relations, &infos, &prefills);
         insta::assert_debug_snapshot!(join_order, @r#"
         (
             0,
@@ -612,9 +659,10 @@ mod test {
         let relations = vec![("Attack".into(), 1, 0)];
         let vars = vec![0, 1];
         let mut result = String::new();
+        let prefills = HashMap::new();
 
         insta::assert_snapshot!({
-            generate_fsm_context(&mut result, &vars, &components, &relations);
+            generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
             result
         }, @r#"
         // result set
@@ -652,12 +700,17 @@ mod test {
             &relations,
             &uncomponents,
         );
-        generate_fsm_context(&mut result, &vars, &components, &relations);
+        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
         generate_invar_archetype_fill(&mut result, &infos, &prefills);
-        insta::assert_snapshot!({
-            generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
-            result
-        });
+        generate_resumable_query_closure(
+            &mut result,
+            &vars,
+            &prefills,
+            &infos,
+            &relations,
+            &accessors,
+        );
+        insta::assert_snapshot!(result);
     }
 
     #[test]
@@ -685,11 +738,18 @@ mod test {
             &uncomponents,
         );
         dbg!(&infos);
-        generate_fsm_context(&mut result, &vars, &components, &relations);
+        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
         generate_invar_archetype_fill(&mut result, &infos, &prefills);
-        insta::assert_snapshot!({
-            generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
-            result
-        });
+
+        generate_resumable_query_closure(
+            &mut result,
+            &vars,
+            &prefills,
+            &infos,
+            &relations,
+            &accessors,
+        );
+
+        insta::assert_snapshot!(result);
     }
 }
