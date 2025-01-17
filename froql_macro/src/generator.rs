@@ -43,7 +43,7 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
         write!(
             result,
             "
-let invar_{index} = {name};"
+let invar_{index}: Entity = {name};"
         ).unwrap();
     }
 }
@@ -519,8 +519,8 @@ mod test {
             generate_invar_captures(&mut result, &prefills);
             result
         }, @r#"
-        let invar_1 = player;
-        let invar_2 = somebody;
+        let invar_1: Entity = player;
+        let invar_2: Entity = somebody;
         "#);
 
         let mut result = String::new();
@@ -529,7 +529,7 @@ mod test {
         insta::assert_snapshot!({
             generate_invar_captures(&mut result, &prefills);
             result
-        }, @"let invar_1 = player;");
+        }, @"let invar_1: Entity = player;");
 
         // empty
         let mut result = String::new();
@@ -601,6 +601,35 @@ mod test {
         let vars = vec![0, 1];
         let mut result = String::new();
         let prefills = HashMap::new();
+        let infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+        );
+        generate_fsm_context(&mut result, &vars, &components, &relations);
+        insta::assert_snapshot!({
+            generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
+            result
+        });
+    }
+
+    #[test]
+    fn test_invar() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let uncomponents = vec![];
+        let relations = vec![("Attack".into(), 1, 0)];
+        let accessors = vec![
+            Accessor::Component("Unit".to_string(), 0),
+            Accessor::Component("Unit".to_string(), 1),
+            Accessor::ComponentMut("Health".to_string(), 0),
+        ];
+        let vars = vec![0, 1];
+        let mut result = String::new();
+        let mut prefills = HashMap::new();
+        //prefills.insert(1, "player".to_string());
         let infos = generate_archetype_sets(
             &mut result,
             &vars,

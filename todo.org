@@ -12,6 +12,13 @@ Though I guess I can do that later still.
 I suspect this will be a bit more complicated.
 I'll have to add a route to the code gone that populates the archetypes/rows of invars.
 Should do that as the first step, instead of fetching an archetype from the possible set.
+- [X] write manual query
+- [X] capture invars
+- [ ] branch generator depending on if invars are used
+  + step 0 and 1 can be replaced by one that just returns None
+  + we need to start at step 1 then (follow Relations)
+- [ ] prefill archetypes from invars
+
 ** TODO anyvars
 - example: ~ChildOf(_, me)~
 They only constrain the component set, but don't add any variables.
