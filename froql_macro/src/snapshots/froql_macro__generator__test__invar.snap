@@ -2,6 +2,7 @@
 source: froql_macro/src/generator.rs
 expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
 ---
+let invar_1: Entity = player;
 let components_0 = [
     world.get_component_id::<Unit>(),
     world.get_component_id::<Health>(),
@@ -15,7 +16,7 @@ let components_1 = [
 
 let archetype_id_sets = [
     bk.matching_archetypes(&components_0, &[]),
-    bk.matching_archetypes(&components_1, &[]),
+    Vec::new(),
 ];
 
 

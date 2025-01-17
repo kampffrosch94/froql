@@ -42,9 +42,10 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     for (index, name) in v {
         write!(
             result,
-            "
-let invar_{index}: Entity = {name};"
-        ).unwrap();
+            "let invar_{index}: Entity = {name};
+"
+        )
+        .unwrap();
     }
 }
 
@@ -63,9 +64,6 @@ pub(crate) fn generate_archetype_sets(
     let mut index = 0;
 
     for var in vars {
-        if prefills.contains_key(var) {
-            continue;
-        }
         let mut info = VarInfo {
             index: *var,
             related_with: HashMap::new(),
@@ -106,13 +104,24 @@ pub(crate) fn generate_archetype_sets(
     if uncomponents.is_empty() {
         result.push_str("let archetype_id_sets = [\n");
         for var in vars {
-            result.push_str(&format!(
-                "    bk.matching_archetypes(&components_{var}, &[]),\n"
-            ));
+            if prefills.contains_key(var) {
+                // don't need this for prefills
+                result.push_str(&format!("    Vec::new(),\n"));
+            } else {
+                write!(
+                    result,
+                    "    bk.matching_archetypes(&components_{var}, &[]),\n"
+                )
+                .unwrap();
+            }
         }
         result.push_str("];\n\n");
     } else {
         for var in vars {
+            if prefills.contains_key(var) {
+                continue;
+            }
+
             result.push_str(&format!("let uncomponents_{var} = ["));
             // component
             for (ty, _) in uncomponents.iter().filter(|(_, id)| id == var) {
@@ -122,9 +131,16 @@ pub(crate) fn generate_archetype_sets(
         }
         result.push_str("let archetype_id_sets = [\n");
         for var in vars {
-            result.push_str(&format!(
-                "    bk.matching_archetypes(&components_{var}, &uncomponents_{var}),\n"
-            ));
+            if prefills.contains_key(var) {
+                // don't need this for prefills
+                result.push_str(&format!("    Vec::new(),\n"));
+            } else {
+                write!(
+                    result,
+                    "    bk.matching_archetypes(&components_{var}, &uncomponents_{var}),\n"
+                )
+                .unwrap();
+            }
         }
         result.push_str("];\n\n");
     }
@@ -534,10 +550,13 @@ mod test {
         // empty
         let mut result = String::new();
         let prefills = HashMap::new();
-        assert_eq!({
-            generate_invar_captures(&mut result, &prefills);
-            result
-        }, "");
+        assert_eq!(
+            {
+                generate_invar_captures(&mut result, &prefills);
+                result
+            },
+            ""
+        );
     }
 
     #[test]
@@ -627,9 +646,11 @@ mod test {
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
         let vars = vec![0, 1];
-        let mut result = String::new();
         let mut prefills = HashMap::new();
-        //prefills.insert(1, "player".to_string());
+        prefills.insert(1, "player".to_string());
+
+        let mut result = String::new();
+        generate_invar_captures(&mut result, &prefills);
         let infos = generate_archetype_sets(
             &mut result,
             &vars,
@@ -638,6 +659,7 @@ mod test {
             &relations,
             &uncomponents,
         );
+        dbg!(&infos);
         generate_fsm_context(&mut result, &vars, &components, &relations);
         insta::assert_snapshot!({
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
