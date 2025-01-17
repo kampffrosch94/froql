@@ -31,6 +31,14 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
+{
+    let (aid, arow) = bk.entities.get_archetype(invar_1);
+    let a_ref = &mut a_refs[1];
+    *a_ref = &bk.archetypes[aid.as_index()];
+    a_ref.find_multiple_columns(&components_1, &mut col_indexes[3..5]);
+    a_rows[1] = arow;
+}
+
 let mut rel_index_2 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {

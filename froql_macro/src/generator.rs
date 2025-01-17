@@ -49,6 +49,30 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     }
 }
 
+pub(crate) fn generate_invar_archetype_fill(
+    result: &mut String,
+    infos: &[VarInfo],
+    prefills: &HashMap<isize, String>,
+) {
+    for info in infos.iter().filter(|it| prefills.contains_key(&it.index)) {
+        let var_index = info.index;
+        let Range { start, end } = &info.component_range;
+        write!(
+            result,
+            "
+{{
+    let (aid, arow) = bk.entities.get_archetype(invar_{var_index});
+    let a_ref = &mut a_refs[{var_index}];
+    *a_ref = &bk.archetypes[aid.as_index()];
+    a_ref.find_multiple_columns(&components_{var_index}, &mut col_indexes[{start}..{end}]);
+    a_rows[{var_index}] = arow;
+}}
+"
+        )
+        .unwrap();
+    }
+}
+
 pub(crate) fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
@@ -629,6 +653,7 @@ mod test {
             &uncomponents,
         );
         generate_fsm_context(&mut result, &vars, &components, &relations);
+        generate_invar_archetype_fill(&mut result, &infos, &prefills);
         insta::assert_snapshot!({
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
             result
@@ -661,6 +686,7 @@ mod test {
         );
         dbg!(&infos);
         generate_fsm_context(&mut result, &vars, &components, &relations);
+        generate_invar_archetype_fill(&mut result, &infos, &prefills);
         insta::assert_snapshot!({
             generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
             result

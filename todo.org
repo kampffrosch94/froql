@@ -14,10 +14,11 @@ I'll have to add a route to the code gone that populates the archetypes/rows of 
 Should do that as the first step, instead of fetching an archetype from the possible set.
 - [X] write manual query
 - [X] capture invars
+- [X] generate component sets for invars
+- [ ] prefill archetypes from invars
 - [ ] branch generator depending on if invars are used
   + step 0 and 1 can be replaced by one that just returns None
   + we need to start at step 1 then (follow Relations)
-- [ ] prefill archetypes from invars
 
 ** TODO anyvars
 - example: ~ChildOf(_, me)~

@@ -320,6 +320,8 @@ let bk = &world.bookkeeping;
         &uncomponents,
     );
     generate_fsm_context(&mut result, &vars, &components, &relations);
+    generate_invar_archetype_fill(&mut result, &infos, &prefills);
+
     generate_resumable_query_closure(&mut result, &vars, &infos, &relations, &accessors);
 
     result.push_str("\n}");
