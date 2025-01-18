@@ -230,7 +230,7 @@ fn proc_query_relation_anyvar() {
 
     let mut counter = 0;
 
-    for (me,) in query!(world, Unit(me), Attack(_, me)) {
+    for (me,) in query!(world, &me, Attack(_, me)) {
         println!("{me:?} is attacked by something.");
         counter += 1;
     }

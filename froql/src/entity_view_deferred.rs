@@ -3,6 +3,8 @@ use std::{
     ops::Deref,
 };
 
+use std::fmt::Debug;
+
 use crate::{
     entity_store::{Entity, EntityId},
     world::World,
@@ -18,6 +20,15 @@ impl<'a> Deref for EntityViewDeferred<'a> {
 
     fn deref(&self) -> &Self::Target {
         &self.id
+    }
+}
+
+impl<'a> Debug for EntityViewDeferred<'a> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EntityViewDeferred")
+            .field("gen", &self.id.gen)
+            .field("id", &self.id.id)
+            .finish()
     }
 }
 

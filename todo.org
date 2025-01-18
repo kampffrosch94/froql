@@ -41,6 +41,7 @@ In the case of invars I might need to check them even earlier.
 ** TODO unrelations
 - ~!Rel(a,b)~
 Should be an additional step that needs to be inserted.
+Similar to inequality constraints
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component

@@ -167,10 +167,10 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                         (VK::Var(_), VK::Var(_)) | (VK::InVar(_), VK::InVar(_)) => (),
                     }
-                    unequals.push(format!("({a}, {b})"));
+                    unequals.push((a, b));
                 }
-                Term::ConstraintUnequal(VK::InVar(_), VK::InVar(_)) => {
-                    panic!("*a != *b can be done outside the query")
+                Term::ConstraintUnequal(VK::InVar(a), VK::InVar(b)) => {
+                    panic!("*{a} != *{b} can be done outside the query")
                 }
                 Term::Uncomponent(ty, var) => {
                     let var = variables.var_number(var);
@@ -324,6 +324,7 @@ let bk = &world.bookkeeping;
         &prefills,
         &infos,
         &relations,
+        &unequals,
         &accessors,
     );
 
