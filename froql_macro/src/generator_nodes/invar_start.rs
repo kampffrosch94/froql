@@ -9,17 +9,29 @@ pub struct InvarStart {
 }
 
 impl GeneratorNode for InvarStart {
-    fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
-        write!(
-            append,
-            r#"
+    fn generate(&self, step: usize, _prepend: &mut String, append: &mut String) -> usize {
+        if self.unequalities.is_empty() {
+            write!(
+                append,
+                r#"
+0 => {{
+    return None;
+}}
+"#
+            )
+            .unwrap();
+        } else {
+            write!(
+                append,
+                r#"
 0 => {{
     todo!("Check for unrelations.");
     return None;
 }}
 "#
-        )
-        .unwrap();
+            )
+            .unwrap();
+        }
 
         return step + 1;
     }
@@ -42,7 +54,6 @@ mod test {
         insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append, @r#"
         0 => {
-            todo!("Check for unrelations.");
             return None;
         }
         "#);

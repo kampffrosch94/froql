@@ -43,7 +43,6 @@ let mut rel_index_1 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {
 0 => {
-    todo!("Check for unrelations.");
     return None;
 }
 
