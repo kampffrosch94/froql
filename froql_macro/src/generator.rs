@@ -304,12 +304,12 @@ pub(crate) fn generate_resumable_query_closure(
 
         step_count = 0;
     }
+    step_count += 1;
     // follow relations/constraints
     for step in join_order {
-        step_count += 1;
         match step {
             JoinKind::NewJoin(relation_comp, old, new, unequalities) => {
-                RelationJoin {
+                step_count = RelationJoin {
                     relation_comp,
                     old,
                     new,
@@ -325,7 +325,6 @@ pub(crate) fn generate_resumable_query_closure(
     }
 
     // yield row
-    step_count += 1;
     write!(
         &mut append,
         "

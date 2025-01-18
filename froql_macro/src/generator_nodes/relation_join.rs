@@ -13,7 +13,7 @@ pub(crate) struct RelationJoin {
 }
 
 impl GeneratorNode for RelationJoin {
-    fn generate(&self, step: usize, prepend: &mut String, append: &mut String) {
+    fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
         let old = self.old;
         let new = self.new;
         let comp = self.relation_comp;
@@ -112,6 +112,7 @@ impl GeneratorNode for RelationJoin {
 "
         )
         .unwrap();
+        return step + 1;
     }
 }
 
@@ -130,7 +131,8 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        gen.generate(3, &mut prepend, &mut append);
+        let r = gen.generate(3, &mut prepend, &mut append);
+        assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
         insta::assert_snapshot!(append);
     }
