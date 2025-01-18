@@ -349,8 +349,20 @@ pub(crate) fn generate_resumable_query_closure(
                 &mut col_indexes[REL_VAR_COMPONENTS],
             );
             a_rows[REL_VAR] = arow;
+"
+                )
+                .unwrap();
 
-            current_step += 1;
+                write!(
+                    append,
+                    "
+            current_step += 1;"
+                )
+                .unwrap();
+
+                write!(
+                    append,
+                    "
         }}
     }}
 }}
