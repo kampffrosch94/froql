@@ -32,12 +32,8 @@ Examples:
 - ~a != b~
 - ~*a != b~
 - ~a != *b~
-Inequality constraints are an additonal step that needs to be inserted in the generator.
-In theory I could check inequalities also the moment I follow an relationship,
-instead of actually creating an additional step :thonk:
-In the case of invars I might need to check them even earlier.
--> easiest to just add another step though
--> should be part of the join order
+- [ ] check after following relation
+- [ ] check before iterating in case of invars
 ** TODO unrelations
 - ~!Rel(a,b)~
 Should be an additional step that needs to be inserted.

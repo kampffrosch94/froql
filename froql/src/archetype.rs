@@ -4,9 +4,9 @@ use crate::{component::ComponentId, entity_store::EntityId, layout_vec::LayoutVe
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct ArchetypeId(pub u32);
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct ArchetypeRow(pub u32);
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 pub struct ArchetypeColumn(pub u32);
 
 impl ArchetypeId {

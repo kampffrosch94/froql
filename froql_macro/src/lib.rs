@@ -154,6 +154,10 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 | Term::ConstraintUnequal(
                     ref ta @ VK::Var(ref var_a),
                     ref tb @ VK::InVar(ref var_b),
+                )
+                | Term::ConstraintUnequal(
+                    ref ta @ VK::InVar(ref var_a),
+                    ref tb @ VK::InVar(ref var_b),
                 ) => {
                     // maybe we should error if a constraint uses a variable defined nowhere else?
                     let a = variables.var_number(var_a);
@@ -165,12 +169,13 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         (VK::Var(_), VK::InVar(_)) => {
                             prefills.insert(b, var_b.clone());
                         }
-                        (VK::Var(_), VK::Var(_)) | (VK::InVar(_), VK::InVar(_)) => (),
+                        (VK::InVar(_), VK::InVar(_)) => {
+                            prefills.insert(a, var_a.clone());
+                            prefills.insert(b, var_b.clone());
+                        }
+                        (VK::Var(_), VK::Var(_)) => (),
                     }
                     unequals.push((a, b));
-                }
-                Term::ConstraintUnequal(VK::InVar(a), VK::InVar(b)) => {
-                    panic!("*{a} != *{b} can be done outside the query")
                 }
                 Term::Uncomponent(ty, var) => {
                     let var = variables.var_number(var);

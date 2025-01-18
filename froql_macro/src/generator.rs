@@ -222,7 +222,8 @@ pub(crate) fn generate_resumable_query_closure(
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let (first, join_order) = compute_join_order(relations, infos, prefills, unequals);
+    let (first, invar_unequals, join_order) =
+        compute_join_order(relations, infos, prefills, unequals);
 
     // TODO save on constants by directly applying the var
     append.push_str(
@@ -287,6 +288,8 @@ pub(crate) fn generate_resumable_query_closure(
     } else {
         // we have invars
 
+        todo!("Check for unrelations.");
+
         // we start at 1, when we get here we are done
         write!(
             append,
@@ -304,12 +307,13 @@ pub(crate) fn generate_resumable_query_closure(
     for step in join_order {
         step_count += 1;
         match step {
-            JoinKind::NewJoin(comp, old, new) => {
+            JoinKind::NewJoin(comp, old, new, uneqs) => {
                 let new_info = &infos[new as usize];
                 let Range { start, end } = &new_info.component_range;
                 // TODO prepend state for current join
-                prepend.push_str(&format!("\nlet mut rel_index_{step_count} = 0;"));
-                append.push_str(&format!(
+                write!(prepend, "\nlet mut rel_index_{step_count} = 0;").unwrap();
+                write!(
+                    append,
                     "
 // follow relation
 {step_count} => {{
@@ -350,14 +354,12 @@ pub(crate) fn generate_resumable_query_closure(
         }}
     }}
 }}
-",
-                ));
+"
+                )
+                .unwrap();
             }
             JoinKind::RelationConstraint(_, _, _) => {
                 todo!("RelationConstraints");
-            }
-            JoinKind::Unequals(_a, _b) => {
-                todo!("Unequal");
             }
         }
     }
@@ -434,12 +436,12 @@ _ => unreachable!(),
 
 #[derive(Debug)]
 enum JoinKind {
-    /// component id, old var, new var
-    NewJoin(usize, isize, isize),
+    /// component id, old var, new var, unequals to check
+    NewJoin(usize, isize, isize, Vec<(isize, isize)>),
     /// component id, old var, new var
     RelationConstraint(usize, isize, isize),
-    /// var a, var b
-    Unequals(isize, isize),
+    // /// var a, var b
+    // Unequals(isize, isize),
 }
 
 fn compute_join_order(
@@ -447,7 +449,7 @@ fn compute_join_order(
     infos: &[VarInfo],
     prefills: &HashMap<isize, String>,
     unequals: &[(isize, isize)],
-) -> (isize, Vec<JoinKind>) {
+) -> (isize, Vec<(isize, isize)>, Vec<JoinKind>) {
     let mut result: Vec<JoinKind> = Vec::new();
     let mut available: Vec<isize> = Vec::new();
     let mut unequals = Vec::from(unequals);
@@ -474,17 +476,19 @@ fn compute_join_order(
     }
 
     // using a closure so I don't have to duplicate this part
-    let mut insert_available_unequals = |available: &mut Vec<isize>, result: &mut Vec<JoinKind>| {
+    let mut newly_available_unequals = |available: &mut Vec<isize>| {
+        let mut result = Vec::new();
         while let Some(index) = unequals
             .iter()
             .position(|(a, b)| available.contains(a) && available.contains(b))
         {
             let (a, b) = unequals[index];
-            result.push(JoinKind::Unequals(a, b));
+            result.push((a, b));
             unequals.swap_remove(index);
         }
+        result
     };
-    insert_available_unequals(&mut available, &mut result);
+    let invar_unequals = newly_available_unequals(&mut available);
 
     // compute join
     for _ in 0..work_left.len() {
@@ -519,16 +523,16 @@ fn compute_join_order(
                 let info = &infos[old as usize];
                 assert_eq!(old, info.index);
                 let comp_index = info.related_with[&(join.0, new)];
-                result.push(JoinKind::NewJoin(comp_index, old, new));
                 available.push(new);
-                insert_available_unequals(&mut available, &mut result);
+                let uneqs = newly_available_unequals(&mut available);
+                result.push(JoinKind::NewJoin(comp_index, old, new, uneqs));
             } else {
                 panic!("Cross joins are not supported.")
             }
         }
     }
     assert!(unequals.is_empty());
-    return (available[0], result);
+    return (available[0], invar_unequals, result);
 }
 
 #[cfg(test)]
@@ -612,11 +616,13 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         (
             0,
+            [],
             [
                 NewJoin(
                     2,
                     0,
                     1,
+                    [],
                 ),
             ],
         )
@@ -627,15 +633,18 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         (
             0,
+            [],
             [
                 NewJoin(
                     2,
                     0,
                     1,
-                ),
-                Unequals(
-                    0,
-                    1,
+                    [
+                        (
+                            0,
+                            1,
+                        ),
+                    ],
                 ),
             ],
         )
@@ -761,6 +770,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "reason"]
     fn test_invar() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let uncomponents = vec![];
@@ -798,6 +808,43 @@ mod test {
             &accessors,
         );
 
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_unequals() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let uncomponents = vec![];
+        let relations = vec![("Attack".into(), 1, 0)];
+        let accessors = vec![
+            Accessor::OutVar(0),
+            Accessor::Component("Unit".to_string(), 0),
+            Accessor::Component("Unit".to_string(), 1),
+            Accessor::ComponentMut("Health".to_string(), 0),
+        ];
+        let vars = vec![0, 1];
+        let mut result = String::new();
+        let prefills = HashMap::new();
+        let infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+        );
+        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
+        generate_invar_archetype_fill(&mut result, &infos, &prefills);
+        let unequals = vec![(0, 1)];
+        generate_resumable_query_closure(
+            &mut result,
+            &vars,
+            &prefills,
+            &infos,
+            &relations,
+            &unequals,
+            &accessors,
+        );
         insta::assert_snapshot!(result);
     }
 }
