@@ -3,13 +3,13 @@ use std::fmt::Write;
 use std::ops::Range;
 
 #[derive(Debug)]
-pub(crate) struct RelationJoin {
+pub struct RelationJoin {
     /// index of the component of `old` where the relation resides
-    pub(crate) relation_comp: usize,
-    pub(crate) old: isize,
-    pub(crate) new: isize,
-    pub(crate) new_components: Range<usize>,
-    pub(crate) unequalities: Vec<(isize, isize)>,
+    pub relation_comp: usize,
+    pub old: isize,
+    pub new: isize,
+    pub new_components: Range<usize>,
+    pub unequalities: Vec<(isize, isize)>,
 }
 
 impl GeneratorNode for RelationJoin {

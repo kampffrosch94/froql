@@ -286,7 +286,7 @@ pub(crate) fn generate_resumable_query_closure(
 "
             ));
         }
-        step_count = 1;
+        step_count = 2;
     } else {
         // we have invars
 
@@ -302,9 +302,8 @@ pub(crate) fn generate_resumable_query_closure(
         )
         .unwrap();
 
-        step_count = 0;
+        step_count = 1;
     }
-    step_count += 1;
     // follow relations/constraints
     for step in join_order {
         match step {
