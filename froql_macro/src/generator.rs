@@ -729,7 +729,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "reason"]
     fn test_invar() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let uncomponents = vec![];
