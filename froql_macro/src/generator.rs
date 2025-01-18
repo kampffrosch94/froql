@@ -5,6 +5,8 @@ use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
+use crate::generator_nodes::GeneratorNode;
+use crate::generator_nodes::RelationJoin;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 // TODO use write! instead of format! to save on intermediate allocations
@@ -288,16 +290,15 @@ pub(crate) fn generate_resumable_query_closure(
     } else {
         // we have invars
 
-        todo!("Check for unrelations.");
-
         // we start at 1, when we get here we are done
         write!(
             append,
-            "
+            r#"
 0 => {{
+    todo!("Check for unrelations.");
     return None;
 }}
-"
+"#
         )
         .unwrap();
 
@@ -307,68 +308,15 @@ pub(crate) fn generate_resumable_query_closure(
     for step in join_order {
         step_count += 1;
         match step {
-            JoinKind::NewJoin(comp, old, new, uneqs) => {
-                let new_info = &infos[new as usize];
-                let Range { start, end } = &new_info.component_range;
-                // TODO prepend state for current join
-                write!(prepend, "\nlet mut rel_index_{step_count} = 0;").unwrap();
-                write!(
-                    append,
-                    "
-// follow relation
-{step_count} => {{
-    const CURRENT_VAR: usize = {old};
-    const REL_VAR: usize = {new};
-    const RELATION_COMP_INDEX: usize = {comp};
-    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = {start}..{end};
-    let row = a_rows[CURRENT_VAR].0;
-    let col = col_indexes[RELATION_COMP_INDEX];
-    let arch = &a_refs[CURRENT_VAR];
-    debug_assert_eq!(
-        arch.columns[col].element_size(),
-        size_of::<RelationVec>()
-    );
-    let ptr = unsafe {{ arch.columns[col].get(row) }} as *const RelationVec;
-    let rel_vec = unsafe {{ &*ptr }};
-    debug_assert!(rel_vec.len() > 0);
-    if rel_index_{step_count} >= rel_vec.len() {{
-        rel_index_{step_count} = 0;
-        current_step -= 1;
-    }} else {{
-        // get aid/row for entity in relation
-        let id = EntityId(rel_vec[rel_index_{step_count} as usize]);
-        let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-        rel_index_{step_count} += 1;
-
-        // if in target archetype set => go to next step
-        if archetype_id_sets[REL_VAR].contains(&aid) {{
-            let a_ref = &mut a_refs[REL_VAR];
-            *a_ref = &bk.archetypes[aid.as_index()];
-            a_ref.find_multiple_columns(
-                &components_{new},
-                &mut col_indexes[REL_VAR_COMPONENTS],
-            );
-            a_rows[REL_VAR] = arow;
-"
-                )
-                .unwrap();
-
-                write!(
-                    append,
-                    "
-            current_step += 1;"
-                )
-                .unwrap();
-
-                write!(
-                    append,
-                    "
-        }}
-    }}
-}}
-"
-                )
-                .unwrap();
+            JoinKind::NewJoin(relation_comp, old, new, unequalities) => {
+                RelationJoin {
+                    relation_comp,
+                    old,
+                    new,
+                    new_components: infos[new as usize].component_range.clone(),
+                    unequalities,
+                }
+                .generate(step_count, prepend, &mut append);
             }
             JoinKind::RelationConstraint(_, _, _) => {
                 todo!("RelationConstraints");

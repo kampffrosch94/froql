@@ -1,6 +1,7 @@
 extern crate proc_macro;
 
 mod generator;
+mod generator_nodes;
 mod macro_error;
 mod parser;
 

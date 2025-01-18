@@ -610,12 +610,13 @@ fn query_fsm_relation_unequal() {
                                 a_rows[REL_VAR] = arow;
 
                                 // check unequal
-                                if !::std::ptr::eq(a_refs[CURRENT_VAR], a_refs[REL_VAR])
-                                    || a_rows[CURRENT_VAR] != a_rows[REL_VAR]
+                                if
+                                    ::std::ptr::eq(a_refs[CURRENT_VAR], a_refs[REL_VAR])
+                                    && a_rows[CURRENT_VAR] == a_rows[REL_VAR]
                                 {
-                                    current_step += 1;
-                                } else {
                                     current_step -= 1;
+                                } else {
+                                    current_step += 1;
                                 }
                             }
                         }

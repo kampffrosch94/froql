@@ -106,7 +106,15 @@ let mut rel_index_2 = 0;
             );
             a_rows[REL_VAR] = arow;
 
-            current_step += 1;
+todo!("Complete this");
+            if
+                ::std::ptr::eq(a_refs[CURRENT_VAR], a_refs[REL_VAR])
+                && a_rows[CURRENT_VAR] == a_rows[REL_VAR]
+            {
+                current_step -= 1;
+            } else {
+                current_step += 1;
+            }
         }
     }
 }
