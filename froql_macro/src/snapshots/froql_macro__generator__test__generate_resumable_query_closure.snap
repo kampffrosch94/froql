@@ -1,6 +1,6 @@
 ---
 source: froql_macro/src/generator.rs
-expression: "{\n    generate_resumable_query_closure(&mut result, &vars, &infos, &relations,\n    &accessors); result\n}"
+expression: result
 ---
 let components_0 = [
     world.get_component_id::<Unit>(),

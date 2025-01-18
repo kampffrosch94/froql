@@ -1,5 +1,5 @@
 ---
-source: froql_macro/src/generator_nodes.rs
+source: froql_macro/src/generator_nodes/relation_join.rs
 expression: append
 ---
 // follow relation

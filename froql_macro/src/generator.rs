@@ -5,8 +5,8 @@ use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
+use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
-use crate::generator_nodes::RelationJoin;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 // TODO use write! instead of format! to save on intermediate allocations
