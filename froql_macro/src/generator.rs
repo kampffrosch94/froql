@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
+use crate::generator_nodes::invar_start::InvarStart;
 use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
 use crate::ANYVAR;
@@ -288,21 +289,10 @@ pub(crate) fn generate_resumable_query_closure(
         }
         step_count = 2;
     } else {
-        // we have invars
-
-        // we start at 1, when we get here we are done
-        write!(
-            append,
-            r#"
-0 => {{
-    todo!("Check for unrelations.");
-    return None;
-}}
-"#
-        )
-        .unwrap();
-
-        step_count = 1;
+        step_count = InvarStart {
+            unequalities: invar_unequals,
+        }
+        .generate(0, prepend, &mut append);
     }
     // follow relations/constraints
     for step in join_order {
