@@ -75,19 +75,28 @@ impl GeneratorNode for RelationJoin {
         } else {
             append.push_str(
                 r#"
-todo!("Complete this");
             if"#,
             );
 
-            // TODO it depends also on join direction what current var etc is
-            // so look up how I handled that above
-            write!(
-                append,
-                "
-                ::std::ptr::eq(a_refs[CURRENT_VAR], a_refs[REL_VAR])
-                && a_rows[CURRENT_VAR] == a_rows[REL_VAR]"
-            )
-            .unwrap();
+            let mut not_first = false;
+            for (a, b) in &self.unequalities {
+                if not_first {
+                    write!(
+                        append,
+                        "
+            ||"
+                    )
+                    .unwrap();
+                }
+                write!(
+                    append,
+                    "
+                ::std::ptr::eq(a_refs[{a}], a_refs[{b}])
+                && a_rows[{a}] == a_rows[{b}]"
+                )
+                .unwrap();
+                not_first = true;
+            }
             append.push_str(
                 "
             {
@@ -107,5 +116,26 @@ todo!("Complete this");
 "
         )
         .unwrap();
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    #[test]
+    fn relation_join_unequality() {
+        let gen = RelationJoin {
+            relation_comp: 2,
+            old: 0,
+            new: 2,
+            new_components: 3..5,
+            unequalities: vec![(0, 2), (2, 1)],
+        };
+
+        let mut prepend = String::new();
+        let mut append = String::new();
+        gen.generate(3, &mut prepend, &mut append);
+        insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
+        insta::assert_snapshot!(append);
     }
 }
