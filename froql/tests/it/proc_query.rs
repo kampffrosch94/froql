@@ -282,3 +282,25 @@ fn proc_query_constraint() {
     }
     assert_eq!(1, counter);
 }
+
+#[test]
+fn proc_query_optional_component() {
+    struct CompA(usize);
+    struct CompB(isize);
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    world.add_component(a, CompA(4));
+    world.add_component(a, CompB(2));
+    world.add_component(b, CompA(0));
+
+    let mut counter = 0;
+
+    for (me,) in query!(world, CompA, CompB?) {
+        assert_eq!(me.id, a);
+        counter += 1;
+    }
+
+    assert_eq!(1, counter);
+}

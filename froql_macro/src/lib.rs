@@ -91,6 +91,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
 
     let mut unequals = Vec::new();
     let mut unrelations = Vec::new();
+    let mut opt_components = Vec::new();
     let mut prefills = HashMap::new();
 
     loop {
@@ -287,6 +288,12 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 }
                 Term::Unrelation(_ty, RVK::AnyVar, RVK::AnyVar) => {
                     panic!("!Rel(_,_) does not make sense.")
+                }
+                Term::OptionalComponent(ty, var) => {
+                    let index = opt_components.len();
+                    let var = variables.var_number(var);
+                    opt_components.push((ty, var, index));
+                    todo!("Optional Component: {:?}", opt_components[index]);
                 }
             };
             buffer.clear();

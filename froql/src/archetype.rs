@@ -97,6 +97,13 @@ impl Archetype {
         &self.columns[index]
     }
 
+    /// returns column this component is in
+    /// None if not found
+    pub fn find_column_opt(&self, cid: ComponentId) -> Option<&LayoutVec> {
+        let index = self.components.iter().position(|it| *it == cid);
+        index.map(|it| &self.columns[it])
+    }
+
     // we use an outvar so that we don't have to allocate
     // ideally the results can live in an array on the stack
     pub fn find_multiple_columns(&self, cids: &[ComponentId], result_indexes: &mut [usize]) {

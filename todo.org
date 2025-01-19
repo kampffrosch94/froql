@@ -43,10 +43,21 @@ CLOSED: [2025-01-19 Sun 13:31]
 - [X] check before iterating in case of invars
 - [X] test proc query relation constraint invar
 - [X] uncomment test case when done
+** TODO optional components
+- [ ] parser
+- [ ] var info
+- [ ] set on archetype init
+- [ ] set on invar init
+- [ ] set on relation join
+- [ ] use on yield
 ** TODO unrelations
 - ~!Rel(a,b)~
-Should be an additional step that needs to be inserted.
-Similar to inequality constraints
+Similar to inequality constraints and optional components
+- [ ] var info
+- [ ] set on archetype init
+- [ ] set on invar init
+- [ ] set on relation join
+- [ ] use on yield
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component

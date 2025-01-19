@@ -50,9 +50,10 @@ pub enum Term {
     ConstraintUnequal(VarKind, VarKind),
     /// Type, VariableName
     Uncomponent(String, String),
-    // TODO
-    // Type, Variable, Variable
+    /// Type, Variable, Variable
     Unrelation(String, RelationVarKind, RelationVarKind),
+    /// Type, VariableName
+    OptionalComponent(String, String),
 }
 
 pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
@@ -193,10 +194,17 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 '!' => return Ok(Term::Uncomponent(ident.to_string(), "this".to_string())),
                 _ => error_single!(&tokens[0], "Expected & or !"),
             },
+            // Example: CompA?
+            (TT::Ident(ty), ref t_question @ TT::Punct(question)) => {
+                if !(question.as_char() == '?') {
+                    error_single!(t_question, "Expected '?'");
+                }
+                return Ok(Term::OptionalComponent(ty.to_string(), "this".to_string()));
+            }
             x => {
                 error!(
                     tokens,
-                    "expected mut Component or Component(var) or Relation(a,b) or &var, got {x:?}"
+                    "expected mut Component or Component(var) or Relation(a,b) or &var or Component?, got {x:?}"
                 );
             }
         };
@@ -319,6 +327,19 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         "expected !Component(var) or !Rel(a,b), got {group:?} {}",
                         line!()
                     ),
+                }
+            }
+            (TT::Ident(ty), TT::Group(group), ref question_t @ TT::Punct(question)) => {
+                match question.as_char() {
+                    '?' => (),
+                    _ => error_single!(&question_t, "Expected ?"),
+                };
+                let mut iter = group.stream().into_iter();
+                match (iter.next(), iter.next()) {
+                    (Some(TT::Ident(ident)), None) => {
+                        return Ok(Term::OptionalComponent(ty.to_string(), ident.to_string()));
+                    }
+                    group => error!(tokens, "expected Component(var)? got {group:?} {}", line!()),
                 }
             }
             _ => {
