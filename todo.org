@@ -35,6 +35,9 @@ Examples:
 - [X] check after following relation
 - [ ] check before iterating in case of invars
 ** TODO relation constraints
+- [X] manual query
+- [ ] check after following relation
+- [ ] check before iterating in case of invars
 - [ ] uncomment test case when done
 ** TODO unrelations
 - ~!Rel(a,b)~

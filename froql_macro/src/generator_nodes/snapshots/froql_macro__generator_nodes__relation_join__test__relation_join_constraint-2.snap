@@ -1,0 +1,59 @@
+---
+source: froql_macro/src/generator_nodes/relation_join.rs
+expression: append
+---
+// follow relation
+3 => {
+    const CURRENT_VAR: usize = 0;
+    const REL_VAR: usize = 2;
+    const RELATION_COMP_INDEX: usize = 2;
+    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 3..5;
+    let row = a_rows[CURRENT_VAR].0;
+    let col = col_indexes[RELATION_COMP_INDEX];
+    let arch = &a_refs[CURRENT_VAR];
+    debug_assert_eq!(
+        arch.columns[col].element_size(),
+        size_of::<RelationVec>()
+    );
+    let ptr = unsafe { arch.columns[col].get(row) } as *const RelationVec;
+    let rel_vec = unsafe { &*ptr };
+    debug_assert!(rel_vec.len() > 0);
+    if rel_index_3 >= rel_vec.len() {
+        rel_index_3 = 0;
+        current_step -= 1;
+    } else {
+        // get aid/row for entity in relation
+        let id = EntityId(rel_vec[rel_index_3 as usize]);
+        let (aid, arow) = bk.entities.get_archetype_unchecked(id);
+        rel_index_3 += 1;
+
+        // if in target archetype set => go to next step
+        if archetype_id_sets[REL_VAR].contains(&aid) {
+            let a_ref = &mut a_refs[REL_VAR];
+            *a_ref = &bk.archetypes[aid.as_index()];
+            a_ref.find_multiple_columns(
+                &components_2,
+                &mut col_indexes[REL_VAR_COMPONENTS],
+            );
+            a_rows[REL_VAR] = arow;
+
+            if
+                {
+                    let arch = &a_refs[2];
+                    let col = col_indexes[5];
+                    let rel_vec = unsafe {
+                        &*(arch.columns[col].get(row) as *const RelationVec)
+                    };
+                    let check_ref = a_refs[1];
+                    let to_check = check_ref.entities[a_rows[1].0 as usize];
+                    !rel_vec.contains(&to_check.0)
+                }
+                
+            {
+                current_step -= 1;
+            } else {
+                current_step += 1;
+            }
+        }
+    }
+}

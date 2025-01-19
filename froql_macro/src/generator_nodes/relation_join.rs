@@ -10,6 +10,7 @@ pub struct RelationJoin {
     pub new: isize,
     pub new_components: Range<usize>,
     pub unequalities: Vec<(isize, isize)>,
+    pub rel_constraints: Vec<(usize, isize, isize)>,
 }
 
 impl GeneratorNode for RelationJoin {
@@ -17,7 +18,6 @@ impl GeneratorNode for RelationJoin {
         let old = self.old;
         let new = self.new;
         let comp = self.relation_comp;
-        let uneqs = &self.unequalities;
         let Range { start, end } = &self.new_components;
         write!(prepend, "\nlet mut rel_index_{step} = 0;").unwrap();
         write!(
@@ -61,7 +61,7 @@ impl GeneratorNode for RelationJoin {
         )
         .unwrap();
 
-        if uneqs.is_empty() {
+        if self.unequalities.is_empty() && self.rel_constraints.is_empty() {
             write!(
                 append,
                 "
@@ -89,6 +89,34 @@ impl GeneratorNode for RelationJoin {
                     "
                 (::std::ptr::eq(a_refs[{a}], a_refs[{b}])
                  && a_rows[{a}] == a_rows[{b}])"
+                )
+                .unwrap();
+                not_first = true;
+            }
+            for (rel_comp, a, b) in &self.rel_constraints {
+                if not_first {
+                    write!(
+                        append,
+                        "
+            ||"
+                    )
+                    .unwrap();
+                }
+                assert!(*a == new || *b == new);
+                write!(
+                    append,
+                    "
+                {{
+                    let arch = &a_refs[{a}];
+                    let col = col_indexes[{rel_comp}];
+                    let rel_vec = unsafe {{
+                        &*(arch.columns[col].get(row) as *const RelationVec)
+                    }};
+                    let check_ref = a_refs[{b}];
+                    let to_check = check_ref.entities[a_rows[{b}].0 as usize];
+                    !rel_vec.contains(&to_check.0)
+                }}
+                "
                 )
                 .unwrap();
                 not_first = true;
@@ -127,6 +155,26 @@ mod test {
             new: 2,
             new_components: 3..5,
             unequalities: vec![(0, 2), (2, 1)],
+            rel_constraints: vec![],
+        };
+
+        let mut prepend = String::new();
+        let mut append = String::new();
+        let r = gen.generate(3, &mut prepend, &mut append);
+        assert_eq!(4, r);
+        insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
+        insta::assert_snapshot!(append);
+    }
+
+    #[test]
+    fn relation_join_constraint() {
+        let gen = RelationJoin {
+            relation_comp: 2,
+            old: 0,
+            new: 2,
+            new_components: 3..5,
+            unequalities: vec![],
+            rel_constraints: vec![(5, 2, 1)],
         };
 
         let mut prepend = String::new();

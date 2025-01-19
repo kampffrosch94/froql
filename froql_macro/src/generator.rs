@@ -233,7 +233,7 @@ pub(crate) fn generate_resumable_query_closure(
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let (first, invar_unequals, join_order) =
+    let (first, invar_unequals, invar_rel_constraints, join_order) =
         compute_join_order(relations, infos, prefills, unequals);
 
     // TODO save on constants by directly applying the var
@@ -299,24 +299,23 @@ pub(crate) fn generate_resumable_query_closure(
     } else {
         step_count = InvarStart {
             unequalities: invar_unequals,
+            rel_constraints: invar_rel_constraints,
         }
         .generate(0, prepend, &mut append);
     }
     // follow relations/constraints
     for step in join_order {
         match step {
-            JoinKind::NewJoin(relation_comp, old, new, unequalities) => {
+            JoinKind::NewJoin(relation_comp, old, new, unequalities, rel_constraints) => {
                 step_count = RelationJoin {
                     relation_comp,
                     old,
                     new,
                     new_components: infos[new as usize].component_range.clone(),
                     unequalities,
+                    rel_constraints,
                 }
                 .generate(step_count, prepend, &mut append);
-            }
-            JoinKind::RelationConstraint(_, _, _) => {
-                todo!("RelationConstraints");
             }
         }
     }
@@ -390,14 +389,17 @@ _ => unreachable!(),
     prepend.push_str(&append);
 }
 
+// TODO turn into struct
 #[derive(Debug)]
 enum JoinKind {
-    /// component id, old var, new var, unequals to check
-    NewJoin(usize, isize, isize, Vec<(isize, isize)>),
-    /// component id, old var, new var
-    RelationConstraint(usize, isize, isize),
-    // /// var a, var b
-    // Unequals(isize, isize),
+    /// component id, old var, new var, unequals to check, relations to check
+    NewJoin(
+        usize,
+        isize,
+        isize,
+        Vec<(isize, isize)>,
+        Vec<(usize, isize, isize)>,
+    ),
 }
 
 fn compute_join_order(
@@ -405,7 +407,12 @@ fn compute_join_order(
     infos: &[VarInfo],
     prefills: &HashMap<isize, String>,
     unequals: &[(isize, isize)],
-) -> (isize, Vec<(isize, isize)>, Vec<JoinKind>) {
+) -> (
+    isize,
+    Vec<(isize, isize)>,
+    Vec<(usize, isize, isize)>,
+    Vec<JoinKind>,
+) {
     let mut result: Vec<JoinKind> = Vec::new();
     let mut available: Vec<isize> = Vec::new();
     let mut unequals = Vec::from(unequals);
@@ -444,51 +451,62 @@ fn compute_join_order(
         }
         result
     };
+    let newly_available_constraints =
+        |available: &mut Vec<isize>, work_left: &mut Vec<Relation>| {
+            let mut result = Vec::new();
+            while let Some(index) = work_left
+                .iter()
+                .position(|(_, a, b)| available.contains(a) && available.contains(b))
+            {
+                let (comp_name, a, b) = work_left[index].clone();
+                let info = &infos[a as usize];
+                assert_eq!(a, info.index);
+                let comp_index = info.related_with[&(comp_name, b)];
+                result.push((comp_index, a, b));
+                work_left.swap_remove(index);
+            }
+            result
+        };
+
     let invar_unequals = newly_available_unequals(&mut available);
+    let invar_constraints = newly_available_constraints(&mut available, &mut work_left);
 
     // compute join
-    for _ in 0..work_left.len() {
+    while !work_left.is_empty() {
         // find next viable for joining and remove it from working list
         // always handle constraints first, because it may let us skip work
-        let next_constraint = {
-            let pos = work_left
-                .iter()
-                .position(|(_, from, to)| available.contains(from) && available.contains(to));
+        let next_join = {
+            let pos = work_left.iter().position(|rel| {
+                available
+                    .iter()
+                    .any(|avail| *avail == rel.1 || *avail == rel.2)
+            });
             pos.map(|pos| work_left.remove(pos))
         };
-        if let Some(constraint) = next_constraint {
-            let old = constraint.1;
-            let new = constraint.2;
+        if let Some(join) = next_join {
+            let reversed = available.iter().any(|avail| *avail == join.2);
+            let old = if reversed { join.2 } else { join.1 };
+            let new = if reversed { join.1 } else { join.2 };
             let info = &infos[old as usize];
             assert_eq!(old, info.index);
-            let comp_index = info.related_with[&(constraint.0, constraint.2)];
-            result.push(JoinKind::RelationConstraint(comp_index, old, new));
+            let comp_index = info.related_with[&(join.0, new)];
+            available.push(new);
+            let uneqs = newly_available_unequals(&mut available);
+            let relation_constraints = newly_available_constraints(&mut available, &mut work_left);
+            result.push(JoinKind::NewJoin(
+                comp_index,
+                old,
+                new,
+                uneqs,
+                relation_constraints,
+            ));
         } else {
-            let next_join = {
-                let pos = work_left.iter().position(|rel| {
-                    available
-                        .iter()
-                        .any(|avail| *avail == rel.1 || *avail == rel.2)
-                });
-                pos.map(|pos| work_left.remove(pos))
-            };
-            if let Some(join) = next_join {
-                let reversed = available.iter().any(|avail| *avail == join.2);
-                let old = if reversed { join.2 } else { join.1 };
-                let new = if reversed { join.1 } else { join.2 };
-                let info = &infos[old as usize];
-                assert_eq!(old, info.index);
-                let comp_index = info.related_with[&(join.0, new)];
-                available.push(new);
-                let uneqs = newly_available_unequals(&mut available);
-                result.push(JoinKind::NewJoin(comp_index, old, new, uneqs));
-            } else {
-                panic!("Cross joins are not supported.")
-            }
+            panic!("Cross joins are not supported.")
         }
     }
     assert!(unequals.is_empty());
-    return (available[0], invar_unequals, result);
+
+    return (available[0], invar_unequals, invar_constraints, result);
 }
 
 #[cfg(test)]
@@ -573,11 +591,13 @@ mod test {
         (
             0,
             [],
+            [],
             [
                 NewJoin(
                     2,
                     0,
                     1,
+                    [],
                     [],
                 ),
             ],
@@ -590,6 +610,7 @@ mod test {
         (
             0,
             [],
+            [],
             [
                 NewJoin(
                     2,
@@ -601,6 +622,7 @@ mod test {
                             1,
                         ),
                     ],
+                    [],
                 ),
             ],
         )

@@ -241,7 +241,6 @@ fn proc_query_relation_anyvar() {
     assert_eq!(2, counter);
 }
 
-// TODO implement Relation Constraints
 /*
 #[test]
 fn proc_query_unequality_invars() {

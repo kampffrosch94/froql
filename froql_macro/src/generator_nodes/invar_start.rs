@@ -5,11 +5,12 @@ use std::fmt::Write;
 pub struct InvarStart {
     /// index of the component of `old` where the relation resides
     pub unequalities: Vec<(isize, isize)>,
+    pub rel_constraints: Vec<(usize, isize, isize)>,
 }
 
 impl GeneratorNode for InvarStart {
     fn generate(&self, step: usize, _prepend: &mut String, append: &mut String) -> usize {
-        if self.unequalities.is_empty() {
+        if self.unequalities.is_empty() && self.rel_constraints.is_empty() {
             write!(
                 append,
                 r#"
@@ -55,6 +56,7 @@ mod test {
     fn invar_trivial() {
         let gen = InvarStart {
             unequalities: vec![],
+            rel_constraints: vec![],
         };
 
         let mut prepend = String::new();
@@ -73,6 +75,7 @@ mod test {
     fn invar_unequality() {
         let gen = InvarStart {
             unequalities: vec![(0, 2), (2, 1)],
+            rel_constraints: vec![],
         };
 
         let mut prepend = String::new();
