@@ -330,6 +330,7 @@ let bk = &world.bookkeeping;
         &components,
         &relations,
         &uncomponents,
+        &opt_components,
     );
     generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
     generate_invar_archetype_fill(&mut result, &infos, &prefills);

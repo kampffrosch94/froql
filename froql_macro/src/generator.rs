@@ -22,6 +22,8 @@ pub struct VarInfo {
     component_range: Range<usize>,
     /// map from type to component index for accessors
     components: HashMap<String, usize>,
+    /// map from type to index part of context variable name
+    opt_components: HashMap<String, usize>,
 }
 
 impl Debug for VarInfo {
@@ -29,11 +31,13 @@ impl Debug for VarInfo {
         // fix ordering, for snapshot testing
         let related_with = self.related_with.iter().collect::<BTreeMap<_, _>>();
         let components = self.components.iter().collect::<BTreeMap<_, _>>();
+        let opt_components = self.opt_components.iter().collect::<BTreeMap<_, _>>();
         f.debug_struct("VarInfo")
             .field("index", &self.index)
             .field("related_with", &related_with)
             .field("component_range", &self.component_range)
             .field("components", &components)
+            .field("opt_components", &opt_components)
             .finish()
     }
 }
@@ -96,6 +100,7 @@ pub(crate) fn generate_archetype_sets(
     components: &[Component],
     relations: &[Relation],
     uncomponents: &[Component],
+    opt_components: &[(String, isize, usize)],
 ) -> Vec<VarInfo> {
     assert_ne!(
         0,
@@ -117,6 +122,7 @@ pub(crate) fn generate_archetype_sets(
             related_with: HashMap::new(),
             component_range: index..index,
             components: HashMap::new(),
+            opt_components: HashMap::new(),
         };
         result.push_str(&format!("let components_{var} = ["));
         // component
@@ -126,6 +132,7 @@ pub(crate) fn generate_archetype_sets(
             index += 1;
             info.component_range.end += 1;
         }
+
         // relation from
         for (ty, _, other) in relations.iter().filter(|(_, id, _)| id == var) {
             result.push_str(&format!(
@@ -146,6 +153,13 @@ pub(crate) fn generate_archetype_sets(
             info.component_range.end += 1;
         }
         result.push_str("\n];\n\n");
+
+        // optional components are not written into archetype set
+        // but they are put into the var info
+        for (ty, _, index) in opt_components.iter().filter(|(_, id, _)| id == var) {
+            info.opt_components.insert(ty.clone(), *index);
+        }
+
         infos.push(info);
     }
 
@@ -521,12 +535,16 @@ mod test {
         let vars = vec![0, 1];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let infos;
-        insta::assert_snapshot!({
-            infos = generate_archetype_sets(&mut result, &vars, &prefills, &components, &relations,
-                                            &uncomponents);
-            result
-        }, @r#"
+        let infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+            &[],
+        );
+        insta::assert_snapshot!(result, @r#"
         let components_0 = [
             world.get_component_id::<Unit>(),
             world.get_component_id::<Health>(),
@@ -568,6 +586,7 @@ mod test {
                     "Health": 1,
                     "Unit": 0,
                 },
+                opt_components: {},
             },
             VarInfo {
                 index: 1,
@@ -581,6 +600,7 @@ mod test {
                 components: {
                     "Unit": 3,
                 },
+                opt_components: {},
             },
         ]
         "#);
@@ -670,10 +690,16 @@ mod test {
         let vars = vec![0];
         let prefills = HashMap::new();
         let mut result = String::new();
-        insta::assert_snapshot!({
-            generate_archetype_sets(&mut result, &vars, &prefills, &components, &relations, &uncomponents);
-            result
-        }, @r#"
+        let info = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+            &[("MyOpt".to_string(), 0, 0)],
+        );
+        insta::assert_snapshot!(result, @r#"
         let components_0 = [
             world.get_component_id::<Pos>(),
             world.get_component_id::<Speed>(),
@@ -682,6 +708,22 @@ mod test {
         let archetype_id_sets = [
             bk.matching_archetypes(&components_0, &[]),
         ];
+        "#);
+        insta::assert_debug_snapshot!(info, @r#"
+        [
+            VarInfo {
+                index: 0,
+                related_with: {},
+                component_range: 0..2,
+                components: {
+                    "Pos": 0,
+                    "Speed": 1,
+                },
+                opt_components: {
+                    "MyOpt": 0,
+                },
+            },
+        ]
         "#);
     }
 
@@ -731,6 +773,7 @@ mod test {
             &components,
             &relations,
             &uncomponents,
+            &[],
         );
         generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
         generate_invar_archetype_fill(&mut result, &infos, &prefills);
@@ -769,6 +812,7 @@ mod test {
             &components,
             &relations,
             &uncomponents,
+            &[],
         );
         dbg!(&infos);
         generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
@@ -808,6 +852,7 @@ mod test {
             &components,
             &relations,
             &uncomponents,
+            &[],
         );
         generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
         generate_invar_archetype_fill(&mut result, &infos, &prefills);
