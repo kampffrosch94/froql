@@ -16,7 +16,7 @@ let components_1 = [
 
 let archetype_id_sets = [
     bk.matching_archetypes(&components_0, &[]),
-    Vec::new(),
+    Vec::<ArchetypeId>::new(),
 ];
 
 
@@ -26,7 +26,7 @@ let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
-let mut current_step = 1;
+let mut current_step = 0;
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
@@ -39,6 +39,7 @@ let mut col_indexes = [usize::MAX; 5];
     a_rows[1] = arow;
 }
 
+current_step = 1;
 let mut rel_index_1 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {

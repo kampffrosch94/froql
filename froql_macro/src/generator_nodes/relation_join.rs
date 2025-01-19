@@ -69,58 +69,7 @@ impl GeneratorNode for RelationJoin {
             )
             .unwrap();
         } else {
-            append.push_str(
-                r#"
-            if"#,
-            );
-
-            let mut not_first = false;
-            for (a, b) in &self.unequalities {
-                if not_first {
-                    write!(
-                        append,
-                        "
-            ||"
-                    )
-                    .unwrap();
-                }
-                write!(
-                    append,
-                    "
-                (::std::ptr::eq(a_refs[{a}], a_refs[{b}])
-                 && a_rows[{a}] == a_rows[{b}])"
-                )
-                .unwrap();
-                not_first = true;
-            }
-            for (rel_comp, a, b) in &self.rel_constraints {
-                if not_first {
-                    write!(
-                        append,
-                        "
-            ||"
-                    )
-                    .unwrap();
-                }
-                assert!(*a == new || *b == new);
-                write!(
-                    append,
-                    "
-                {{
-                    let arch = &a_refs[{a}];
-                    let col = col_indexes[{rel_comp}];
-                    let rel_vec = unsafe {{
-                        &*(arch.columns[col].get(row) as *const RelationVec)
-                    }};
-                    let check_ref = a_refs[{b}];
-                    let to_check = check_ref.entities[a_rows[{b}].0 as usize];
-                    !rel_vec.contains(&to_check.0)
-                }}
-                "
-                )
-                .unwrap();
-                not_first = true;
-            }
+            insert_checks(append, &self.unequalities, &self.rel_constraints);
             append.push_str(
                 "
             {
@@ -141,6 +90,65 @@ impl GeneratorNode for RelationJoin {
         )
         .unwrap();
         return step + 1;
+    }
+}
+
+pub fn insert_checks(
+    append: &mut String,
+    unequalities: &[(isize, isize)],
+    rel_constraints: &[(usize, isize, isize)],
+) {
+    append.push_str(
+        r#"
+            if"#,
+    );
+
+    let mut not_first = false;
+    for (a, b) in unequalities {
+        if not_first {
+            write!(
+                append,
+                "
+            ||"
+            )
+            .unwrap();
+        }
+        write!(
+            append,
+            "
+                (::std::ptr::eq(a_refs[{a}], a_refs[{b}])
+                 && a_rows[{a}] == a_rows[{b}])"
+        )
+        .unwrap();
+        not_first = true;
+    }
+    for (rel_comp, a, b) in rel_constraints {
+        if not_first {
+            write!(
+                append,
+                "
+            ||"
+            )
+            .unwrap();
+        }
+        write!(
+            append,
+            "
+                {{
+                    let arch = &a_refs[{a}];
+                    let row = a_rows[{a}].0;
+                    let col = col_indexes[{rel_comp}];
+                    let rel_vec = unsafe {{
+                        &*(arch.columns[col].get(row) as *const RelationVec)
+                    }};
+                    let check_ref = a_refs[{b}];
+                    let to_check = check_ref.entities[a_rows[{b}].0 as usize];
+                    !rel_vec.contains(&to_check.0)
+                }}
+                "
+        )
+        .unwrap();
+        not_first = true;
     }
 }
 

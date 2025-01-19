@@ -154,7 +154,7 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                result.push_str(&format!("    Vec::new(),\n"));
+                result.push_str(&format!("    Vec::<ArchetypeId>::new(),\n"));
             } else {
                 write!(
                     result,
@@ -198,13 +198,12 @@ pub(crate) fn generate_archetype_sets(
 pub(crate) fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
-    prefills: &HashMap<isize, String>,
+    _prefills: &HashMap<isize, String>, // TODO remove
     components: &[Component],
     relations: &[Relation],
 ) {
     let var_count = vars.len();
     let col_count = components.len() + relations.len() * 2;
-    let start_step = if prefills.is_empty() { 0 } else { 1 };
     result.push_str(&format!(
         "
 // result set
@@ -213,7 +212,7 @@ let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
 let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
-let mut current_step = {start_step};
+let mut current_step = 0;
 let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; {col_count}];

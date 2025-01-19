@@ -40,6 +40,7 @@ expression: append
             if
                 {
                     let arch = &a_refs[2];
+                    let row = a_rows[2].0;
                     let col = col_indexes[5];
                     let rel_vec = unsafe {
                         &*(arch.columns[col].get(row) as *const RelationVec)

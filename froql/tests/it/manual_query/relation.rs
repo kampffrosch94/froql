@@ -168,7 +168,7 @@ fn query_fsm_relation_outvar() {
         ];
         let archetype_ids_me = bk.matching_archetypes(&components_me, &[]);
         let archetype_ids_other = bk.matching_archetypes(&components_other, &[]);
-        let archetype_id_sets = [archetype_ids_me, archetype_ids_other];
+        let archetype_id_sets: [Vec<ArchetypeId>; 2] = [archetype_ids_me, archetype_ids_other];
 
         // result set
         const VAR_COUNT: usize = 2;

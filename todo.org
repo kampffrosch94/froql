@@ -37,8 +37,8 @@ Examples:
 ** TODO relation constraints
 - [X] manual query
 - [X] check after following relation
+- [X] test proc query relation constraint
 - [ ] check before iterating in case of invars
-- [ ] test proc query relation constraint
 - [ ] test proc query relation constraint invar
 - [ ] uncomment test case when done
 ** TODO unrelations

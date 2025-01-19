@@ -3,7 +3,7 @@ use froql::query;
 use froql::world::World;
 
 // TODO this is bleed from unhygienic macros
-use froql::archetype::ArchetypeRow;
+use froql::archetype::{ArchetypeId, ArchetypeRow};
 use froql::entity_store::EntityId;
 use froql::entity_view_deferred::EntityViewDeferred;
 use froql::relation::Relation;
@@ -241,7 +241,6 @@ fn proc_query_relation_anyvar() {
     assert_eq!(2, counter);
 }
 
-/*
 #[test]
 fn proc_query_unequality_invars() {
     enum Rel {}
@@ -259,4 +258,27 @@ fn proc_query_unequality_invars() {
     }
     assert_eq!(1, counter);
 }
-*/
+
+#[test]
+fn proc_query_constraint() {
+    enum Rel {}
+    enum Rel2 {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    let d = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel2>(a, b);
+    world.add_relation::<Rel>(a, c);
+    world.add_relation::<Rel2>(a, d);
+
+    let mut counter = 0;
+
+    for (me,) in query!(world, &x, Rel(x, y), Rel2(x, y)) {
+        assert_eq!(me.id, a);
+        counter += 1;
+    }
+    assert_eq!(1, counter);
+}
