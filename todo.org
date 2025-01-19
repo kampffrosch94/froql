@@ -27,20 +27,22 @@ CLOSED: [2025-01-17 Fri 14:41]
 - example: ~ChildOf(_, me)~
 They only constrain the component set, but don't add any variables.
 Shouldn't be too hard.
-** TODO variable inequality constraints
+** DONE variable inequality constraints
+CLOSED: [2025-01-19 Sun 13:31]
 Examples:
 - ~a != b~
 - ~*a != b~
 - ~a != *b~
 - [X] check after following relation
-- [ ] check before iterating in case of invars
-** TODO relation constraints
+- [X] check before iterating in case of invars
+** DONE relation constraints
+CLOSED: [2025-01-19 Sun 13:31]
 - [X] manual query
 - [X] check after following relation
 - [X] test proc query relation constraint
-- [ ] check before iterating in case of invars
-- [ ] test proc query relation constraint invar
-- [ ] uncomment test case when done
+- [X] check before iterating in case of invars
+- [X] test proc query relation constraint invar
+- [X] uncomment test case when done
 ** TODO unrelations
 - ~!Rel(a,b)~
 Should be an additional step that needs to be inserted.
