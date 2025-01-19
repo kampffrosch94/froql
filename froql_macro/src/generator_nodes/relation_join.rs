@@ -87,8 +87,8 @@ impl GeneratorNode for RelationJoin {
                 write!(
                     append,
                     "
-                ::std::ptr::eq(a_refs[{a}], a_refs[{b}])
-                && a_rows[{a}] == a_rows[{b}]"
+                (::std::ptr::eq(a_refs[{a}], a_refs[{b}])
+                 && a_rows[{a}] == a_rows[{b}])"
                 )
                 .unwrap();
                 not_first = true;

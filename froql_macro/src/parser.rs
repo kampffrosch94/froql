@@ -94,17 +94,24 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 let second = iter.next(); // TODO inline
                 let third = iter.next();
                 let fourth = iter.next();
-                match (&first, &second, &third, &fourth) {
-                    (TT::Ident(var), None, None, None) => {
+                let fifth = iter.next();
+                match (&first, &second, &third, &fourth, &fifth) {
+                    (TT::Ident(var), None, None, None, None) => {
                         Ok(Term::ComponentVar(ty, VK::Var(var.to_string())))
                     }
-                    (start_tt @ TT::Punct(star), Some(TT::Ident(var)), None, None) => {
+                    (start_tt @ TT::Punct(star), Some(TT::Ident(var)), None, None, None) => {
                         if star.as_char() != '*' {
                             error_single!(start_tt, "Expected '*'");
                         }
                         Ok(Term::ComponentVar(ty, VK::InVar(var.to_string())))
                     }
-                    (TT::Ident(rel_a), Some(TT::Punct(comma)), Some(TT::Ident(rel_b)), None) => {
+                    (
+                        TT::Ident(rel_a),
+                        Some(TT::Punct(comma)),
+                        Some(TT::Ident(rel_b)),
+                        None,
+                        None,
+                    ) => {
                         if !(comma.as_char() == ',') {
                             error_single!(second.as_ref().unwrap(), "Expected ','");
                         }
@@ -119,6 +126,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Ident(rel_a)),
                         Some(TT::Punct(comma)),
                         Some(TT::Ident(rel_b)),
+                        None,
                     ) => {
                         if !(star.as_char() == '*') {
                             error_single!(&first, "Expected '*'");
@@ -137,16 +145,40 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Punct(comma)),
                         Some(TT::Punct(star)),
                         Some(TT::Ident(rel_b)),
+                        None,
+                    ) => {
+                        if !(star.as_char() == '*') {
+                            error_single!(third.as_ref().unwrap(), "Expected '*'");
+                        }
+                        if !(comma.as_char() == ',') {
+                            error_single!(second.as_ref().unwrap(), "Expected ','");
+                        }
+                        Ok(Term::Relation(
+                            ty,
+                            RVK::Var(rel_a.to_string()),
+                            RVK::InVar(rel_b.to_string()),
+                        ))
+                    }
+
+                    (
+                        TT::Punct(star),
+                        Some(TT::Ident(rel_a)),
+                        Some(TT::Punct(comma)),
+                        Some(TT::Punct(star2)),
+                        Some(TT::Ident(rel_b)),
                     ) => {
                         if !(star.as_char() == '*') {
                             error_single!(&first, "Expected '*'");
+                        }
+                        if !(star2.as_char() == '*') {
+                            error_single!(fourth.as_ref().unwrap(), "Expected '*'");
                         }
                         if !(comma.as_char() == ',') {
                             error_single!(third.as_ref().unwrap(), "Expected ','");
                         }
                         Ok(Term::Relation(
                             ty,
-                            RVK::Var(rel_a.to_string()),
+                            RVK::InVar(rel_a.to_string()),
                             RVK::InVar(rel_b.to_string()),
                         ))
                     }
@@ -356,6 +388,36 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             _ => error!(tokens, "Expected: a != *b or *a != b but got: {tokens:?}"),
         }
     }
+    if tokens.len() == 6 {
+        match (
+            &tokens[0], &tokens[1], &tokens[2], &tokens[3], &tokens[4], &tokens[5],
+        ) {
+            (
+                ref t_star @ TT::Punct(star),
+                TT::Ident(id_a),
+                TT::Punct(bang),
+                TT::Punct(equal),
+                ref t_star2 @ TT::Punct(star2),
+                TT::Ident(id_b),
+            ) => {
+                let var_a = id_a.to_string();
+                let var_b = id_b.to_string();
+                match (bang.as_char(), equal.as_char()) {
+                    ('!', '=') => (),
+                    _ => error!(&tokens[3..4], "Expected var_a != var_b"),
+                }
+                if !(star.as_char() == '*') {
+                    error_single!(t_star, "Expected '*'");
+                }
+                if !(star2.as_char() == '*') {
+                    error_single!(t_star2, "Expected '*'");
+                }
+                return Ok(Term::ConstraintUnequal(VK::InVar(var_a), VK::InVar(var_b)));
+            }
+            _ => error!(tokens, "Expected: *a != *b but got: {tokens:?}"),
+        }
+    }
 
-    error!(tokens, "Can't parse this: {tokens:?}");
+    let len = tokens.len();
+    error!(tokens, "Can't parse this: Len: {len} {tokens:?}");
 }

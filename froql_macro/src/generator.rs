@@ -97,8 +97,16 @@ pub(crate) fn generate_archetype_sets(
     relations: &[Relation],
     uncomponents: &[Component],
 ) -> Vec<VarInfo> {
-    assert_ne!(0, components.len() + relations.len());
-    assert_ne!(0, vars.len());
+    assert_ne!(
+        0,
+        components.len() + relations.len(),
+        "A query needs have at least one Component or Relation."
+    );
+    assert_ne!(
+        0,
+        vars.len(),
+        "A query needs to have at least one Variable."
+    );
 
     let mut infos = Vec::new();
     let mut index = 0;

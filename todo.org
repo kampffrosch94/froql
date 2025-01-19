@@ -32,8 +32,10 @@ Examples:
 - ~a != b~
 - ~*a != b~
 - ~a != *b~
-- [ ] check after following relation
+- [X] check after following relation
 - [ ] check before iterating in case of invars
+** TODO relation constraints
+- [ ] uncomment test case when done
 ** TODO unrelations
 - ~!Rel(a,b)~
 Should be an additional step that needs to be inserted.

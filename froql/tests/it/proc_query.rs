@@ -240,3 +240,24 @@ fn proc_query_relation_anyvar() {
     // we would get 3 iteration if we used a normal var instead of _
     assert_eq!(2, counter);
 }
+
+// TODO implement Relation Constraints
+/*
+#[test]
+fn proc_query_unequality_invars() {
+    enum Rel {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    world.add_relation::<Rel>(a, b);
+
+    let mut counter = 0;
+
+    for (me,) in query!(world, &a, Rel(a, b), *a != *b) {
+        assert_eq!(me.id, a);
+        counter += 1;
+    }
+    assert_eq!(1, counter);
+}
+*/

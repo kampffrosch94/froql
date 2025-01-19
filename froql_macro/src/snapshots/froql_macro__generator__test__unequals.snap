@@ -107,8 +107,8 @@ let mut rel_index_2 = 0;
             a_rows[REL_VAR] = arow;
 
             if
-                ::std::ptr::eq(a_refs[0], a_refs[1])
-                && a_rows[0] == a_rows[1]
+                (::std::ptr::eq(a_refs[0], a_refs[1])
+                 && a_rows[0] == a_rows[1])
             {
                 current_step -= 1;
             } else {

@@ -193,8 +193,12 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     relations.push((ty, a, b));
                     prefills.insert(a, var_a);
                 }
-                Term::Relation(_, RVK::InVar(_), RVK::InVar(_)) => {
-                    unreachable!("The parser should never get us here.");
+                Term::Relation(ty, RVK::InVar(var_a), RVK::InVar(var_b)) => {
+                    let a = variables.var_number(&var_a);
+                    let b = variables.var_number(&var_b);
+                    relations.push((ty, a, b));
+                    prefills.insert(a, var_a);
+                    prefills.insert(b, var_b);
                 }
 
                 Term::Relation(ty, RVK::Var(var_a), RVK::InVar(var_b)) => {
@@ -294,8 +298,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         }
     }
 
-    assert_eq!(unequals.len(), 0);
-    assert_eq!(unrelations.len(), 0);
+    assert_eq!(unrelations.len(), 0, "Unrelations are not done yet.");
 
     let mut result = String::new();
 

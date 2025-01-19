@@ -1,6 +1,5 @@
 use super::GeneratorNode;
 use std::fmt::Write;
-use std::ops::Range;
 
 #[derive(Debug)]
 pub struct InvarStart {
@@ -14,26 +13,37 @@ impl GeneratorNode for InvarStart {
             write!(
                 append,
                 r#"
-0 => {{
+{step} => {{
     return None;
 }}
 "#
             )
             .unwrap();
+            return step + 1;
         } else {
             write!(
                 append,
                 r#"
-0 => {{
+{step} => {{
     todo!("Check for unrelations.");
+    current_step += 2;
+}}
+"#
+            )
+            .unwrap();
+            let next_step = step + 1;
+            // end state
+            write!(
+                append,
+                r#"
+{next_step} => {{
     return None;
 }}
 "#
             )
             .unwrap();
+            return step + 2;
         }
-
-        return step + 1;
     }
 }
 
@@ -60,7 +70,6 @@ mod test {
     }
 
     #[test]
-    #[ignore = "WIP"]
     fn invar_unequality() {
         let gen = InvarStart {
             unequalities: vec![(0, 2), (2, 1)],
@@ -71,6 +80,15 @@ mod test {
         let r = gen.generate(0, &mut prepend, &mut append);
         assert_eq!(2, r);
         insta::assert_snapshot!(prepend, @"");
-        insta::assert_snapshot!(append);
+        insta::assert_snapshot!(append, @r#"
+        0 => {
+            todo!("Check for unrelations.");
+            current_step += 2;
+        }
+
+        1 => {
+            return None;
+        }
+        "#);
     }
 }
