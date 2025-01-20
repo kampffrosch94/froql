@@ -276,13 +276,20 @@ pub(crate) fn generate_resumable_query_closure(
     // follow relations/constraints
     for step in join_order {
         match step {
-            JoinKind::NewJoin(relation_comp, old, new, unequalities, rel_constraints) => {
+            JoinKind::NewJoin(new_join) => {
+                let NewJoin {
+                    comp_id: relation_comp,
+                    old,
+                    new,
+                    unequal_constraints,
+                    rel_constraints,
+                } = new_join;
                 step_count = RelationJoin {
                     relation_comp,
                     old,
                     new,
                     new_components: infos[new as usize].component_range.clone(),
-                    unequalities,
+                    unequal_constraints,
                     rel_constraints,
                 }
                 .generate(step_count, prepend, &mut append);
@@ -359,17 +366,20 @@ _ => unreachable!(),
     prepend.push_str(&append);
 }
 
+#[derive(Debug)]
+struct NewJoin {
+    comp_id: usize,
+    old: isize,
+    new: isize,
+    unequal_constraints: Vec<(isize, isize)>,
+    rel_constraints: Vec<(usize, isize, isize)>,
+}
+
 // TODO turn into struct
 #[derive(Debug)]
 enum JoinKind {
     /// component id, old var, new var, unequals to check, relations to check
-    NewJoin(
-        usize,
-        isize,
-        isize,
-        Vec<(isize, isize)>,
-        Vec<(usize, isize, isize)>,
-    ),
+    NewJoin(NewJoin),
 }
 
 fn compute_join_order(
@@ -455,21 +465,21 @@ fn compute_join_order(
         };
         if let Some(join) = next_join {
             let reversed = available.iter().any(|avail| *avail == join.2);
-            let old = if reversed { join.2 } else { join.1 };
-            let new = if reversed { join.1 } else { join.2 };
-            let info = &infos[old as usize];
-            assert_eq!(old, info.index);
-            let comp_index = info.related_with[&(join.0, new)];
-            available.push(new);
-            let uneqs = newly_available_unequals(&mut available);
+            let old_var = if reversed { join.2 } else { join.1 };
+            let new_var = if reversed { join.1 } else { join.2 };
+            let info = &infos[old_var as usize];
+            assert_eq!(old_var, info.index);
+            let comp_id = info.related_with[&(join.0, new_var)];
+            available.push(new_var);
+            let unequal_constraints = newly_available_unequals(&mut available);
             let relation_constraints = newly_available_constraints(&mut available, &mut work_left);
-            result.push(JoinKind::NewJoin(
-                comp_index,
-                old,
-                new,
-                uneqs,
-                relation_constraints,
-            ));
+            result.push(JoinKind::NewJoin(NewJoin {
+                comp_id,
+                old: old_var,
+                new: new_var,
+                unequal_constraints,
+                rel_constraints: relation_constraints,
+            }));
         } else {
             panic!("Cross joins are not supported.")
         }
@@ -570,11 +580,13 @@ mod test {
             [],
             [
                 NewJoin(
-                    2,
-                    0,
-                    1,
-                    [],
-                    [],
+                    NewJoin {
+                        comp_id: 2,
+                        old: 0,
+                        new: 1,
+                        unequal_constraints: [],
+                        rel_constraints: [],
+                    },
                 ),
             ],
         )
@@ -589,16 +601,18 @@ mod test {
             [],
             [
                 NewJoin(
-                    2,
-                    0,
-                    1,
-                    [
-                        (
-                            0,
-                            1,
-                        ),
-                    ],
-                    [],
+                    NewJoin {
+                        comp_id: 2,
+                        old: 0,
+                        new: 1,
+                        unequal_constraints: [
+                            (
+                                0,
+                                1,
+                            ),
+                        ],
+                        rel_constraints: [],
+                    },
                 ),
             ],
         )

@@ -9,7 +9,7 @@ pub struct RelationJoin {
     pub old: isize,
     pub new: isize,
     pub new_components: Range<usize>,
-    pub unequalities: Vec<(isize, isize)>,
+    pub unequal_constraints: Vec<(isize, isize)>,
     pub rel_constraints: Vec<(usize, isize, isize)>,
 }
 
@@ -61,7 +61,7 @@ impl GeneratorNode for RelationJoin {
         )
         .unwrap();
 
-        if self.unequalities.is_empty() && self.rel_constraints.is_empty() {
+        if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
             write!(
                 append,
                 "
@@ -69,7 +69,7 @@ impl GeneratorNode for RelationJoin {
             )
             .unwrap();
         } else {
-            insert_checks(append, &self.unequalities, &self.rel_constraints);
+            insert_checks(append, &self.unequal_constraints, &self.rel_constraints);
             append.push_str(
                 "
             {
@@ -162,7 +162,7 @@ mod test {
             old: 0,
             new: 2,
             new_components: 3..5,
-            unequalities: vec![(0, 2), (2, 1)],
+            unequal_constraints: vec![(0, 2), (2, 1)],
             rel_constraints: vec![],
         };
 
@@ -181,7 +181,7 @@ mod test {
             old: 0,
             new: 2,
             new_components: 3..5,
-            unequalities: vec![],
+            unequal_constraints: vec![],
             rel_constraints: vec![(5, 2, 1)],
         };
 
