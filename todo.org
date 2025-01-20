@@ -44,8 +44,8 @@ CLOSED: [2025-01-19 Sun 13:31]
 - [X] test proc query relation constraint invar
 - [X] uncomment test case when done
 ** TODO optional components
-- [ ] parser
-- [ ] var info
+- [X] parser
+- [X] var info
 - [ ] set on archetype init
 - [ ] set on invar init
 - [ ] set on relation join
