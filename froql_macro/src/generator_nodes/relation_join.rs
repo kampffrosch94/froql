@@ -11,6 +11,7 @@ pub struct RelationJoin {
     pub new_components: Range<usize>,
     pub unequal_constraints: Vec<(isize, isize)>,
     pub rel_constraints: Vec<(usize, isize, isize)>,
+    pub opt_components: Vec<(String, usize)>,
 }
 
 impl GeneratorNode for RelationJoin {
@@ -61,6 +62,10 @@ impl GeneratorNode for RelationJoin {
         )
         .unwrap();
 
+        // handle optional components
+        insert_optional_comps(prepend, append, &self.opt_components);
+
+        // check constraints if there are any
         if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
             write!(
                 append,
@@ -152,6 +157,29 @@ pub fn insert_checks(
     }
 }
 
+pub fn insert_optional_comps(
+    prepend: &mut String,
+    append: &mut String,
+    opt_components: &[(String, usize)],
+) {
+    for (ty, id) in opt_components {
+        write!(
+            prepend,
+            r#"
+let opt_cid_{id} = world.get_component_id::<{ty}>();
+let mut opt_col_{id} = None;"#
+        )
+        .unwrap();
+        write!(
+            append,
+            r#"
+            opt_col_{id} = a_ref.find_column_opt(opt_cid_{id});
+"#
+        )
+        .unwrap();
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
@@ -164,6 +192,7 @@ mod test {
             new_components: 3..5,
             unequal_constraints: vec![(0, 2), (2, 1)],
             rel_constraints: vec![],
+            opt_components: vec![],
         };
 
         let mut prepend = String::new();
@@ -183,6 +212,7 @@ mod test {
             new_components: 3..5,
             unequal_constraints: vec![],
             rel_constraints: vec![(5, 2, 1)],
+            opt_components: vec![],
         };
 
         let mut prepend = String::new();
@@ -190,6 +220,32 @@ mod test {
         let r = gen.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
+        insta::assert_snapshot!(append);
+    }
+
+    #[test]
+    fn relation_join_optional() {
+        let gen = RelationJoin {
+            relation_comp: 2,
+            old: 0,
+            new: 2,
+            new_components: 3..5,
+            unequal_constraints: vec![],
+            rel_constraints: vec![],
+            opt_components: vec![("OptA".into(), 0), ("OptB".into(), 1)],
+        };
+
+        let mut prepend = String::new();
+        let mut append = String::new();
+        let r = gen.generate(3, &mut prepend, &mut append);
+        assert_eq!(4, r);
+        insta::assert_snapshot!(prepend, @r#"
+        let mut rel_index_3 = 0;
+        let opt_cid_0 = world.get_component_id::<OptA>();
+        let mut opt_col_0 = None;
+        let opt_cid_1 = world.get_component_id::<OptB>();
+        let mut opt_col_1 = None;
+        "#);
         insta::assert_snapshot!(append);
     }
 }

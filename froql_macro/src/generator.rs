@@ -23,8 +23,8 @@ pub struct VarInfo {
     component_range: Range<usize>,
     /// map from type to component index for accessors
     components: HashMap<String, usize>,
-    /// map from type to index part of context variable name
-    opt_components: HashMap<String, usize>,
+    /// type, index part of context variable name
+    opt_components: Vec<(String, usize)>,
 }
 
 impl Debug for VarInfo {
@@ -32,13 +32,12 @@ impl Debug for VarInfo {
         // fix ordering, for snapshot testing
         let related_with = self.related_with.iter().collect::<BTreeMap<_, _>>();
         let components = self.components.iter().collect::<BTreeMap<_, _>>();
-        let opt_components = self.opt_components.iter().collect::<BTreeMap<_, _>>();
         f.debug_struct("VarInfo")
             .field("index", &self.index)
             .field("related_with", &related_with)
             .field("component_range", &self.component_range)
             .field("components", &components)
-            .field("opt_components", &opt_components)
+            .field("opt_components", &self.opt_components)
             .finish()
     }
 }
@@ -123,7 +122,7 @@ pub(crate) fn generate_archetype_sets(
             related_with: HashMap::new(),
             component_range: index..index,
             components: HashMap::new(),
-            opt_components: HashMap::new(),
+            opt_components: Vec::new(),
         };
         result.push_str(&format!("let components_{var} = ["));
         // component
@@ -158,7 +157,7 @@ pub(crate) fn generate_archetype_sets(
         // optional components are not written into archetype set
         // but they are put into the var info
         for (ty, _, index) in opt_components.iter().filter(|(_, id, _)| id == var) {
-            info.opt_components.insert(ty.clone(), *index);
+            info.opt_components.push((ty.clone(), *index));
         }
 
         infos.push(info);
@@ -264,6 +263,7 @@ pub(crate) fn generate_resumable_query_closure(
         step_count = ArchetypeStart {
             var: first,
             components: first_info.component_range.clone(),
+            opt_components: first_info.opt_components.clone(),
         }
         .generate(0, prepend, &mut append);
     } else {
@@ -284,13 +284,15 @@ pub(crate) fn generate_resumable_query_closure(
                     unequal_constraints,
                     rel_constraints,
                 } = new_join;
+                let info = &infos[new as usize];
                 step_count = RelationJoin {
                     relation_comp,
                     old,
                     new,
-                    new_components: infos[new as usize].component_range.clone(),
+                    new_components: info.component_range.clone(),
                     unequal_constraints,
                     rel_constraints,
+                    opt_components: info.opt_components.clone(),
                 }
                 .generate(step_count, prepend, &mut append);
             }
@@ -553,7 +555,7 @@ mod test {
                     "Health": 1,
                     "Unit": 0,
                 },
-                opt_components: {},
+                opt_components: [],
             },
             VarInfo {
                 index: 1,
@@ -567,7 +569,7 @@ mod test {
                 components: {
                     "Unit": 3,
                 },
-                opt_components: {},
+                opt_components: [],
             },
         ]
         "#);
@@ -690,9 +692,12 @@ mod test {
                     "Pos": 0,
                     "Speed": 1,
                 },
-                opt_components: {
-                    "MyOpt": 0,
-                },
+                opt_components: [
+                    (
+                        "MyOpt",
+                        0,
+                    ),
+                ],
             },
         ]
         "#);
@@ -825,6 +830,67 @@ mod test {
             &uncomponents,
             &[],
         );
+        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
+        generate_invar_archetype_fill(&mut result, &infos, &prefills);
+        let unequals = vec![(0, 1)];
+        generate_resumable_query_closure(
+            &mut result,
+            &vars,
+            &prefills,
+            &infos,
+            &relations,
+            &unequals,
+            &accessors,
+        );
+        insta::assert_snapshot!(result);
+    }
+
+    #[test]
+    fn test_optional_component() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
+        let uncomponents = vec![];
+        let relations = vec![("Attack".into(), 1, 0)];
+        let accessors = vec![
+            // TODO opt component access
+            Accessor::Component("Unit".to_string(), 0),
+            Accessor::Component("Unit".to_string(), 1),
+            Accessor::ComponentMut("Health".to_string(), 0),
+        ];
+        let vars = vec![0, 1];
+        let mut result = String::new();
+        let prefills = HashMap::new();
+        let opt_components = vec![("Reputation".into(), 0, 0)];
+        let infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+            &opt_components,
+        );
+        insta::assert_debug_snapshot!(&infos[0], @r#"
+        VarInfo {
+            index: 0,
+            related_with: {
+                (
+                    "Attack",
+                    1,
+                ): 2,
+            },
+            component_range: 0..3,
+            components: {
+                "Health": 1,
+                "Unit": 0,
+            },
+            opt_components: [
+                (
+                    "Reputation",
+                    0,
+                ),
+            ],
+        }
+        "#);
         generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
         generate_invar_archetype_fill(&mut result, &infos, &prefills);
         let unequals = vec![(0, 1)];

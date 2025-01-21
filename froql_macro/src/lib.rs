@@ -293,7 +293,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let index = opt_components.len();
                     let var = variables.var_number(var);
                     opt_components.push((ty, var, index));
-                    todo!("Optional Component: {:?}", opt_components[index]);
+                    // TODO accessor
+                    //todo!("Optional Component: {:?}", opt_components[index]);
                 }
             };
             buffer.clear();
@@ -323,6 +324,7 @@ let bk = &world.bookkeeping;
 
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
+    dbg!(&opt_components);
     let infos = generate_archetype_sets(
         &mut result,
         &vars,

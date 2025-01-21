@@ -1,3 +1,4 @@
+use super::relation_join::insert_optional_comps;
 use super::GeneratorNode;
 use std::fmt::Write;
 use std::ops::Range;
@@ -6,10 +7,11 @@ use std::ops::Range;
 pub struct ArchetypeStart {
     pub var: isize,
     pub components: Range<usize>,
+    pub opt_components: Vec<(String, usize)>,
 }
 
 impl GeneratorNode for ArchetypeStart {
-    fn generate(&self, step: usize, _prepend: &mut String, append: &mut String) -> usize {
+    fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
         let first = self.var;
         let Range { start, end } = &self.components;
         write!(
@@ -34,7 +36,16 @@ impl GeneratorNode for ArchetypeStart {
         &components_{first},
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
-    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;"
+        )
+        .unwrap();
+
+        // handle optional components
+        insert_optional_comps(prepend, append, &self.opt_components);
+
+        write!(
+            append,
+            "
     current_step += 1;
 }}
 "
@@ -76,6 +87,7 @@ mod test {
         let gen = ArchetypeStart {
             var: 0,
             components: 0..2,
+            opt_components: vec![],
         };
 
         let mut prepend = String::new();
