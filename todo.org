@@ -46,10 +46,13 @@ CLOSED: [2025-01-19 Sun 13:31]
 ** TODO optional components
 - [X] parser
 - [X] var info
-- [ ] set on archetype init
+- [X] set on archetype init
+- [X] set on relation join
 - [ ] set on invar init
-- [ ] set on relation join
-- [ ] use on yield
+- [X] test on archetype init
+- [ ] test on relation join
+- [ ] test on invar init
+- [X] use on yield
 ** TODO unrelations
 - ~!Rel(a,b)~
 Similar to inequality constraints and optional components
@@ -57,7 +60,10 @@ Similar to inequality constraints and optional components
 - [ ] set on archetype init
 - [ ] set on invar init
 - [ ] set on relation join
-- [ ] use on yield
+- [ ] check constraint on relation join
+- [ ] test for on archetype init
+- [ ] test for on relation join
+- [ ] test for on invar init
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component
@@ -68,6 +74,16 @@ Similar to inequality constraints and optional components
   - need to search for them when creating archetype sets
   - don't need them in output array, can just create from NonNull::dangling()
   - maybe I should insert checks that outputs are not ZSTs
+- I think I'll just handle ZSTs like any other so I don't end in type hell
+** TODO work on a demo before continuing here
+The possibilities for more and more involved queries are endless.
+But at some point I need to actually try them out in the field and gain insights there.
+** TODO mutable optional components
+- [ ] change parser
+- [ ] accessor
+- [ ] test
+** TODO dynamic tags
+- tag relationship to component entity?
 * World API
 ** TODO EntityViewMut
 ** TODO EntityViewDeferred

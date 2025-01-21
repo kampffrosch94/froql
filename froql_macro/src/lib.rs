@@ -33,12 +33,14 @@ pub(crate) type Component = (String, isize);
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
 pub(crate) enum Accessor {
-    /// ComponentType, index_in_result_array, var
+    /// ComponentType, var
     Component(String, isize),
-    /// ComponentType, index_in_result_array, var
+    /// ComponentType, var
     ComponentMut(String, isize),
     /// var index in result
     OutVar(isize),
+    /// ComponentType, var, opt_col_index
+    OptComponent(String, isize, usize),
 }
 
 struct VariableStore {
@@ -292,9 +294,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                 Term::OptionalComponent(ty, var) => {
                     let index = opt_components.len();
                     let var = variables.var_number(var);
-                    opt_components.push((ty, var, index));
-                    // TODO accessor
-                    //todo!("Optional Component: {:?}", opt_components[index]);
+                    opt_components.push((ty.clone(), var, index));
+                    accessors.push(Accessor::OptComponent(ty, var, index));
                 }
             };
             buffer.clear();
@@ -324,7 +325,6 @@ let bk = &world.bookkeeping;
 
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
-    dbg!(&opt_components);
     let infos = generate_archetype_sets(
         &mut result,
         &vars,

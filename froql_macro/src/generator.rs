@@ -336,12 +336,21 @@ pub(crate) fn generate_resumable_query_closure(
                 .unwrap();
             }
             Accessor::OutVar(var) => {
-                // TODO lookup archetype and row and just return the entity from there lol
                 write!(
                     &mut append,
                     "
             EntityViewDeferred::from_id_unchecked(world,
                                 a_refs[{var}].entities[a_rows[{var}].0 as usize]),"
+                )
+                .unwrap();
+            }
+            Accessor::OptComponent(ty, var, opt_id) => {
+                write!(
+                    &mut append,
+                    "
+            (opt_col_{opt_id}.map(|col| {{
+                (&*(col.get(a_rows[{var}].0) as *const RefCell<{ty}>)).borrow()
+            }})),"
                 )
                 .unwrap();
             }
