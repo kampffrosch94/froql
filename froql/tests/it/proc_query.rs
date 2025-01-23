@@ -362,3 +362,18 @@ fn proc_query_optional_component_invar() {
 
     assert_eq!(1, counter);
 }
+
+#[test]
+fn proc_query_relation_simple() {
+    enum Rel {}
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    world.add_relation::<Rel>(a, b);
+
+    let mut counter = 0;
+    for (_a,) in query!(world, &a, Rel(a, b)) {
+        counter += 1;
+    }
+    assert_eq!(1, counter);
+}
