@@ -2,7 +2,7 @@
 
 pub mod archetype;
 pub mod bookkeeping;
-mod component;
+pub mod component;
 pub mod entity_store;
 mod layout_vec;
 pub mod query_helper;
