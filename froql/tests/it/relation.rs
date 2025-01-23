@@ -121,3 +121,21 @@ fn relation_cascading() {
     assert!(!world.is_alive(a));
     assert!(!world.is_alive(b));
 }
+
+#[test]
+fn relation_transitive() {
+    enum Rel {}
+
+    let mut world = World::new();
+    world.register_relation_flags::<Rel>(TRANSITIVE);
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    let d = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(b, c);
+    world.add_relation::<Rel>(c, d);
+    assert!(world.has_relation::<Rel>(a, b));
+    assert!(world.has_relation::<Rel>(a, c));
+    assert!(world.has_relation::<Rel>(a, d));
+}

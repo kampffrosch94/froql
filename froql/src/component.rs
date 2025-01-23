@@ -37,6 +37,8 @@ pub const SYMMETRIC: u32 = RELATION >> 3;
 /// then once the faction is destroyed all NPCs belonging to it are also destroyed.
 pub const CASCADING_DESTRUCT: u32 = RELATION >> 4;
 
+pub const TRANSITIVE: u32 = RELATION >> 5;
+
 impl ComponentId {
     /// 24 bit ought to be enough component ids
     /// the rest is reserved for flags
@@ -113,6 +115,17 @@ impl ComponentId {
     /// only returns true for the relation origin
     pub fn is_symmetric(&self) -> bool {
         self.is_relation() && (self.0 & SYMMETRIC) > 0
+    }
+
+    #[must_use]
+    pub fn set_transitive(self) -> Self {
+        debug_assert!(self.is_relation());
+        Self(self.0 ^ TRANSITIVE)
+    }
+
+    /// only returns true for the relation origin
+    pub fn is_transitive(&self) -> bool {
+        self.is_relation() && (self.0 & TRANSITIVE) > 0
     }
 
     #[track_caller]

@@ -79,6 +79,13 @@ impl Bookkeeping {
         unsafe { col.get(row.0) }
     }
 
+    pub fn get_component_opt_unchecked(&self, e: EntityId, cid: ComponentId) -> Option<*mut u8> {
+        let (aid, row) = self.entities.get_archetype_unchecked(e);
+        let a = &self.archetypes[aid.0 as usize];
+        let col = a.find_column_opt(cid);
+        col.map(|col| unsafe { col.get(row.0) })
+    }
+
     pub fn has_component(&self, e: Entity, cid: ComponentId) -> bool {
         if !self.entities.is_alive(e) {
             // dead entities have no components
@@ -402,9 +409,27 @@ impl Bookkeeping {
         // so we can just treat pointers to them as RelationVec
         debug_assert!(!origin_cid.is_target());
         if self.has_component(from, origin_cid) {
-            let ptr = self.get_component(from, origin_cid) as *mut RelationVec;
-            let rel_vec = unsafe { &mut *ptr };
-            return rel_vec.contains(&to.id.0);
+            let ptr = self.get_component(from, origin_cid) as *const RelationVec;
+            let rel_vec = unsafe { &*ptr };
+            if rel_vec.contains(&to.id.0) {
+                return true;
+            }
+            if origin_cid.is_transitive() {
+                // now we need to follow the transitive relationship
+                let mut work = Vec::new();
+                work.extend_from_slice(&rel_vec);
+                while !work.is_empty() {
+                    let current = EntityId(work.pop().unwrap());
+                    let comp_opt = self.get_component_opt_unchecked(current, origin_cid);
+                    if let Some(ptr) = comp_opt {
+                        let rel_vec = unsafe { &*(ptr as *const RelationVec) };
+                        if rel_vec.contains(&to.id.0) {
+                            return true;
+                        }
+                        work.extend_from_slice(&rel_vec);
+                    }
+                }
+            }
         }
         return false;
     }
@@ -414,6 +439,7 @@ impl Bookkeeping {
         relation_cid: ComponentId,
         e: Entity,
     ) -> Option<impl Iterator<Item = Entity> + use<'a>> {
+        debug_assert!(!relation_cid.is_transitive(), "transitive is still TODO");
         if self.has_component(e, relation_cid) {
             let ptr = self.get_component(e, relation_cid) as *mut RelationVec;
             let rel_vec = unsafe { &mut *ptr };
