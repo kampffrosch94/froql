@@ -1,8 +1,4 @@
-
-use froql::{
-    archetype::ArchetypeRow,
-    world::World,
-};
+use froql::{archetype::ArchetypeRow, world::World};
 use std::cell::RefCell;
 
 #[test]

@@ -31,12 +31,16 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
+let opt_cid_0 = world.get_component_id::<Reputation>();
+let mut opt_col_0 = None;
 {
     let (aid, arow) = bk.entities.get_archetype(invar_1);
     let a_ref = &mut a_refs[1];
     *a_ref = &bk.archetypes[aid.as_index()];
     a_ref.find_multiple_columns(&components_1, &mut col_indexes[3..5]);
     a_rows[1] = arow;
+            opt_col_0 = a_ref.find_column_opt(opt_cid_0);
+
 }
 
 current_step = 1;

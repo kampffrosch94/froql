@@ -43,27 +43,29 @@ CLOSED: [2025-01-19 Sun 13:31]
 - [X] check before iterating in case of invars
 - [X] test proc query relation constraint invar
 - [X] uncomment test case when done
-** TODO optional components
+** DONE optional components
+CLOSED: [2025-01-21 Tue 22:58]
 - [X] parser
 - [X] var info
 - [X] set on archetype init
 - [X] set on relation join
-- [ ] set on invar init
-- [X] test on archetype init
-- [ ] test on relation join
-- [ ] test on invar init
+- [X] set on invar init
+- [X] write test for archetype init
+- [X] write test for relation join
+- [X] write test for invar init
 - [X] use on yield
 ** TODO unrelations
 - ~!Rel(a,b)~
 Similar to inequality constraints and optional components
+- [ ] need to handle transitivity first
 - [ ] var info
 - [ ] set on archetype init
 - [ ] set on invar init
 - [ ] set on relation join
 - [ ] check constraint on relation join
-- [ ] test for on archetype init
-- [ ] test for on relation join
-- [ ] test for on invar init
+- [ ] write test for on archetype init
+- [ ] write test for on relation join
+- [ ] write test for on invar init
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component
@@ -79,8 +81,9 @@ Similar to inequality constraints and optional components
 The possibilities for more and more involved queries are endless.
 But at some point I need to actually try them out in the field and gain insights there.
 ** TODO mutable optional components
-- [ ] change parser
-- [ ] accessor
+- [ ] parser: optional component with invar ~CompA(*me)?~
+- [ ] parser for ~mut CompA?~, ~mut CompA(me)?~, ~mut CompA(*me)?~
+- [ ] accessor for mutable
 - [ ] test
 ** TODO dynamic tags
 - tag relationship to component entity?

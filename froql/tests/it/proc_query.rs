@@ -284,6 +284,7 @@ fn proc_query_constraint() {
 }
 
 #[test]
+#[allow(dead_code)] // used only for debug output
 fn proc_query_optional_component() {
     #[derive(Debug)]
     struct CompA(usize);
@@ -299,7 +300,7 @@ fn proc_query_optional_component() {
 
     let mut counter = 0;
 
-    for (ca,cb) in query!(world, CompA, CompB?) {
+    for (ca, cb) in query!(world, CompA, CompB?) {
         println!("{ca:?}");
         println!("{cb:?}");
         counter += 1;
@@ -308,3 +309,56 @@ fn proc_query_optional_component() {
     assert_eq!(2, counter);
 }
 
+#[test]
+#[allow(dead_code)] // used only for debug output
+fn proc_query_optional_component_relation() {
+    #[derive(Debug)]
+    struct CompA(usize);
+    enum Rel {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.add_component(a, CompA(4));
+    world.add_component(c, CompA(2));
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(a, c);
+
+    let mut counter = 0;
+
+    for (ca, cb) in query!(world, CompA(a)?, CompA(b)?, Rel(a, b)) {
+        println!("{ca:?}");
+        println!("{cb:?}");
+        counter += 1;
+    }
+
+    assert_eq!(2, counter);
+}
+
+#[test]
+#[allow(dead_code)] // used only for debug output
+fn proc_query_optional_component_invar() {
+    #[derive(Debug)]
+    struct CompA(usize);
+    enum Rel {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.add_component(a, CompA(4));
+    world.add_component(c, CompA(2));
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(a, c);
+
+    let mut counter = 0;
+
+    for (ca, cb) in query!(world, CompA(a)?, CompA(b)?, Rel(*a, *b)) {
+        println!("{ca:?}");
+        println!("{cb:?}");
+        counter += 1;
+    }
+
+    assert_eq!(1, counter);
+}

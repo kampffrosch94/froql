@@ -7,6 +7,7 @@ use std::{collections::HashMap, ops::Range};
 
 use crate::generator_nodes::archetype_start::ArchetypeStart;
 use crate::generator_nodes::invar_start::InvarStart;
+use crate::generator_nodes::relation_join::insert_optional_comps;
 use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
 use crate::ANYVAR;
@@ -69,28 +70,37 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     }
 }
 
+// TODO move to invar node?
 pub(crate) fn generate_invar_archetype_fill(
-    result: &mut String,
+    prepend: &mut String,
     infos: &[VarInfo],
     prefills: &HashMap<isize, String>,
 ) {
+    let mut append = String::new();
     for info in infos.iter().filter(|it| prefills.contains_key(&it.index)) {
         let var_index = info.index;
         let Range { start, end } = &info.component_range;
         write!(
-            result,
+            &mut append,
             "
 {{
     let (aid, arow) = bk.entities.get_archetype(invar_{var_index});
     let a_ref = &mut a_refs[{var_index}];
     *a_ref = &bk.archetypes[aid.as_index()];
     a_ref.find_multiple_columns(&components_{var_index}, &mut col_indexes[{start}..{end}]);
-    a_rows[{var_index}] = arow;
+    a_rows[{var_index}] = arow;"
+        )
+        .unwrap();
+        insert_optional_comps(prepend, &mut append, &info.opt_components);
+        write!(
+            &mut append,
+            "
 }}
 "
         )
         .unwrap();
     }
+    prepend.push_str(&append);
 }
 
 pub(crate) fn generate_archetype_sets(
@@ -195,7 +205,7 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                result.push_str(&format!("    Vec::new(),\n"));
+                result.push_str(&format!("    Vec::<ArchetypeId>::new(),\n"));
             } else {
                 write!(
                     result,
@@ -787,6 +797,7 @@ mod test {
         let vars = vec![0, 1];
         let mut prefills = HashMap::new();
         prefills.insert(1, "player".to_string());
+        let opt_components = vec![("Reputation".into(), 1, 0)];
 
         let mut result = String::new();
         generate_invar_captures(&mut result, &prefills);
@@ -797,7 +808,7 @@ mod test {
             &components,
             &relations,
             &uncomponents,
-            &[],
+            &opt_components,
         );
         dbg!(&infos);
         generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
