@@ -819,10 +819,10 @@ mod test {
 
         let result = Generator {
             vars,
+            unequals,
             components,
             relations,
             accessors,
-            unequals,
             ..Default::default()
         }
         .generate("world");
@@ -832,62 +832,29 @@ mod test {
 
     #[test]
     fn test_optional_component() {
+        let vars = vec![0, 1];
+        let unequals = vec![(0, 1)];
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
-        let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
+        let opt_components = vec![("Reputation".into(), 0, 0)];
         let accessors = vec![
-            // TODO opt component access
+            Accessor::OptComponent("Reputation".into(), 0, 0),
             Accessor::Component("Unit".to_string(), 0),
             Accessor::Component("Unit".to_string(), 1),
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
-        let vars = vec![0, 1];
-        let mut result = String::new();
-        let prefills = HashMap::new();
-        let opt_components = vec![("Reputation".into(), 0, 0)];
-        let infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &opt_components,
-        );
-        insta::assert_debug_snapshot!(&infos[0], @r#"
-        VarInfo {
-            index: 0,
-            related_with: {
-                (
-                    "Attack",
-                    1,
-                ): 2,
-            },
-            component_range: 0..3,
-            components: {
-                "Health": 1,
-                "Unit": 0,
-            },
-            opt_components: [
-                (
-                    "Reputation",
-                    0,
-                ),
-            ],
+
+        let result = Generator {
+            vars,
+            components,
+            relations,
+            accessors,
+            opt_components,
+            unequals,
+            ..Default::default()
         }
-        "#);
-        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
-        generate_invar_archetype_fill(&mut result, &infos, &prefills);
-        let unequals = vec![(0, 1)];
-        generate_resumable_query_closure(
-            &mut result,
-            &vars,
-            &prefills,
-            &infos,
-            &relations,
-            &unequals,
-            &accessors,
-        );
+        .generate("world");
+
         insta::assert_snapshot!(result);
     }
 }

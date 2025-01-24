@@ -13,7 +13,6 @@ use parser::RelationVarKind as RVK;
 use parser::VarKind as VK;
 use parser::{parse_term, Term};
 use proc_macro::{TokenStream, TokenTree};
-use std::fmt::Write;
 
 pub(crate) const ANYVAR: isize = isize::MAX;
 

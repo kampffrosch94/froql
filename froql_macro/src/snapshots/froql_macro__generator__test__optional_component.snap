@@ -2,6 +2,10 @@
 source: froql_macro/src/generator.rs
 expression: result
 ---
+{
+
+let world: &World = &world;
+let bk = &world.bookkeeping;
 let components_0 = [
     world.get_component_id::<Unit>(),
     world.get_component_id::<Health>(),
@@ -30,6 +34,8 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
+let opt_cid_0 = world.get_component_id::<Reputation>();
+let mut opt_col_0 = None;
 let mut rel_index_2 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {
@@ -53,6 +59,8 @@ let mut rel_index_2 = 0;
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+            opt_col_0 = a_ref.find_column_opt(opt_cid_0);
+
     current_step += 1;
 }
 
@@ -123,6 +131,9 @@ let mut rel_index_2 = 0;
     current_step -= 1;
     return Some(unsafe {
         (
+            (opt_col_0.map(|col| {
+                (&*(col.get(a_rows[0].0) as *const RefCell<Reputation>)).borrow()
+            })),
             (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
                 as *const RefCell<Unit>))
                 .borrow(),
@@ -138,3 +149,5 @@ let mut rel_index_2 = 0;
 
 _ => unreachable!(),
 }}})
+
+}
