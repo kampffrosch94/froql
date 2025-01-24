@@ -730,54 +730,6 @@ mod test {
     }
 
     #[test]
-    fn test_generate_archetype_id_sets_trivial() {
-        let components = vec![("Pos".into(), 0), ("Speed".into(), 0)];
-        let uncomponents = vec![];
-        let relations = [];
-        let vars = vec![0];
-        let prefills = HashMap::new();
-        let mut result = String::new();
-        let info = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &[("MyOpt".to_string(), 0, 0)],
-        );
-        insta::assert_snapshot!(result, @r#"
-        let components_0 = [
-            world.get_component_id::<Pos>(),
-            world.get_component_id::<Speed>(),
-        ];
-
-        let archetype_id_sets = [
-            bk.matching_archetypes(&components_0, &[]),
-        ];
-        "#);
-        insta::assert_debug_snapshot!(info, @r#"
-        [
-            VarInfo {
-                index: 0,
-                related_with: {},
-                component_range: 0..2,
-                components: {
-                    "Pos": 0,
-                    "Speed": 1,
-                },
-                opt_components: [
-                    (
-                        "MyOpt",
-                        0,
-                    ),
-                ],
-            },
-        ]
-        "#);
-    }
-
-    #[test]
     fn test_generate_result_set() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
@@ -805,7 +757,6 @@ mod test {
     #[test]
     fn test_generate_resumable_query_closure() {
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
-        let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
             Accessor::OutVar(0),
@@ -814,28 +765,14 @@ mod test {
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
         let vars = vec![0, 1];
-        let mut result = String::new();
-        let prefills = HashMap::new();
-        let infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &[],
-        );
-        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
-        generate_invar_archetype_fill(&mut result, &infos, &prefills);
-        generate_resumable_query_closure(
-            &mut result,
-            &vars,
-            &prefills,
-            &infos,
-            &relations,
-            &[], //unequals
-            &accessors,
-        );
+        let result = Generator {
+            vars,
+            components,
+            relations,
+            accessors,
+            ..Default::default()
+        }
+        .generate("world");
         insta::assert_snapshot!(result);
     }
 
