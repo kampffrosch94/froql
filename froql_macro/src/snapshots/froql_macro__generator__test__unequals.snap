@@ -2,6 +2,10 @@
 source: froql_macro/src/generator.rs
 expression: result
 ---
+{
+
+let world: &World = &world;
+let bk = &world.bookkeeping;
 let components_0 = [
     world.get_component_id::<Unit>(),
     world.get_component_id::<Health>(),
@@ -140,3 +144,5 @@ let mut rel_index_2 = 0;
 
 _ => unreachable!(),
 }}})
+
+}

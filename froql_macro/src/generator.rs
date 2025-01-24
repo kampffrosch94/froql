@@ -773,6 +773,7 @@ mod test {
             ..Default::default()
         }
         .generate("world");
+
         insta::assert_snapshot!(result);
     }
 
@@ -799,13 +800,15 @@ mod test {
             ..Default::default()
         }
         .generate("world");
+
         insta::assert_snapshot!(result);
     }
 
     #[test]
     fn test_unequals() {
+        let vars = vec![0, 1];
+        let unequals = vec![(0, 1)];
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
-        let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
             Accessor::OutVar(0),
@@ -813,30 +816,17 @@ mod test {
             Accessor::Component("Unit".to_string(), 1),
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
-        let vars = vec![0, 1];
-        let mut result = String::new();
-        let prefills = HashMap::new();
-        let infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &[],
-        );
-        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
-        generate_invar_archetype_fill(&mut result, &infos, &prefills);
-        let unequals = vec![(0, 1)];
-        generate_resumable_query_closure(
-            &mut result,
-            &vars,
-            &prefills,
-            &infos,
-            &relations,
-            &unequals,
-            &accessors,
-        );
+
+        let result = Generator {
+            vars,
+            components,
+            relations,
+            accessors,
+            unequals,
+            ..Default::default()
+        }
+        .generate("world");
+
         insta::assert_snapshot!(result);
     }
 
