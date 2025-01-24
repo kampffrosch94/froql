@@ -32,6 +32,7 @@ pub(crate) type Component = (String, isize);
 
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
+#[derive(Debug)]
 pub(crate) enum Accessor {
     /// ComponentType, var
     Component(String, isize),
@@ -309,45 +310,21 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
 
     assert_eq!(unrelations.len(), 0, "Unrelations are not done yet.");
 
-    let mut result = String::new();
-
-    result.push_str("{");
-
-    generate_invar_captures(&mut result, &prefills);
-
-    write!(
-        &mut result,
-        "
-let world: &World = &{world};
-let bk = &world.bookkeeping;
-"
-    );
-
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
-    let infos = generate_archetype_sets(
-        &mut result,
-        &vars,
-        &prefills,
-        &components,
-        &relations,
-        &uncomponents,
-        &opt_components,
-    );
-    generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
-    generate_invar_archetype_fill(&mut result, &infos, &prefills);
 
-    generate_resumable_query_closure(
-        &mut result,
-        &vars,
-        &prefills,
-        &infos,
-        &relations,
-        &unequals,
-        &accessors,
-    );
+    let gen = Generator {
+        vars,
+        prefills,
+        components,
+        relations,
+        uncomponents,
+        opt_components,
+        unequals,
+        accessors,
+    };
 
-    result.push_str("\n}");
+    let result = gen.generate(&world);
 
     //eprintln!("{}", &output);
     Ok(result.parse().unwrap())

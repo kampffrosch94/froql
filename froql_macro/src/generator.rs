@@ -14,13 +14,75 @@ use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 // TODO use write! instead of format! to save on intermediate allocations
 
+#[derive(Default, Debug)]
+pub struct Generator {
+    pub vars: Vec<isize>,
+    pub prefills: HashMap<isize, String>,
+    pub components: Vec<Component>,
+    pub relations: Vec<Relation>,
+    pub uncomponents: Vec<Component>,
+    pub opt_components: Vec<(String, isize, usize)>,
+    pub unequals: Vec<(isize, isize)>,
+    pub accessors: Vec<Accessor>,
+}
+
+impl Generator {
+    pub fn generate(&self, world: &str) -> String {
+        let mut result = String::new();
+
+        result.push_str("{");
+
+        generate_invar_captures(&mut result, &self.prefills);
+
+        write!(
+            &mut result,
+            "
+let world: &World = &{world};
+let bk = &world.bookkeeping;
+"
+        )
+        .unwrap();
+
+        let infos = generate_archetype_sets(
+            &mut result,
+            &self.vars,
+            &self.prefills,
+            &self.components,
+            &self.relations,
+            &self.uncomponents,
+            &self.opt_components,
+        );
+        generate_fsm_context(
+            &mut result,
+            &self.vars,
+            &self.prefills,
+            &self.components,
+            &self.relations,
+        );
+        generate_invar_archetype_fill(&mut result, &infos, &self.prefills);
+
+        generate_resumable_query_closure(
+            &mut result,
+            &self.vars,
+            &self.prefills,
+            &infos,
+            &self.relations,
+            &self.unequals,
+            &self.accessors,
+        );
+
+        result.push_str("\n}");
+        return result;
+    }
+}
+
 #[derive(Clone, PartialEq, Eq)]
 pub struct VarInfo {
     /// Index of this variable
     index: isize,
     /// relation type + other var index => index for relation component
     related_with: HashMap<(String, isize), usize>,
-    /// indexes in component array
+    /// indexes in component array for this variables non-optional components
     component_range: Range<usize>,
     /// map from type to component index for accessors
     components: HashMap<String, usize>,
