@@ -103,6 +103,7 @@ pub(crate) fn generate_invar_archetype_fill(
     prepend.push_str(&append);
 }
 
+// TODO put building the varinfo into a separate function
 pub(crate) fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
@@ -284,29 +285,25 @@ pub(crate) fn generate_resumable_query_closure(
         .generate(0, prepend, &mut append);
     }
     // follow relations/constraints
-    for step in join_order {
-        match step {
-            JoinKind::NewJoin(new_join) => {
-                let NewJoin {
-                    comp_id: relation_comp,
-                    old,
-                    new,
-                    unequal_constraints,
-                    rel_constraints,
-                } = new_join;
-                let info = &infos[new as usize];
-                step_count = RelationJoin {
-                    relation_comp,
-                    old,
-                    new,
-                    new_components: info.component_range.clone(),
-                    unequal_constraints,
-                    rel_constraints,
-                    opt_components: info.opt_components.clone(),
-                }
-                .generate(step_count, prepend, &mut append);
-            }
+    for new_join in join_order {
+        let NewJoin {
+            comp_id: relation_comp,
+            old,
+            new,
+            unequal_constraints,
+            rel_constraints,
+        } = new_join;
+        let info = &infos[new as usize];
+        step_count = RelationJoin {
+            relation_comp,
+            old,
+            new,
+            new_components: info.component_range.clone(),
+            unequal_constraints,
+            rel_constraints,
+            opt_components: info.opt_components.clone(),
         }
+        .generate(step_count, prepend, &mut append);
     }
 
     // yield row
@@ -412,9 +409,9 @@ fn compute_join_order(
     isize,
     Vec<(isize, isize)>,
     Vec<(usize, isize, isize)>,
-    Vec<JoinKind>,
+    Vec<NewJoin>,
 ) {
-    let mut result: Vec<JoinKind> = Vec::new();
+    let mut result = Vec::new();
     let mut available: Vec<isize> = Vec::new();
     let mut unequals = Vec::from(unequals);
     let mut work_left: Vec<Relation> = relations
@@ -494,13 +491,13 @@ fn compute_join_order(
             available.push(new_var);
             let unequal_constraints = newly_available_unequals(&mut available);
             let relation_constraints = newly_available_constraints(&mut available, &mut work_left);
-            result.push(JoinKind::NewJoin(NewJoin {
+            result.push(NewJoin {
                 comp_id,
                 old: old_var,
                 new: new_var,
                 unequal_constraints,
                 rel_constraints: relation_constraints,
-            }));
+            });
         } else {
             panic!("Cross joins are not supported.")
         }
@@ -600,15 +597,13 @@ mod test {
             [],
             [],
             [
-                NewJoin(
-                    NewJoin {
-                        comp_id: 2,
-                        old: 0,
-                        new: 1,
-                        unequal_constraints: [],
-                        rel_constraints: [],
-                    },
-                ),
+                NewJoin {
+                    comp_id: 2,
+                    old: 0,
+                    new: 1,
+                    unequal_constraints: [],
+                    rel_constraints: [],
+                },
             ],
         )
         "#);
@@ -621,20 +616,18 @@ mod test {
             [],
             [],
             [
-                NewJoin(
-                    NewJoin {
-                        comp_id: 2,
-                        old: 0,
-                        new: 1,
-                        unequal_constraints: [
-                            (
-                                0,
-                                1,
-                            ),
-                        ],
-                        rel_constraints: [],
-                    },
-                ),
+                NewJoin {
+                    comp_id: 2,
+                    old: 0,
+                    new: 1,
+                    unequal_constraints: [
+                        (
+                            0,
+                            1,
+                        ),
+                    ],
+                    rel_constraints: [],
+                },
             ],
         )
         "#);
