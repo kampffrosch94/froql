@@ -30,7 +30,7 @@ impl Generator {
     pub fn generate(&self, world: &str) -> String {
         let mut result = String::new();
 
-        result.push_str("{");
+        result.push_str("{\n");
 
         generate_invar_captures(&mut result, &self.prefills);
 
@@ -755,7 +755,8 @@ mod test {
     }
 
     #[test]
-    fn test_generate_resumable_query_closure() {
+    fn test_relation_outvar() {
+        let vars = vec![0, 1];
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
@@ -764,7 +765,6 @@ mod test {
             Accessor::Component("Unit".to_string(), 1),
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
-        let vars = vec![0, 1];
         let result = Generator {
             vars,
             components,
@@ -778,44 +778,27 @@ mod test {
 
     #[test]
     fn test_invar() {
+        let vars = vec![0, 1];
         let components = vec![("Unit".into(), 0), ("Health".into(), 0), ("Unit".into(), 1)];
-        let uncomponents = vec![];
         let relations = vec![("Attack".into(), 1, 0)];
         let accessors = vec![
             Accessor::Component("Unit".to_string(), 0),
             Accessor::Component("Unit".to_string(), 1),
             Accessor::ComponentMut("Health".to_string(), 0),
         ];
-        let vars = vec![0, 1];
-        let mut prefills = HashMap::new();
-        prefills.insert(1, "player".to_string());
+        let prefills = vec![(1, "player".to_string())].into_iter().collect();
         let opt_components = vec![("Reputation".into(), 1, 0)];
 
-        let mut result = String::new();
-        generate_invar_captures(&mut result, &prefills);
-        let infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &opt_components,
-        );
-        dbg!(&infos);
-        generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
-        generate_invar_archetype_fill(&mut result, &infos, &prefills);
-
-        generate_resumable_query_closure(
-            &mut result,
-            &vars,
-            &prefills,
-            &infos,
-            &relations,
-            &[],
-            &accessors,
-        );
-
+        let result = Generator {
+            vars,
+            components,
+            relations,
+            accessors,
+            prefills,
+            opt_components,
+            ..Default::default()
+        }
+        .generate("world");
         insta::assert_snapshot!(result);
     }
 
