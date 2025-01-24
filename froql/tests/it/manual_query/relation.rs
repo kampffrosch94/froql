@@ -2,6 +2,7 @@ use froql::{
     archetype::{ArchetypeId, ArchetypeRow},
     entity_store::{Entity, EntityId},
     entity_view_deferred::EntityViewDeferred,
+    query_helper::RelationHelper,
     relation::Relation,
     relation_vec::RelationVec,
     world::World,
@@ -876,7 +877,7 @@ fn manual_query_relation_simple() {
     let b = world.create();
     world.add_relation::<Rel>(a, b);
     let mut counter = 0;
-    for (_a,) in {
+    {
         let world: &World = &world;
         let bk = &world.bookkeeping;
         let components_0 = [bk.get_component_id_unchecked(TypeId::of::<Relation<Rel>>())];
@@ -894,7 +895,9 @@ fn manual_query_relation_simple() {
         let mut a_max_rows = [0; VAR_COUNT];
         let mut a_next_indexes = [usize::MAX; VAR_COUNT];
         let mut col_indexes = [usize::MAX; 2];
-        let mut rel_index_2 = 0;
+
+        let mut rel_helper_2 = RelationHelper::new(components_1[0]);
+
         ::std::iter::from_fn(move || loop {
             match current_step {
                 0 => {
@@ -916,12 +919,16 @@ fn manual_query_relation_simple() {
                     );
                     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
                     current_step += 1;
+
+                    // RELATION_COMP_INDEX from step 2
+                    rel_helper_2.set_col(&a_ref.columns[col_indexes[1]]);
                 }
                 1 => {
                     const CURRENT_VAR: usize = 1;
                     let row_counter = &mut a_rows[CURRENT_VAR].0;
                     let max_row = a_max_rows[CURRENT_VAR];
                     *row_counter = row_counter.wrapping_add(1);
+                    rel_helper_2.set_row(*row_counter);
                     if *row_counter >= max_row {
                         current_step -= 1;
                     } else {
@@ -929,25 +936,10 @@ fn manual_query_relation_simple() {
                     }
                 }
                 2 => {
-                    const CURRENT_VAR: usize = 1;
                     const REL_VAR: usize = 0;
-                    const RELATION_COMP_INDEX: usize = 1;
                     const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..1;
-
-                    let row = a_rows[CURRENT_VAR].0;
-                    let col = col_indexes[RELATION_COMP_INDEX];
-                    let arch = &a_refs[CURRENT_VAR];
-
-                    let ptr = unsafe { arch.columns[col].get(row) } as *const RelationVec;
-                    let rel_vec = unsafe { &*ptr };
-
-                    if rel_index_2 >= rel_vec.len() {
-                        rel_index_2 = 0;
-                        current_step -= 1;
-                    } else {
-                        let id = EntityId(rel_vec[rel_index_2 as usize]);
+                    if let Some(id) = rel_helper_2.next_related() {
                         let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-                        rel_index_2 += 1;
                         if archetype_id_sets[REL_VAR].contains(&aid) {
                             let a_ref = &mut a_refs[REL_VAR];
                             *a_ref = &bk.archetypes[aid.as_index()];
@@ -958,6 +950,8 @@ fn manual_query_relation_simple() {
                             a_rows[REL_VAR] = arow;
                             current_step += 1;
                         }
+                    } else {
+                        current_step -= 1;
                     }
                 }
                 3 => {
@@ -972,8 +966,9 @@ fn manual_query_relation_simple() {
                 _ => unreachable!(),
             }
         })
-    } {
-        counter += 1;
     }
+    .for_each(|(_a,)| {
+        counter += 1;
+    });
     assert_eq!(1, counter);
 }
