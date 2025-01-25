@@ -43,7 +43,7 @@ let bk = &world.bookkeeping;
         )
         .unwrap();
 
-        let infos = generate_archetype_sets(
+        let mut infos = generate_archetype_sets(
             &mut result,
             &self.vars,
             &self.prefills,
@@ -65,7 +65,7 @@ let bk = &world.bookkeeping;
             &mut result,
             &self.vars,
             &self.prefills,
-            &infos,
+            &mut infos,
             &self.relations,
             &self.unequals,
             &self.accessors,
@@ -74,6 +74,14 @@ let bk = &world.bookkeeping;
         result.push_str("\n}");
         return result;
     }
+}
+
+#[derive(Clone, PartialEq, Eq, Debug)]
+struct RelationHelperInfo {
+    /// Index where the relationship cid is in the cid array
+    cid_index: usize,
+    old_var: isize,
+    new_var: isize,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -88,6 +96,10 @@ pub struct VarInfo {
     components: HashMap<String, usize>,
     /// type, index part of context variable name
     opt_components: Vec<(String, usize)>,
+    /// only built up when joins are computed
+    /// When a join is added the already existing variable (`old`) gets a relationship helper added.
+    /// This is then used for code gen in steps leading up to the join.
+    relation_helpers: Vec<RelationHelperInfo>,
 }
 
 impl Debug for VarInfo {
@@ -101,6 +113,7 @@ impl Debug for VarInfo {
             .field("component_range", &self.component_range)
             .field("components", &components)
             .field("opt_components", &self.opt_components)
+            .field("relation_helpers", &self.relation_helpers)
             .finish()
     }
 }
@@ -196,6 +209,7 @@ pub(crate) fn generate_archetype_sets(
             component_range: index..index,
             components: HashMap::new(),
             opt_components: Vec::new(),
+            relation_helpers: Vec::new(),
         };
         result.push_str(&format!("let components_{var} = ["));
         // component
@@ -311,7 +325,7 @@ pub(crate) fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
     prefills: &HashMap<isize, String>,
-    infos: &[VarInfo],
+    infos: &mut [VarInfo],
     relations: &[Relation],
     unequals: &[(isize, isize)],
     accessors: &[Accessor],
@@ -455,16 +469,9 @@ struct NewJoin {
     rel_constraints: Vec<(usize, isize, isize)>,
 }
 
-// TODO turn into struct
-#[derive(Debug)]
-enum JoinKind {
-    /// component id, old var, new var, unequals to check, relations to check
-    NewJoin(NewJoin),
-}
-
 fn compute_join_order(
     relations: &[Relation],
-    infos: &[VarInfo],
+    infos: &mut [VarInfo],
     prefills: &HashMap<isize, String>,
     unequals: &[(isize, isize)],
 ) -> (
@@ -512,7 +519,7 @@ fn compute_join_order(
         result
     };
     let newly_available_constraints =
-        |available: &mut Vec<isize>, work_left: &mut Vec<Relation>| {
+        |available: &mut Vec<isize>, work_left: &mut Vec<Relation>, infos: &[VarInfo]| {
             let mut result = Vec::new();
             while let Some(index) = work_left
                 .iter()
@@ -529,7 +536,7 @@ fn compute_join_order(
         };
 
     let invar_unequals = newly_available_unequals(&mut available);
-    let invar_constraints = newly_available_constraints(&mut available, &mut work_left);
+    let invar_constraints = newly_available_constraints(&mut available, &mut work_left, &infos);
 
     // compute join
     while !work_left.is_empty() {
@@ -547,21 +554,27 @@ fn compute_join_order(
             let reversed = available.iter().any(|avail| *avail == join.2);
             let old_var = if reversed { join.2 } else { join.1 };
             let new_var = if reversed { join.1 } else { join.2 };
-            let info = &infos[old_var as usize];
-            assert_eq!(old_var, info.index);
-            let comp_id = info.related_with[&(join.0, new_var)];
+            let old_info = &mut infos[old_var as usize];
+            assert_eq!(old_var, old_info.index);
+            let cid_index = old_info.related_with[&(join.0, new_var)];
+            old_info.relation_helpers.push(RelationHelperInfo {
+                cid_index,
+                old_var,
+                new_var,
+            });
             available.push(new_var);
             let unequal_constraints = newly_available_unequals(&mut available);
-            let relation_constraints = newly_available_constraints(&mut available, &mut work_left);
+            let relation_constraints =
+                newly_available_constraints(&mut available, &mut work_left, &infos);
             result.push(NewJoin {
-                comp_id,
+                comp_id: cid_index,
                 old: old_var,
                 new: new_var,
                 unequal_constraints,
                 rel_constraints: relation_constraints,
             });
         } else {
-            panic!("Cross joins are not supported.")
+            panic!("Cross joins are not supported. Use nested queries instead.")
         }
     }
     assert!(unequals.is_empty());
@@ -582,7 +595,7 @@ mod test {
         let vars = vec![0, 1];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let infos = generate_archetype_sets(
+        let mut infos = generate_archetype_sets(
             &mut result,
             &vars,
             &prefills,
@@ -634,6 +647,7 @@ mod test {
                     "Unit": 0,
                 },
                 opt_components: [],
+                relation_helpers: [],
             },
             VarInfo {
                 index: 1,
@@ -648,11 +662,12 @@ mod test {
                     "Unit": 3,
                 },
                 opt_components: [],
+                relation_helpers: [],
             },
         ]
         "#);
 
-        let join_order = compute_join_order(&relations, &infos, &prefills, &[]);
+        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[]);
         insta::assert_debug_snapshot!(join_order, @r#"
         (
             0,
@@ -671,7 +686,7 @@ mod test {
         "#);
 
         let unequals = vec![(0, 1)];
-        let join_order = compute_join_order(&relations, &infos, &prefills, &unequals);
+        let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals);
         insta::assert_debug_snapshot!(join_order, @r#"
         (
             0,
