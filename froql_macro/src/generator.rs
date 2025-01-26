@@ -4,9 +4,9 @@ use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
 use crate::generator_nodes::archetype_start::ArchetypeStart;
+use crate::generator_nodes::invar_start::InvarInfo;
 use crate::generator_nodes::invar_start::InvarStart;
 use crate::generator_nodes::relation_helper::RelationHelperInfo;
-use crate::generator_nodes::relation_join::insert_optional_comps;
 use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
 use crate::ANYVAR;
@@ -58,7 +58,6 @@ let bk = &world.bookkeeping;
             &self.components,
             &self.relations,
         );
-        generate_invar_archetype_fill(&mut result, &infos, &self.prefills);
 
         generate_resumable_query_closure(
             &mut result,
@@ -134,39 +133,6 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
         )
         .unwrap();
     }
-}
-
-// TODO move to invar node?
-pub(crate) fn generate_invar_archetype_fill(
-    prepend: &mut String,
-    infos: &[VarInfo],
-    prefills: &HashMap<isize, String>,
-) {
-    let mut append = String::new();
-    for info in infos.iter().filter(|it| prefills.contains_key(&it.index)) {
-        let var_index = info.index;
-        let Range { start, end } = &info.component_range;
-        write!(
-            &mut append,
-            "
-{{
-    let (aid, arow) = bk.entities.get_archetype(invar_{var_index});
-    let a_ref = &mut a_refs[{var_index}];
-    *a_ref = &bk.archetypes[aid.as_index()];
-    a_ref.find_multiple_columns(&components_{var_index}, &mut col_indexes[{start}..{end}]);
-    a_rows[{var_index}] = arow;"
-        )
-        .unwrap();
-        insert_optional_comps(prepend, &mut append, &info.opt_components);
-        write!(
-            &mut append,
-            "
-}}
-"
-        )
-        .unwrap();
-    }
-    prepend.push_str(&append);
 }
 
 // TODO put building the varinfo into a separate function
@@ -349,6 +315,15 @@ pub(crate) fn generate_resumable_query_closure(
         step_count = InvarStart {
             unequalities: invar_unequals,
             rel_constraints: invar_rel_constraints,
+            invars: infos
+                .iter()
+                .filter(|it| prefills.contains_key(&it.index))
+                .map(|info| InvarInfo {
+                    var_index: info.index,
+                    component_range: info.component_range.clone(),
+                    opt_components: info.opt_components.clone(),
+                })
+                .collect(),
         }
         .generate(0, prepend, &mut append);
     }
