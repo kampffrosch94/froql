@@ -1,3 +1,6 @@
+use super::relation_helper::{
+    relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+};
 use super::relation_join::insert_optional_comps;
 use super::GeneratorNode;
 use std::fmt::Write;
@@ -8,6 +11,7 @@ pub struct ArchetypeStart {
     pub var: isize,
     pub components: Range<usize>,
     pub opt_components: Vec<(String, usize)>,
+    pub relation_helpers: Vec<RelationHelperInfo>,
 }
 
 impl GeneratorNode for ArchetypeStart {
@@ -42,6 +46,7 @@ impl GeneratorNode for ArchetypeStart {
 
         // handle optional components
         insert_optional_comps(prepend, append, &self.opt_components);
+        relation_helpers_init_and_set_col(prepend, append, &self.relation_helpers);
 
         write!(
             append,
@@ -54,6 +59,7 @@ impl GeneratorNode for ArchetypeStart {
 
         // get row from first archetype
         let next_step = step + 1;
+
         write!(
             append,
             "
@@ -67,13 +73,22 @@ impl GeneratorNode for ArchetypeStart {
 
     if *row_counter >= max_row {{
         current_step -= 1;
-    }} else {{
+    }} else {{"
+        )
+        .unwrap();
+
+        relation_helpers_set_rows(append, &self.relation_helpers);
+
+        write!(
+            append,
+            "
         current_step += 1;
     }}
 }}
 "
         )
         .unwrap();
+
         return step + 2;
     }
 }
@@ -88,6 +103,7 @@ mod test {
             var: 0,
             components: 0..2,
             opt_components: vec![],
+            relation_helpers: vec![],
         };
 
         let mut prepend = String::new();

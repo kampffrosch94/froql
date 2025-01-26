@@ -1,12 +1,11 @@
-#![allow(dead_code)]
 use std::collections::BTreeMap;
-// TODO remove once finished
 use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
 use crate::generator_nodes::archetype_start::ArchetypeStart;
 use crate::generator_nodes::invar_start::InvarStart;
+use crate::generator_nodes::relation_helper::RelationHelperInfo;
 use crate::generator_nodes::relation_join::insert_optional_comps;
 use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
@@ -74,14 +73,6 @@ let bk = &world.bookkeeping;
         result.push_str("\n}");
         return result;
     }
-}
-
-#[derive(Clone, PartialEq, Eq, Debug)]
-struct RelationHelperInfo {
-    /// Index where the relationship cid is in the cid array
-    cid_index: usize,
-    old_var: isize,
-    new_var: isize,
 }
 
 #[derive(Clone, PartialEq, Eq)]
@@ -336,7 +327,6 @@ pub(crate) fn generate_resumable_query_closure(
     let (first, invar_unequals, invar_rel_constraints, join_order) =
         compute_join_order(relations, infos, prefills, unequals);
 
-    // TODO save on constants by directly applying the var
     append.push_str(
         "
 ::std::iter::from_fn(move || { loop { match current_step {",
@@ -351,9 +341,11 @@ pub(crate) fn generate_resumable_query_closure(
             var: first,
             components: first_info.component_range.clone(),
             opt_components: first_info.opt_components.clone(),
+            relation_helpers: first_info.relation_helpers.clone(),
         }
         .generate(0, prepend, &mut append);
     } else {
+        // TODO: include invar gen here and add it via prepend
         step_count = InvarStart {
             unequalities: invar_unequals,
             rel_constraints: invar_rel_constraints,
@@ -505,6 +497,8 @@ fn compute_join_order(
         }
     }
 
+    let mut relation_helper_nr = 0;
+
     // using a closure so I don't have to duplicate this part
     let mut newly_available_unequals = |available: &mut Vec<isize>| {
         let mut result = Vec::new();
@@ -519,24 +513,46 @@ fn compute_join_order(
         result
     };
     let newly_available_constraints =
-        |available: &mut Vec<isize>, work_left: &mut Vec<Relation>, infos: &[VarInfo]| {
+        |available: &mut Vec<isize>,
+         work_left: &mut Vec<Relation>,
+         infos: &mut [VarInfo],
+         relation_helper_nr: &mut usize| {
             let mut result = Vec::new();
             while let Some(index) = work_left
                 .iter()
                 .position(|(_, a, b)| available.contains(a) && available.contains(b))
             {
                 let (comp_name, a, b) = work_left[index].clone();
-                let info = &infos[a as usize];
+                let info = &mut infos[a as usize];
                 assert_eq!(a, info.index);
-                let comp_index = info.related_with[&(comp_name, b)];
-                result.push((comp_index, a, b));
+                let column_index = info.related_with[&(comp_name, b)];
+                result.push((column_index, a, b));
                 work_left.swap_remove(index);
+
+                // it might be possible to be smart here when deciding between
+                // whether a or b should have the relationhelper
+                // for now we just use a
+                // but in theory using the variable that is written to earlier is better
+                let cid_index = column_index - info.component_range.start;
+                info.relation_helpers.push(RelationHelperInfo {
+                    column_index,
+                    old_var: a,
+                    new_var: b,
+                    nr: *relation_helper_nr,
+                    cid_index,
+                });
+                *relation_helper_nr += 1;
             }
             result
         };
 
     let invar_unequals = newly_available_unequals(&mut available);
-    let invar_constraints = newly_available_constraints(&mut available, &mut work_left, &infos);
+    let invar_constraints = newly_available_constraints(
+        &mut available,
+        &mut work_left,
+        infos,
+        &mut relation_helper_nr,
+    );
 
     // compute join
     while !work_left.is_empty() {
@@ -556,18 +572,28 @@ fn compute_join_order(
             let new_var = if reversed { join.1 } else { join.2 };
             let old_info = &mut infos[old_var as usize];
             assert_eq!(old_var, old_info.index);
-            let cid_index = old_info.related_with[&(join.0, new_var)];
+            let column_index = old_info.related_with[&(join.0, new_var)];
+            let cid_index = column_index - old_info.component_range.start;
+
             old_info.relation_helpers.push(RelationHelperInfo {
-                cid_index,
+                column_index,
                 old_var,
                 new_var,
+                nr: relation_helper_nr,
+                cid_index,
             });
+            relation_helper_nr += 1;
+
             available.push(new_var);
             let unequal_constraints = newly_available_unequals(&mut available);
-            let relation_constraints =
-                newly_available_constraints(&mut available, &mut work_left, &infos);
+            let relation_constraints = newly_available_constraints(
+                &mut available,
+                &mut work_left,
+                infos,
+                &mut relation_helper_nr,
+            );
             result.push(NewJoin {
-                comp_id: cid_index,
+                comp_id: column_index,
                 old: old_var,
                 new: new_var,
                 unequal_constraints,

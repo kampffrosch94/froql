@@ -65,7 +65,6 @@ impl VariableStore {
     }
 }
 
-#[allow(unused)] // TODO remove once cleaned up
 fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     //dbg!(&input);
 
@@ -325,7 +324,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
 
     let result = gen.generate(&world);
 
-    //eprintln!("{}", &output);
+    //eprintln!("{}", &result);
     Ok(result.parse().unwrap())
 }
 

@@ -54,6 +54,17 @@ CLOSED: [2025-01-21 Tue 22:58]
 - [X] write test for relation join
 - [X] write test for invar init
 - [X] use on yield
+** TODO RelationHelper abstraction
+This is needed for allowing transitive relations in queries.
+- [X] add RelationHelper to var in case of RelationConstraint
+- [X] init fsm context
+- [X] set col, set row in ArchetypeInit
+- [ ] set col, set row in InvarInit
+- [ ] set col, set row in RelationJoin
+- [ ] use for next in relation join
+- [ ] relation constraints in relation join
+- [ ] invar constraints
+- [ ] remove old variant
 ** TODO unrelations
 - ~!Rel(a,b)~
 Similar to inequality constraints and optional components

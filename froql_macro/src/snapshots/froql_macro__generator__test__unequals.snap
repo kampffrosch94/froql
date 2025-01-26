@@ -34,6 +34,8 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
+let mut rel_helper_0 = RelationHelper::new(components_0[2]);
+
 let mut rel_index_2 = 0;
 
 ::std::iter::from_fn(move || { loop { match current_step {
@@ -57,6 +59,8 @@ let mut rel_index_2 = 0;
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+    rel_helper_0.set_col(&a_ref.columns[col_indexes[1]]);
+
     current_step += 1;
 }
 
@@ -71,6 +75,8 @@ let mut rel_index_2 = 0;
     if *row_counter >= max_row {
         current_step -= 1;
     } else {
+        rel_helper_0.set_row(a_rows[0].0);
+
         current_step += 1;
     }
 }

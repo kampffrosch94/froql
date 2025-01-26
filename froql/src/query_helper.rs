@@ -6,7 +6,6 @@ use crate::{
 /// Helps with Relation Traversal
 #[derive(Default)]
 pub struct RelationHelper<'a> {
-    // TODO replace with MaybeUinit after making sure its safe
     column: Option<&'a LayoutVec>,
     row: u32,
     rel_index: u32,

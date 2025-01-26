@@ -928,11 +928,11 @@ fn manual_query_relation_simple() {
                     let row_counter = &mut a_rows[CURRENT_VAR].0;
                     let max_row = a_max_rows[CURRENT_VAR];
                     *row_counter = row_counter.wrapping_add(1);
-                    rel_helper_2.set_row(*row_counter);
                     if *row_counter >= max_row {
                         current_step -= 1;
                     } else {
                         current_step += 1;
+                        rel_helper_2.set_row(a_rows[1].0);
                     }
                 }
                 2 => {
