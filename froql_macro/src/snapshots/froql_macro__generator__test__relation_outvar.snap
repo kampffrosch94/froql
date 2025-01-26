@@ -34,7 +34,8 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; 5];
 
-let mut rel_helper_0 = RelationHelper::new(components_0[2]);
+let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
+    (components_0[2]);
 
 let mut rel_index_2 = 0;
 
@@ -59,7 +60,7 @@ let mut rel_index_2 = 0;
         &mut col_indexes[CURRENT_VAR_COMPONENTS],
     );
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
-    rel_helper_0.set_col(&a_ref.columns[col_indexes[1]]);
+    rel_helper_0.set_col(&a_ref.columns[col_indexes[2]]);
 
     current_step += 1;
 }

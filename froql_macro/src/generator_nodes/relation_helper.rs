@@ -1,5 +1,3 @@
-#![allow(unused)]
-
 use std::fmt::Write;
 
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -13,6 +11,7 @@ pub struct RelationHelperInfo {
     pub nr: usize,
 }
 
+#[allow(unused)]
 impl RelationHelperInfo {
     /// generates code that returns the next entity in the relation
     pub fn get_next(append: &mut String) {
@@ -22,21 +21,6 @@ impl RelationHelperInfo {
     pub fn has_relation(append: &mut String) {
         todo!();
     }
-}
-
-/// should be called by ??? TODO
-/// adds the state of the relation helper to the fsm context
-fn relation_helper_init(prepend: &mut String, helper: &RelationHelperInfo) {
-    let old = helper.old_var;
-    let nr = helper.nr;
-    let index = helper.column_index;
-    write!(
-        prepend,
-        "
-let mut rel_helper_{nr} = RelationHelper::new(components_{old}[{index}]);
-"
-    )
-    .unwrap();
 }
 
 pub fn relation_helpers_init_and_set_col(
@@ -52,14 +36,15 @@ pub fn relation_helpers_init_and_set_col(
         write!(
             prepend,
             "
-let mut rel_helper_{nr} = RelationHelper::new(components_{old}[{cid_index}]);
+let mut rel_helper_{nr} = ::froql::query_helper::RelationHelper::new
+    (components_{old}[{cid_index}]);
 "
         )
         .unwrap();
         write!(
             append,
             "
-    rel_helper_{nr}.set_col(&a_ref.columns[col_indexes[1]]);
+    rel_helper_{nr}.set_col(&a_ref.columns[col_indexes[{column_index}]]);
 "
         )
         .unwrap();

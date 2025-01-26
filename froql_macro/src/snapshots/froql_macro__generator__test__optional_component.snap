@@ -36,7 +36,8 @@ let mut col_indexes = [usize::MAX; 5];
 
 let opt_cid_0 = world.get_component_id::<Reputation>();
 let mut opt_col_0 = None;
-let mut rel_helper_0 = RelationHelper::new(components_0[2]);
+let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
+    (components_0[2]);
 
 let mut rel_index_2 = 0;
 
@@ -63,7 +64,7 @@ let mut rel_index_2 = 0;
     a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
             opt_col_0 = a_ref.find_column_opt(opt_cid_0);
 
-    rel_helper_0.set_col(&a_ref.columns[col_indexes[1]]);
+    rel_helper_0.set_col(&a_ref.columns[col_indexes[2]]);
 
     current_step += 1;
 }
