@@ -337,15 +337,16 @@ pub(crate) fn generate_resumable_query_closure(
             unequal_constraints,
             rel_constraints,
         } = new_join;
-        let info = &infos[new as usize];
+        let new_info = &infos[new as usize];
         step_count = RelationJoin {
             relation_comp,
             old,
             new,
-            new_components: info.component_range.clone(),
+            new_components: new_info.component_range.clone(),
             unequal_constraints,
             rel_constraints,
-            opt_components: info.opt_components.clone(),
+            opt_components: new_info.opt_components.clone(),
+            new_relation_helpers: new_info.relation_helpers.clone(),
         }
         .generate(step_count, prepend, &mut append);
     }

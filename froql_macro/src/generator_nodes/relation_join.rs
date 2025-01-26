@@ -1,3 +1,6 @@
+use super::relation_helper::{
+    relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+};
 use super::GeneratorNode;
 use std::fmt::Write;
 use std::ops::Range;
@@ -12,6 +15,8 @@ pub struct RelationJoin {
     pub unequal_constraints: Vec<(isize, isize)>,
     pub rel_constraints: Vec<(usize, isize, isize)>,
     pub opt_components: Vec<(String, usize)>,
+    /// RelationHelpers that depend on the new var
+    pub new_relation_helpers: Vec<RelationHelperInfo>,
 }
 
 impl GeneratorNode for RelationJoin {
@@ -64,6 +69,8 @@ impl GeneratorNode for RelationJoin {
 
         // handle optional components
         insert_optional_comps(prepend, append, &self.opt_components);
+        relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
+        relation_helpers_set_rows(append, &self.new_relation_helpers);
 
         // check constraints if there are any
         if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
@@ -193,6 +200,7 @@ mod test {
             unequal_constraints: vec![(0, 2), (2, 1)],
             rel_constraints: vec![],
             opt_components: vec![],
+            new_relation_helpers: vec![],
         };
 
         let mut prepend = String::new();
@@ -213,6 +221,7 @@ mod test {
             unequal_constraints: vec![],
             rel_constraints: vec![(5, 2, 1)],
             opt_components: vec![],
+            new_relation_helpers: vec![],
         };
 
         let mut prepend = String::new();
@@ -233,6 +242,7 @@ mod test {
             unequal_constraints: vec![],
             rel_constraints: vec![],
             opt_components: vec![("OptA".into(), 0), ("OptB".into(), 1)],
+            new_relation_helpers: vec![],
         };
 
         let mut prepend = String::new();
