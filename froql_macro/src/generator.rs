@@ -322,6 +322,7 @@ pub(crate) fn generate_resumable_query_closure(
                     var_index: info.index,
                     component_range: info.component_range.clone(),
                     opt_components: info.opt_components.clone(),
+                    relation_helpers: info.relation_helpers.clone(),
                 })
                 .collect(),
         }

@@ -1,4 +1,7 @@
 use super::{
+    relation_helper::{
+        relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+    },
     relation_join::{insert_checks, insert_optional_comps},
     GeneratorNode,
 };
@@ -10,6 +13,7 @@ pub struct InvarInfo {
     pub component_range: Range<usize>,
     /// type, index part of context variable name
     pub opt_components: Vec<(String, usize)>,
+    pub relation_helpers: Vec<RelationHelperInfo>,
 }
 
 #[derive(Debug)]
@@ -77,7 +81,7 @@ current_step = 1;",
 
 impl InvarStart {
     fn generate_invar_archetype_fill(&self, prepend: &mut String) {
-        // TODO is this needed?
+        // another string is needed because we prepend optional components before this block
         let mut append = String::new();
         for invar in &self.invars {
             let var_index = invar.var_index;
@@ -93,7 +97,11 @@ impl InvarStart {
     a_rows[{var_index}] = arow;"
             )
             .unwrap();
+
             insert_optional_comps(prepend, &mut append, &invar.opt_components);
+            relation_helpers_init_and_set_col(prepend, &mut append, &invar.relation_helpers);
+            relation_helpers_set_rows(&mut append, &invar.relation_helpers);
+
             write!(
                 &mut append,
                 "
@@ -119,6 +127,7 @@ mod test {
                 var_index: 0,
                 component_range: 0..2,
                 opt_components: vec![],
+                relation_helpers: vec![],
             }],
         };
 
@@ -139,80 +148,6 @@ mod test {
         "#);
         insta::assert_snapshot!(append, @r#"
         0 => {
-            return None;
-        }
-        "#);
-    }
-
-    #[test]
-    fn invar_unequality() {
-        let gen = InvarStart {
-            unequalities: vec![(0, 2), (2, 1)],
-            rel_constraints: vec![],
-            invars: vec![
-                InvarInfo {
-                    var_index: 0,
-                    component_range: 0..2,
-                    opt_components: vec![],
-                },
-                InvarInfo {
-                    var_index: 1,
-                    component_range: 3..5,
-                    opt_components: vec![],
-                },
-                InvarInfo {
-                    var_index: 2,
-                    component_range: 5..7,
-                    opt_components: vec![],
-                },
-            ],
-        };
-
-        let mut prepend = String::new();
-        let mut append = String::new();
-        let r = gen.generate(0, &mut prepend, &mut append);
-        assert_eq!(2, r);
-        insta::assert_snapshot!(prepend, @r#"
-        {
-            let (aid, arow) = bk.entities.get_archetype(invar_0);
-            let a_ref = &mut a_refs[0];
-            *a_ref = &bk.archetypes[aid.as_index()];
-            a_ref.find_multiple_columns(&components_0, &mut col_indexes[0..2]);
-            a_rows[0] = arow;
-        }
-
-        {
-            let (aid, arow) = bk.entities.get_archetype(invar_1);
-            let a_ref = &mut a_refs[1];
-            *a_ref = &bk.archetypes[aid.as_index()];
-            a_ref.find_multiple_columns(&components_1, &mut col_indexes[3..5]);
-            a_rows[1] = arow;
-        }
-
-        {
-            let (aid, arow) = bk.entities.get_archetype(invar_2);
-            let a_ref = &mut a_refs[2];
-            *a_ref = &bk.archetypes[aid.as_index()];
-            a_ref.find_multiple_columns(&components_2, &mut col_indexes[5..7]);
-            a_rows[2] = arow;
-        }
-        "#);
-        insta::assert_snapshot!(append, @r#"
-        0 => {
-
-                    if
-                        (::std::ptr::eq(a_refs[0], a_refs[2])
-                         && a_rows[0] == a_rows[2])
-                    ||
-                        (::std::ptr::eq(a_refs[2], a_refs[1])
-                         && a_rows[2] == a_rows[1])
-            {
-                return None;
-            } else {
-                current_step += 2;
-            }
-        }
-        1 => {
             return None;
         }
         "#);

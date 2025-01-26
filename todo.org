@@ -59,7 +59,7 @@ This is needed for allowing transitive relations in queries.
 - [X] add RelationHelper to var in case of RelationConstraint
 - [X] init fsm context
 - [X] set col, set row in ArchetypeInit
-- [ ] set col, set row in InvarInit
+- [X] set col, set row in InvarInit
 - [ ] set col, set row in RelationJoin
 - [ ] use for next in relation join
 - [ ] relation constraints in relation join
