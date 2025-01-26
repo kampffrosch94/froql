@@ -377,3 +377,19 @@ fn proc_query_relation_simple() {
     }
     assert_eq!(1, counter);
 }
+
+#[test]
+fn proc_query_relation_constraint_simple() {
+    enum Rel {}
+    enum Rel2 {}
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    world.add_relation::<Rel>(a, b);
+
+    let mut counter = 0;
+    for (_a,) in query!(world, &a, Rel(a, b), Rel2(a, b)) {
+        counter += 1;
+    }
+    assert_eq!(1, counter);
+}

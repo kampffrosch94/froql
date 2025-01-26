@@ -20,7 +20,7 @@ pub struct InvarInfo {
 pub struct InvarStart {
     /// index of the component of `old` where the relation resides
     pub unequalities: Vec<(isize, isize)>,
-    pub rel_constraints: Vec<(usize, isize, isize)>,
+    pub rel_constraints: Vec<usize>,
     pub invars: Vec<InvarInfo>,
 }
 

@@ -8,51 +8,33 @@ use std::ops::Range;
 #[derive(Debug)]
 pub struct RelationJoin {
     /// index of the component of `old` where the relation resides
-    pub relation_comp: usize,
-    pub old: isize,
     pub new: isize,
     pub new_components: Range<usize>,
     pub unequal_constraints: Vec<(isize, isize)>,
-    pub rel_constraints: Vec<(usize, isize, isize)>,
+    /// RelationHelpers that constrain the new var
+    pub rel_constraint_helpers: Vec<usize>,
     pub opt_components: Vec<(String, usize)>,
     /// RelationHelpers that depend on the new var
     pub new_relation_helpers: Vec<RelationHelperInfo>,
+    /// the relationhelper that contains the Relation(old, new)
+    pub new_helper_nr: usize,
 }
 
 impl GeneratorNode for RelationJoin {
     fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
-        let old = self.old;
         let new = self.new;
-        let comp = self.relation_comp;
         let Range { start, end } = &self.new_components;
-        write!(prepend, "\nlet mut rel_index_{step} = 0;").unwrap();
+        let helper_nr = self.new_helper_nr;
         write!(
             append,
             "
 // follow relation
 {step} => {{
-    const CURRENT_VAR: usize = {old};
     const REL_VAR: usize = {new};
-    const RELATION_COMP_INDEX: usize = {comp};
     const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = {start}..{end};
-    let row = a_rows[CURRENT_VAR].0;
-    let col = col_indexes[RELATION_COMP_INDEX];
-    let arch = &a_refs[CURRENT_VAR];
-    debug_assert_eq!(
-        arch.columns[col].element_size(),
-        size_of::<RelationVec>()
-    );
-    let ptr = unsafe {{ arch.columns[col].get(row) }} as *const RelationVec;
-    let rel_vec = unsafe {{ &*ptr }};
-    debug_assert!(rel_vec.len() > 0);
-    if rel_index_{step} >= rel_vec.len() {{
-        rel_index_{step} = 0;
-        current_step -= 1;
-    }} else {{
+    if let Some(id) = rel_helper_{helper_nr}.next_related() {{
         // get aid/row for entity in relation
-        let id = EntityId(rel_vec[rel_index_{step} as usize]);
         let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-        rel_index_{step} += 1;
 
         // if in target archetype set => go to next step
         if archetype_id_sets[REL_VAR].contains(&aid) {{
@@ -67,13 +49,11 @@ impl GeneratorNode for RelationJoin {
         )
         .unwrap();
 
-        // handle optional components
-        insert_optional_comps(prepend, append, &self.opt_components);
-        relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
-        relation_helpers_set_rows(append, &self.new_relation_helpers);
-
         // check constraints if there are any
-        if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
+        if self.unequal_constraints.is_empty() && self.rel_constraint_helpers.is_empty() {
+            insert_optional_comps(prepend, append, &self.opt_components);
+            relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
+            relation_helpers_set_rows(append, &self.new_relation_helpers);
             write!(
                 append,
                 "
@@ -81,12 +61,23 @@ impl GeneratorNode for RelationJoin {
             )
             .unwrap();
         } else {
-            insert_checks(append, &self.unequal_constraints, &self.rel_constraints);
+            insert_checks(
+                append,
+                &self.unequal_constraints,
+                &self.rel_constraint_helpers,
+            );
             append.push_str(
                 "
             {
                 current_step -= 1;
-            } else {
+            } else {",
+            );
+            // handle optional components only in positive branch
+            insert_optional_comps(prepend, append, &self.opt_components);
+            relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
+            relation_helpers_set_rows(append, &self.new_relation_helpers);
+            append.push_str(
+                "
                 current_step += 1;
             }",
             );
@@ -96,6 +87,8 @@ impl GeneratorNode for RelationJoin {
             append,
             "
         }}
+    }} else {{
+        current_step -= 1;
     }}
 }}
 "
@@ -108,7 +101,7 @@ impl GeneratorNode for RelationJoin {
 pub fn insert_checks(
     append: &mut String,
     unequalities: &[(isize, isize)],
-    rel_constraints: &[(usize, isize, isize)],
+    rel_constraints: &[usize],
 ) {
     append.push_str(
         r#"
@@ -134,7 +127,7 @@ pub fn insert_checks(
         .unwrap();
         not_first = true;
     }
-    for (rel_comp, a, b) in rel_constraints {
+    for constraint_nr in rel_constraints {
         if not_first {
             write!(
                 append,
@@ -146,17 +139,7 @@ pub fn insert_checks(
         write!(
             append,
             "
-                {{
-                    let arch = &a_refs[{a}];
-                    let row = a_rows[{a}].0;
-                    let col = col_indexes[{rel_comp}];
-                    let rel_vec = unsafe {{
-                        &*(arch.columns[col].get(row) as *const RelationVec)
-                    }};
-                    let check_ref = a_refs[{b}];
-                    let to_check = check_ref.entities[a_rows[{b}].0 as usize];
-                    !rel_vec.contains(&to_check.0)
-                }}
+                !rel_helper_{constraint_nr}.has_relation(id)
                 "
         )
         .unwrap();
@@ -193,56 +176,53 @@ mod test {
     #[test]
     fn relation_join_unequality() {
         let gen = RelationJoin {
-            relation_comp: 2,
-            old: 0,
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![(0, 2), (2, 1)],
-            rel_constraints: vec![],
+            rel_constraint_helpers: vec![],
             opt_components: vec![],
             new_relation_helpers: vec![],
+            new_helper_nr: 0,
         };
 
         let mut prepend = String::new();
         let mut append = String::new();
         let r = gen.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
-        insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
+        insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append);
     }
 
     #[test]
     fn relation_join_constraint() {
         let gen = RelationJoin {
-            relation_comp: 2,
-            old: 0,
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
-            rel_constraints: vec![(5, 2, 1)],
+            rel_constraint_helpers: vec![0],
             opt_components: vec![],
             new_relation_helpers: vec![],
+            new_helper_nr: 0,
         };
 
         let mut prepend = String::new();
         let mut append = String::new();
         let r = gen.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
-        insta::assert_snapshot!(prepend, @"let mut rel_index_3 = 0;");
+        insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append);
     }
 
     #[test]
     fn relation_join_optional() {
         let gen = RelationJoin {
-            relation_comp: 2,
-            old: 0,
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
-            rel_constraints: vec![],
+            rel_constraint_helpers: vec![],
             opt_components: vec![("OptA".into(), 0), ("OptB".into(), 1)],
             new_relation_helpers: vec![],
+            new_helper_nr: 0,
         };
 
         let mut prepend = String::new();
@@ -250,7 +230,6 @@ mod test {
         let r = gen.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @r#"
-        let mut rel_index_3 = 0;
         let opt_cid_0 = world.get_component_id::<OptA>();
         let mut opt_col_0 = None;
         let opt_cid_1 = world.get_component_id::<OptB>();

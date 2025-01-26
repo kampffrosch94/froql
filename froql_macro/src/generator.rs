@@ -78,6 +78,10 @@ let bk = &world.bookkeeping;
 pub struct VarInfo {
     /// Index of this variable
     index: isize,
+    /// variables are intialized in this order
+    /// useful for finding out which one is initialized earlier
+    /// None when rank is not decided yet
+    init_rank: Option<u32>,
     /// relation type + other var index => index for relation component
     related_with: HashMap<(String, isize), usize>,
     /// indexes in component array for this variables non-optional components
@@ -90,6 +94,9 @@ pub struct VarInfo {
     /// When a join is added the already existing variable (`old`) gets a relationship helper added.
     /// This is then used for code gen in steps leading up to the join.
     relation_helpers: Vec<RelationHelperInfo>,
+    /// if this var is set by a relation join, then this is the index of the RelationHelper
+    /// for that join
+    join_helper_index: Option<usize>,
 }
 
 impl Debug for VarInfo {
@@ -104,6 +111,7 @@ impl Debug for VarInfo {
             .field("components", &components)
             .field("opt_components", &self.opt_components)
             .field("relation_helpers", &self.relation_helpers)
+            .field("join_helper_index", &self.join_helper_index)
             .finish()
     }
 }
@@ -167,6 +175,8 @@ pub(crate) fn generate_archetype_sets(
             components: HashMap::new(),
             opt_components: Vec::new(),
             relation_helpers: Vec::new(),
+            join_helper_index: None,
+            init_rank: None,
         };
         result.push_str(&format!("let components_{var} = ["));
         // component
@@ -331,22 +341,22 @@ pub(crate) fn generate_resumable_query_closure(
     // follow relations/constraints
     for new_join in join_order {
         let NewJoin {
-            comp_id: relation_comp,
-            old,
             new,
             unequal_constraints,
-            rel_constraints,
+            rel_constraint_helpers: rel_constraints,
+            ..
         } = new_join;
         let new_info = &infos[new as usize];
         step_count = RelationJoin {
-            relation_comp,
-            old,
             new,
             new_components: new_info.component_range.clone(),
             unequal_constraints,
-            rel_constraints,
+            rel_constraint_helpers: rel_constraints,
             opt_components: new_info.opt_components.clone(),
             new_relation_helpers: new_info.relation_helpers.clone(),
+            new_helper_nr: new_info
+                .join_helper_index
+                .expect("Internal: RelationHelper needs to exist for Join"),
         }
         .generate(step_count, prepend, &mut append);
     }
@@ -431,11 +441,9 @@ _ => unreachable!(),
 
 #[derive(Debug)]
 struct NewJoin {
-    comp_id: usize,
-    old: isize,
     new: isize,
     unequal_constraints: Vec<(isize, isize)>,
-    rel_constraints: Vec<(usize, isize, isize)>,
+    rel_constraint_helpers: Vec<usize>,
 }
 
 fn compute_join_order(
@@ -446,7 +454,7 @@ fn compute_join_order(
 ) -> (
     isize,
     Vec<(isize, isize)>,
-    Vec<(usize, isize, isize)>,
+    Vec<usize>, // rel helper nr
     Vec<NewJoin>,
 ) {
     let mut result = Vec::new();
@@ -500,24 +508,27 @@ fn compute_join_order(
                 .position(|(_, a, b)| available.contains(a) && available.contains(b))
             {
                 let (comp_name, a, b) = work_left[index].clone();
-                let info = &mut infos[a as usize];
-                assert_eq!(a, info.index);
-                let column_index = info.related_with[&(comp_name, b)];
-                result.push((column_index, a, b));
+                let (old, new) = if infos[a as usize].init_rank < infos[b as usize].init_rank {
+                    (a, b)
+                } else {
+                    (b, a)
+                };
+                let old_info = &mut infos[old as usize];
+                assert_eq!(old, old_info.index);
+                let column_index = old_info.related_with[&(comp_name, new)];
+                result.push(*relation_helper_nr);
                 work_left.swap_remove(index);
 
-                // it might be possible to be smart here when deciding between
-                // whether a or b should have the relationhelper
-                // for now we just use a
-                // but in theory using the variable that is written to earlier is better
-                let cid_index = column_index - info.component_range.start;
-                info.relation_helpers.push(RelationHelperInfo {
+                let cid_index = column_index - old_info.component_range.start;
+                old_info.relation_helpers.push(RelationHelperInfo {
                     column_index,
-                    old_var: a,
-                    new_var: b,
+                    old_var: old,
+                    new_var: new,
                     nr: *relation_helper_nr,
                     cid_index,
                 });
+                let new_info = &mut infos[new as usize];
+                new_info.join_helper_index = Some(*relation_helper_nr);
                 *relation_helper_nr += 1;
             }
             result
@@ -559,6 +570,8 @@ fn compute_join_order(
                 nr: relation_helper_nr,
                 cid_index,
             });
+            let new_info = &mut infos[new_var as usize];
+            new_info.join_helper_index = Some(relation_helper_nr);
             relation_helper_nr += 1;
 
             available.push(new_var);
@@ -570,11 +583,9 @@ fn compute_join_order(
                 &mut relation_helper_nr,
             );
             result.push(NewJoin {
-                comp_id: column_index,
-                old: old_var,
                 new: new_var,
                 unequal_constraints,
-                rel_constraints: relation_constraints,
+                rel_constraint_helpers: relation_constraints,
             });
         } else {
             panic!("Cross joins are not supported. Use nested queries instead.")
@@ -651,6 +662,7 @@ mod test {
                 },
                 opt_components: [],
                 relation_helpers: [],
+                join_helper_index: None,
             },
             VarInfo {
                 index: 1,
@@ -666,6 +678,7 @@ mod test {
                 },
                 opt_components: [],
                 relation_helpers: [],
+                join_helper_index: None,
             },
         ]
         "#);
@@ -678,11 +691,9 @@ mod test {
             [],
             [
                 NewJoin {
-                    comp_id: 2,
-                    old: 0,
                     new: 1,
                     unequal_constraints: [],
-                    rel_constraints: [],
+                    rel_constraint_helpers: [],
                 },
             ],
         )
@@ -697,8 +708,6 @@ mod test {
             [],
             [
                 NewJoin {
-                    comp_id: 2,
-                    old: 0,
                     new: 1,
                     unequal_constraints: [
                         (
@@ -706,7 +715,7 @@ mod test {
                             1,
                         ),
                     ],
-                    rel_constraints: [],
+                    rel_constraint_helpers: [],
                 },
             ],
         )
