@@ -869,6 +869,7 @@ fn query_fsm_relation_constraint() {
     assert_eq!(1, counter);
 }
 
+#[allow(unused_unsafe)]
 #[test]
 fn manual_query_relation_simple() {
     enum Rel {}
