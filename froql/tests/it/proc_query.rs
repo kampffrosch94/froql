@@ -386,6 +386,7 @@ fn proc_query_relation_constraint_simple() {
     let a = world.create();
     let b = world.create();
     world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel2>(a, b);
 
     let mut counter = 0;
     for (_a,) in query!(world, &a, Rel(a, b), Rel2(a, b)) {

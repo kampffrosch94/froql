@@ -303,6 +303,11 @@ pub(crate) fn generate_resumable_query_closure(
     let (first, invar_unequals, invar_rel_constraints, join_order) =
         compute_join_order(relations, infos, prefills, unequals);
 
+    assert!(
+        infos.iter().all(|it| it.init_rank.is_some()),
+        "Internal: init_rank not set."
+    );
+
     append.push_str(
         "
 ::std::iter::from_fn(move || { loop { match current_step {",
@@ -468,17 +473,24 @@ fn compute_join_order(
         .collect();
 
     // figure out what to start with
+    let mut init_rank = 0;
     if prefills.is_empty() {
         // I think its a decent metric to use the most constrained variable first
         let first = infos
-            .iter()
+            .iter_mut()
             .max_by_key(|it| it.component_range.len())
             .unwrap();
+        first.init_rank = Some(init_rank);
+        init_rank += 1;
         available.push(first.index);
     } else {
         for (var, _) in prefills {
             available.push(*var);
-            available.sort();
+        }
+        available.sort();
+        for var in &available {
+            infos[*var as usize].init_rank = Some(init_rank);
+            init_rank += 1;
         }
     }
 
@@ -508,7 +520,9 @@ fn compute_join_order(
                 .position(|(_, a, b)| available.contains(a) && available.contains(b))
             {
                 let (comp_name, a, b) = work_left[index].clone();
-                let (old, new) = if infos[a as usize].init_rank < infos[b as usize].init_rank {
+                let (old, new) = if infos[a as usize].init_rank.unwrap_or(u32::MAX)
+                    < infos[b as usize].init_rank.unwrap_or(u32::MAX)
+                {
                     (a, b)
                 } else {
                     (b, a)
@@ -572,6 +586,8 @@ fn compute_join_order(
             });
             let new_info = &mut infos[new_var as usize];
             new_info.join_helper_index = Some(relation_helper_nr);
+            new_info.init_rank = Some(init_rank);
+            init_rank += 1;
             relation_helper_nr += 1;
 
             available.push(new_var);
