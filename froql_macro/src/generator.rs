@@ -8,6 +8,7 @@ use crate::generator_nodes::invar_start::InvarInfo;
 use crate::generator_nodes::invar_start::InvarStart;
 use crate::generator_nodes::relation_helper::RelationHelperInfo;
 use crate::generator_nodes::relation_join::RelationJoin;
+use crate::generator_nodes::types::RelationConstraint;
 use crate::generator_nodes::GeneratorNode;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
@@ -348,7 +349,7 @@ pub(crate) fn generate_resumable_query_closure(
         let NewJoin {
             new,
             unequal_constraints,
-            rel_constraint_helpers: rel_constraints,
+            rel_constraints,
             ..
         } = new_join;
         let new_info = &infos[new as usize];
@@ -356,7 +357,7 @@ pub(crate) fn generate_resumable_query_closure(
             new,
             new_components: new_info.component_range.clone(),
             unequal_constraints,
-            rel_constraint_helpers: rel_constraints,
+            rel_constraints: rel_constraints,
             opt_components: new_info.opt_components.clone(),
             new_relation_helpers: new_info.relation_helpers.clone(),
             new_helper_nr: new_info
@@ -448,7 +449,7 @@ _ => unreachable!(),
 struct NewJoin {
     new: isize,
     unequal_constraints: Vec<(isize, isize)>,
-    rel_constraint_helpers: Vec<usize>,
+    rel_constraints: Vec<RelationConstraint>,
 }
 
 fn compute_join_order(
@@ -459,7 +460,7 @@ fn compute_join_order(
 ) -> (
     isize,
     Vec<(isize, isize)>,
-    Vec<usize>, // rel helper nr
+    Vec<RelationConstraint>,
     Vec<NewJoin>,
 ) {
     let mut result = Vec::new();
@@ -520,8 +521,8 @@ fn compute_join_order(
                 .position(|(_, a, b)| available.contains(a) && available.contains(b))
             {
                 let (comp_name, a, b) = work_left[index].clone();
-                let (old, new) = if infos[a as usize].init_rank.unwrap_or(u32::MAX)
-                    < infos[b as usize].init_rank.unwrap_or(u32::MAX)
+                let (old, new) = if infos[a as usize].init_rank.unwrap()
+                    < infos[b as usize].init_rank.unwrap()
                 {
                     (a, b)
                 } else {
@@ -530,7 +531,9 @@ fn compute_join_order(
                 let old_info = &mut infos[old as usize];
                 assert_eq!(old, old_info.index);
                 let column_index = old_info.related_with[&(comp_name, new)];
-                result.push(*relation_helper_nr);
+                result.push(RelationConstraint {
+                    helper_nr: *relation_helper_nr,
+                });
                 work_left.swap_remove(index);
 
                 let cid_index = column_index - old_info.component_range.start;
@@ -601,7 +604,7 @@ fn compute_join_order(
             result.push(NewJoin {
                 new: new_var,
                 unequal_constraints,
-                rel_constraint_helpers: relation_constraints,
+                rel_constraints: relation_constraints,
             });
         } else {
             panic!("Cross joins are not supported. Use nested queries instead.")
@@ -709,7 +712,7 @@ mod test {
                 NewJoin {
                     new: 1,
                     unequal_constraints: [],
-                    rel_constraint_helpers: [],
+                    rel_constraints: [],
                 },
             ],
         )
@@ -731,7 +734,7 @@ mod test {
                             1,
                         ),
                     ],
-                    rel_constraint_helpers: [],
+                    rel_constraints: [],
                 },
             ],
         )

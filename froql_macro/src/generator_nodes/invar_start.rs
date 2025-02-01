@@ -3,6 +3,7 @@ use super::{
         relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
     },
     relation_join::{insert_checks, insert_optional_comps},
+    types::RelationConstraint,
     GeneratorNode,
 };
 use std::{fmt::Write, ops::Range};
@@ -18,9 +19,8 @@ pub struct InvarInfo {
 
 #[derive(Debug)]
 pub struct InvarStart {
-    /// index of the component of `old` where the relation resides
     pub unequalities: Vec<(isize, isize)>,
-    pub rel_constraints: Vec<usize>,
+    pub rel_constraints: Vec<RelationConstraint>,
     pub invars: Vec<InvarInfo>,
 }
 

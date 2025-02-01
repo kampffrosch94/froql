@@ -1,6 +1,7 @@
 use super::relation_helper::{
     relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
 };
+use super::types::RelationConstraint;
 use super::GeneratorNode;
 use std::fmt::Write;
 use std::ops::Range;
@@ -12,7 +13,7 @@ pub struct RelationJoin {
     pub new_components: Range<usize>,
     pub unequal_constraints: Vec<(isize, isize)>,
     /// RelationHelpers that constrain the new var
-    pub rel_constraint_helpers: Vec<usize>,
+    pub rel_constraints: Vec<RelationConstraint>,
     pub opt_components: Vec<(String, usize)>,
     /// RelationHelpers that depend on the new var
     pub new_relation_helpers: Vec<RelationHelperInfo>,
@@ -50,7 +51,7 @@ impl GeneratorNode for RelationJoin {
         .unwrap();
 
         // check constraints if there are any
-        if self.unequal_constraints.is_empty() && self.rel_constraint_helpers.is_empty() {
+        if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
             insert_optional_comps(prepend, append, &self.opt_components);
             relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
             relation_helpers_set_rows(append, &self.new_relation_helpers);
@@ -61,11 +62,7 @@ impl GeneratorNode for RelationJoin {
             )
             .unwrap();
         } else {
-            insert_checks(
-                append,
-                &self.unequal_constraints,
-                &self.rel_constraint_helpers,
-            );
+            insert_checks(append, &self.unequal_constraints, &self.rel_constraints);
             append.push_str(
                 "
             {
@@ -101,7 +98,7 @@ impl GeneratorNode for RelationJoin {
 pub fn insert_checks(
     append: &mut String,
     unequalities: &[(isize, isize)],
-    rel_constraints: &[usize],
+    rel_constraints: &[RelationConstraint],
 ) {
     append.push_str(
         r#"
@@ -127,7 +124,7 @@ pub fn insert_checks(
         .unwrap();
         not_first = true;
     }
-    for constraint_nr in rel_constraints {
+    for constraint_nr in rel_constraints.iter().map(|it| it.helper_nr) {
         if not_first {
             write!(
                 append,
@@ -179,7 +176,7 @@ mod test {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![(0, 2), (2, 1)],
-            rel_constraint_helpers: vec![],
+            rel_constraints: vec![],
             opt_components: vec![],
             new_relation_helpers: vec![],
             new_helper_nr: 0,
@@ -199,7 +196,7 @@ mod test {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
-            rel_constraint_helpers: vec![0],
+            rel_constraints: vec![RelationConstraint { helper_nr: 0 }],
             opt_components: vec![],
             new_relation_helpers: vec![],
             new_helper_nr: 0,
@@ -219,7 +216,7 @@ mod test {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
-            rel_constraint_helpers: vec![],
+            rel_constraints: vec![],
             opt_components: vec![("OptA".into(), 0), ("OptB".into(), 1)],
             new_relation_helpers: vec![],
             new_helper_nr: 0,
