@@ -1,4 +1,7 @@
-use std::{any::TypeId, collections::HashMap};
+use std::{
+    any::TypeId,
+    collections::{HashMap, HashSet},
+};
 
 use hi_sparse_bitset::reduce;
 
@@ -416,8 +419,10 @@ impl Bookkeeping {
             }
             if origin_cid.is_transitive() {
                 // now we need to follow the transitive relationship
+                let mut visited = HashSet::new();
                 let mut work = Vec::new();
                 work.extend_from_slice(&rel_vec);
+                visited.extend(work.iter().copied());
                 while !work.is_empty() {
                     let current = EntityId(work.pop().unwrap());
                     let comp_opt = self.get_component_opt_unchecked(current, origin_cid);
@@ -426,7 +431,12 @@ impl Bookkeeping {
                         if rel_vec.contains(&to.id.0) {
                             return true;
                         }
-                        work.extend_from_slice(&rel_vec);
+                        for id in &rel_vec[..] {
+                            if !visited.contains(id) {
+                                work.push(*id);
+                                visited.insert(*id);
+                            }
+                        }
                     }
                 }
             }

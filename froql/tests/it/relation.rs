@@ -139,3 +139,23 @@ fn relation_transitive() {
     assert!(world.has_relation::<Rel>(a, c));
     assert!(world.has_relation::<Rel>(a, d));
 }
+
+#[test]
+fn relation_transitive_circle() {
+    enum Rel {}
+
+    let mut world = World::new();
+    world.register_relation_flags::<Rel>(TRANSITIVE);
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    let d = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(b, c);
+    world.add_relation::<Rel>(c, d);
+    world.add_relation::<Rel>(b, a);
+    world.add_relation::<Rel>(c, a);
+    assert!(world.has_relation::<Rel>(a, b));
+    assert!(world.has_relation::<Rel>(a, c));
+    assert!(world.has_relation::<Rel>(a, d));
+}

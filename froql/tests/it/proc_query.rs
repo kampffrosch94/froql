@@ -1,3 +1,4 @@
+use froql::component::TRANSITIVE;
 use froql::entity_store::Entity;
 use froql::query;
 use froql::world::World;
@@ -391,4 +392,51 @@ fn proc_query_relation_constraint_simple() {
         counter += 1;
     }
     assert_eq!(1, counter);
+}
+
+
+#[test]
+fn proc_query_relation_transitive() {
+    enum Rel {}
+    let mut world = World::new();
+    world.register_relation_flags::<Rel>(TRANSITIVE);
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    let d = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(b, c);
+    world.add_relation::<Rel>(c, d);
+    world.add_relation::<Rel>(b, a); // circles are ok
+    world.add_relation::<Rel>(c, a);
+
+    let mut counter = 0;
+    for (b,) in query!(world, &b, Rel(*a, b)) {
+        println!("{b:?}");
+        counter += 1;
+    }
+    assert_eq!(4, counter);
+}
+
+#[test]
+fn proc_query_relation_transitive_backwards() {
+    enum Rel {}
+    let mut world = World::new();
+    world.register_relation_flags::<Rel>(TRANSITIVE);
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    let d = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(b, c);
+    world.add_relation::<Rel>(c, d);
+    world.add_relation::<Rel>(b, a); // circles are ok
+    world.add_relation::<Rel>(c, a);
+
+    let mut counter = 0;
+    for (a,) in query!(world, &a, Rel(a, *b)) {
+        println!("{a:?}");
+        counter += 1;
+    }
+    assert_eq!(3, counter);
 }
