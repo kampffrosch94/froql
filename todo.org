@@ -78,7 +78,7 @@ Similar to relation constraints and optional components
 *** TODO unrelation with regular vars and invars
 satisfied if either the component is not in the archetype
 or if it exists it the RelVec does not contain the entity_id bound to the other var
-- [ ] var info
+- [ ] compute place to insert relationhelper and check
 - [ ] add to optional component init
 - [ ] check constraint on relation join
 ** TODO singletons
