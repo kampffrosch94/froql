@@ -533,6 +533,7 @@ fn compute_join_order(
                 let column_index = old_info.related_with[&(comp_name, new)];
                 result.push(RelationConstraint {
                     helper_nr: *relation_helper_nr,
+                    checked_invar: Some(new),
                 });
                 work_left.swap_remove(index);
 
@@ -595,12 +596,15 @@ fn compute_join_order(
 
             available.push(new_var);
             let unequal_constraints = newly_available_unequals(&mut available);
-            let relation_constraints = newly_available_constraints(
+            let mut relation_constraints = newly_available_constraints(
                 &mut available,
                 &mut work_left,
                 infos,
                 &mut relation_helper_nr,
             );
+            for rc in &mut relation_constraints {
+                rc.checked_invar = None; // there must be a better design than this, lol
+            }
             result.push(NewJoin {
                 new: new_var,
                 unequal_constraints,

@@ -1,9 +1,7 @@
 use criterion::{criterion_group, criterion_main, Criterion};
 use froql::archetype::ArchetypeRow;
-use froql::entity_store::EntityId;
 use froql::query;
 use froql::relation::Relation;
-use froql::relation_vec::RelationVec;
 use froql::*;
 use std::any::TypeId;
 

@@ -4,10 +4,8 @@ use froql::world::World;
 
 // TODO this is bleed from unhygienic macros
 use froql::archetype::{ArchetypeId, ArchetypeRow};
-use froql::entity_store::EntityId;
 use froql::entity_view_deferred::EntityViewDeferred;
 use froql::relation::Relation;
-use froql::relation_vec::RelationVec;
 use std::any::TypeId;
 use std::cell::RefCell;
 

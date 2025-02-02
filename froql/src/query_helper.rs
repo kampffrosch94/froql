@@ -1,11 +1,11 @@
 use crate::{
-    component::ComponentId, entity_store::EntityId, layout_vec::LayoutVec,
-    relation_vec::RelationVec,
+    bookkeeping::Bookkeeping, component::ComponentId, entity_store::EntityId,
+    layout_vec::LayoutVec, relation_vec::RelationVec,
 };
 
 /// Helps with Relation Traversal
-#[derive(Default)]
 pub struct RelationHelper<'a> {
+    cid: ComponentId,
     column: Option<&'a LayoutVec>,
     row: u32,
     rel_index: u32,
@@ -13,19 +13,25 @@ pub struct RelationHelper<'a> {
 
 impl<'a> RelationHelper<'a> {
     pub fn new(cid: ComponentId) -> Self {
-        if cid.is_transitive() {
-            todo!("Transitive is not done yet.");
+        RelationHelper {
+            cid,
+            // all of the following are overwritten before use
+            column: None,
+            row: 0,
+            rel_index: 0,
         }
-        RelationHelper::default()
     }
 
     pub fn set_col(&mut self, column: &'a LayoutVec) {
         self.column = Some(column);
     }
 
-    pub fn set_row(&mut self, row_counter: u32) {
+    pub fn set_row(&mut self, bk: &Bookkeeping, row_counter: u32) {
         self.row = row_counter;
         self.rel_index = u32::MAX; // rolls over to 0
+        if self.cid.is_transitive() {
+            todo!("Transitive needs to compute eagerly here.");
+        }
     }
 
     pub fn next_related(&mut self) -> Option<EntityId> {

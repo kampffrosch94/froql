@@ -124,7 +124,12 @@ pub fn insert_checks(
         .unwrap();
         not_first = true;
     }
-    for constraint_nr in rel_constraints.iter().map(|it| it.helper_nr) {
+    for rc in rel_constraints {
+        let helper_nr = &rc.helper_nr;
+        let id = &rc
+            .checked_invar
+            .map(|it| format!("invar_{it}.id"))
+            .unwrap_or_else(|| "id".to_string());
         if not_first {
             write!(
                 append,
@@ -136,7 +141,7 @@ pub fn insert_checks(
         write!(
             append,
             "
-                !rel_helper_{constraint_nr}.has_relation(id)
+                !rel_helper_{helper_nr}.has_relation({id})
                 "
         )
         .unwrap();
@@ -196,7 +201,10 @@ mod test {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
-            rel_constraints: vec![RelationConstraint { helper_nr: 0 }],
+            rel_constraints: vec![RelationConstraint {
+                helper_nr: 0,
+                checked_invar: None,
+            }],
             opt_components: vec![],
             new_relation_helpers: vec![],
             new_helper_nr: 0,

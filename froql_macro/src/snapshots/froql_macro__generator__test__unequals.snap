@@ -75,7 +75,7 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
     if *row_counter >= max_row {
         current_step -= 1;
     } else {
-        rel_helper_0.set_row(a_rows[0].0);
+        rel_helper_0.set_row(bk, a_rows[0].0);
 
         current_step += 1;
     }

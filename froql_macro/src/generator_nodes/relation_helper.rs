@@ -58,7 +58,7 @@ pub fn relation_helpers_set_rows(append: &mut String, helpers: &[RelationHelperI
         write!(
             append,
             "
-        rel_helper_{nr}.set_row(a_rows[{var}].0);
+        rel_helper_{nr}.set_row(bk, a_rows[{var}].0);
 "
         )
         .unwrap();

@@ -933,7 +933,7 @@ fn manual_query_relation_simple() {
                         current_step -= 1;
                     } else {
                         current_step += 1;
-                        rel_helper_2.set_row(a_rows[1].0);
+                        rel_helper_2.set_row(bk, a_rows[1].0);
                     }
                 }
                 2 => {
@@ -1032,7 +1032,7 @@ fn manual_query_relation_simple2() {
                     if *row_counter >= max_row {
                         current_step -= 1;
                     } else {
-                        rel_helper_0.set_row(a_rows[1].0);
+                        rel_helper_0.set_row(bk, a_rows[1].0);
                         current_step += 1;
                     }
                 }
@@ -1074,5 +1074,3 @@ fn manual_query_relation_simple2() {
     }
     assert_eq!(1, counter);
 }
-
-

@@ -50,7 +50,7 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
 
     rel_helper_0.set_col(&a_ref.columns[col_indexes[4]]);
 
-        rel_helper_0.set_row(a_rows[1].0);
+        rel_helper_0.set_row(bk, a_rows[1].0);
 
 }
 
