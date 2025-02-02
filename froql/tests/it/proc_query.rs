@@ -394,7 +394,6 @@ fn proc_query_relation_constraint_simple() {
     assert_eq!(1, counter);
 }
 
-
 #[test]
 fn proc_query_relation_transitive() {
     enum Rel {}
