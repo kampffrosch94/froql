@@ -54,29 +54,33 @@ CLOSED: [2025-01-21 Tue 22:58]
 - [X] write test for relation join
 - [X] write test for invar init
 - [X] use on yield
-** TODO RelationHelper abstraction
+** DONE RelationHelper abstraction
+CLOSED: [2025-02-02 Sun 14:43]
 This is needed for allowing transitive relations in queries.
 - [X] add RelationHelper to var in case of RelationConstraint
 - [X] init fsm context
 - [X] set col, set row in ArchetypeInit
 - [X] set col, set row in InvarInit
-- [ ] set col, set row in RelationJoin
-- [ ] use for next in relation join
-- [ ] relation constraints in relation join
-- [ ] invar constraints
-- [ ] remove old variant
-** TODO unrelations
+- [X] set col, set row in RelationJoin
+- [X] use for next in relation join
+- [X] relation constraints in relation join
+- [X] invar constraints
+- [X] remove old variant
+- [X] transitive relations
+** NEXT unrelations
 - ~!Rel(a,b)~
-Similar to inequality constraints and optional components
-- [ ] need to handle transitivity first
+Similar to relation constraints and optional components
+- [X] need to handle transitivity first
+*** TODO unrelation with anyvar
+~!Rel(a,_)~
+- this can be handled at the archetype constraint level
+- an archetype just needs to not have this relation as component to qualify
+*** TODO unrelation with regular vars and invars
+satisfied if either the component is not in the archetype
+or if it exists it the RelVec does not contain the entity_id bound to the other var
 - [ ] var info
-- [ ] set on archetype init
-- [ ] set on invar init
-- [ ] set on relation join
+- [ ] add to optional component init
 - [ ] check constraint on relation join
-- [ ] write test for on archetype init
-- [ ] write test for on relation join
-- [ ] write test for on invar init
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component
@@ -87,7 +91,7 @@ Similar to inequality constraints and optional components
   - need to search for them when creating archetype sets
   - don't need them in output array, can just create from NonNull::dangling()
   - maybe I should insert checks that outputs are not ZSTs
-- I think I'll just handle ZSTs like any other so I don't end in type hell
+- I think I'll just handle ZSTs like any type other so I don't end in type hell
 ** TODO work on a demo before continuing here
 The possibilities for more and more involved queries are endless.
 But at some point I need to actually try them out in the field and gain insights there.

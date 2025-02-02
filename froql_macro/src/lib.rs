@@ -91,7 +91,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut relations: Vec<Relation> = Vec::new();
 
     let mut unequals = Vec::new();
-    let mut unrelations = Vec::new();
+    let mut unrelations: Vec<Relation> = Vec::new();
     let mut opt_components = Vec::new();
     let mut prefills = HashMap::new();
 
@@ -260,32 +260,36 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                         _ => (),
                     }
-                    unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    unrelations.push((ty, a, b));
                 }
                 Term::Unrelation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
                     let b = ANYVAR;
-                    unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    unrelations.push((ty, a, b));
                 }
                 Term::Unrelation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(&var_a);
                     let b = ANYVAR;
                     prefills.insert(a, var_a);
-                    unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    unrelations.push((ty, a, b));
                 }
                 Term::Unrelation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(var_b);
-                    unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    unrelations.push((ty, a, b));
                 }
                 Term::Unrelation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
                     prefills.insert(b, var_b);
-                    unrelations.push(format!("(TypeId::of::<{ty}>(), {a}, {b})"));
+                    unrelations.push((ty, a, b));
                 }
-                Term::Unrelation(_ty, RVK::InVar(_var_a), RVK::InVar(_var_b)) => {
-                    unimplemented!("!Rel(*a,*b) is not implemented")
+                Term::Unrelation(ty, RVK::InVar(var_a), RVK::InVar(var_b)) => {
+                    let a = variables.var_number(&var_a);
+                    let b = variables.var_number(&var_b);
+                    prefills.insert(a, var_a);
+                    prefills.insert(b, var_b);
+                    unrelations.push((ty, a, b));
                 }
                 Term::Unrelation(_ty, RVK::AnyVar, RVK::AnyVar) => {
                     panic!("!Rel(_,_) does not make sense.")
@@ -320,6 +324,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         opt_components,
         unequals,
         accessors,
+        unrelations,
     };
 
     let result = gen.generate(&world);

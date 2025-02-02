@@ -24,6 +24,7 @@ pub struct Generator {
     pub opt_components: Vec<(String, isize, usize)>,
     pub unequals: Vec<(isize, isize)>,
     pub accessors: Vec<Accessor>,
+    pub unrelations: Vec<Relation>,
 }
 
 impl Generator {
