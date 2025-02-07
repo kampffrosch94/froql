@@ -310,8 +310,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         }
     }
 
-    assert_eq!(unrelations.len(), 0, "Unrelations are not done yet.");
-
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
 

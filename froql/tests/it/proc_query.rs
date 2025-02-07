@@ -439,3 +439,32 @@ fn proc_query_relation_transitive_backwards() {
     }
     assert_eq!(3, counter);
 }
+
+#[test]
+fn proc_query_unrelation_anyvars() {
+    enum Rel {}
+    #[allow(unused)]
+    struct Comp(usize);
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.add_relation::<Rel>(a, c);
+    world.add_component(a, Comp(0));
+    world.add_component(b, Comp(1));
+    world.add_component(c, Comp(2));
+
+    let mut counter = 0;
+    for (x,) in query!(world, &x, _ Comp(x), !Rel(x, _)) {
+        println!("{x:?}");
+        counter += 1;
+    }
+    assert_eq!(2, counter);
+    println!("----");
+    let mut counter = 0;
+    for (x,) in query!(world, &x, _ Comp(x), !Rel(_, x)) {
+        println!("{x:?}");
+        counter += 1;
+    }
+    assert_eq!(2, counter);
+}

@@ -71,7 +71,8 @@ This is needed for allowing transitive relations in queries.
 - ~!Rel(a,b)~
 Similar to relation constraints and optional components
 - [X] need to handle transitivity first
-*** TODO unrelation with anyvar
+*** DONE unrelation with anyvar
+CLOSED: [2025-02-07 Fri 10:23]
 ~!Rel(a,_)~
 - this can be handled at the archetype constraint level
 - an archetype just needs to not have this relation as component to qualify
@@ -81,6 +82,8 @@ or if it exists it the RelVec does not contain the entity_id bound to the other 
 - [ ] compute place to insert relationhelper and check
 - [ ] add to optional component init
 - [ ] check constraint on relation join
+** TODO create Entities for components
+- should those exist for relationships as well?
 ** TODO singletons
 - ~mut $TileMap~ and ~$TileMap~
 - singletons should be entities with only one component

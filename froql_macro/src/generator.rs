@@ -52,6 +52,7 @@ let bk = &world.bookkeeping;
             &self.relations,
             &self.uncomponents,
             &self.opt_components,
+            &self.unrelations,
         );
         generate_fsm_context(
             &mut result,
@@ -154,6 +155,7 @@ pub(crate) fn generate_archetype_sets(
     relations: &[Relation],
     uncomponents: &[Component],
     opt_components: &[(String, isize, usize)],
+    unrelations: &[Relation], // only care about unrelations with anyvars here
 ) -> Vec<VarInfo> {
     assert_ne!(
         0,
@@ -219,7 +221,7 @@ pub(crate) fn generate_archetype_sets(
         infos.push(info);
     }
 
-    if uncomponents.is_empty() {
+    if uncomponents.is_empty() && unrelations.is_empty() {
         result.push_str("let archetype_id_sets = [\n");
         for var in vars {
             if prefills.contains_key(var) {
@@ -240,11 +242,38 @@ pub(crate) fn generate_archetype_sets(
                 continue;
             }
 
-            result.push_str(&format!("let uncomponents_{var} = ["));
+            write!(result, "let uncomponents_{var} = [").unwrap();
+
             // component
             for (ty, _) in uncomponents.iter().filter(|(_, id)| id == var) {
-                result.push_str(&format!("\n    world.get_component_id::<{ty}>(),"));
+                write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
             }
+
+            // unrelations from var to anyvar
+            for (ty, _, _) in unrelations
+                .iter()
+                .filter(|(_, id, any)| *any == ANYVAR && id == var)
+            {
+                write!(
+                    result,
+                    "\n    bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()),"
+                )
+                .unwrap();
+            }
+
+            // unrelations from anyvar to var
+            for (ty, _, _) in unrelations
+                .iter()
+                .filter(|(_, any, id)| *any == ANYVAR && id == var)
+            {
+                result.push_str("\n    ");
+                write!(
+                    result,
+                    "bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()).flip_target(),"
+                )
+                .unwrap();
+            }
+
             result.push_str("\n];\n\n");
         }
         result.push_str("let archetype_id_sets = [\n");
@@ -640,6 +669,7 @@ mod test {
             &components,
             &relations,
             &uncomponents,
+            &[],
             &[],
         );
         insta::assert_snapshot!(result, @r#"
