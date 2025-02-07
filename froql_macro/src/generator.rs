@@ -12,7 +12,6 @@ use crate::generator_nodes::types::RelationConstraint;
 use crate::generator_nodes::GeneratorNode;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
-// TODO use write! instead of format! to save on intermediate allocations
 
 #[derive(Default, Debug)]
 pub struct Generator {
@@ -176,10 +175,10 @@ pub(crate) fn generate_archetype_sets(
             join_helper_index: None,
             init_rank: None,
         };
-        result.push_str(&format!("let components_{var} = ["));
+        write!(result, "let components_{var} = [").unwrap();
         // component
         for (ty, _) in components.iter().filter(|(_, id)| id == var) {
-            result.push_str(&format!("\n    world.get_component_id::<{ty}>(),"));
+            write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
             info.components.insert(ty.clone(), index);
             index += 1;
             info.component_range.end += 1;
@@ -187,9 +186,11 @@ pub(crate) fn generate_archetype_sets(
 
         // relation from
         for (ty, _, other) in relations.iter().filter(|(_, id, _)| id == var) {
-            result.push_str(&format!(
+            write!(
+                result,
                 "\n    bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()),"
-            ));
+            )
+            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
@@ -197,9 +198,11 @@ pub(crate) fn generate_archetype_sets(
         // relation to
         for (ty, other, _) in relations.iter().filter(|(_, _, id)| id == var) {
             result.push_str("\n    ");
-            result.push_str(&format!(
+            write!(
+                result,
                 "bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()).flip_target(),"
-            ));
+            )
+            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
@@ -220,7 +223,7 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                result.push_str(&format!("    Vec::<ArchetypeId>::new(),\n"));
+                result.push_str("    Vec::<ArchetypeId>::new(),\n");
             } else {
                 write!(
                     result,
@@ -274,7 +277,7 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                result.push_str(&format!("    Vec::<ArchetypeId>::new(),\n"));
+                write!(result, "    Vec::<ArchetypeId>::new(),\n").unwrap();
             } else {
                 write!(
                     result,
@@ -296,7 +299,8 @@ pub(crate) fn generate_fsm_context(
 ) {
     let var_count = vars.len();
     let col_count = components.len() + relations.len() * 2;
-    result.push_str(&format!(
+    write!(
+        result,
         "
 // result set
 const VAR_COUNT: usize = {var_count};
@@ -309,7 +313,8 @@ let mut a_max_rows = [0; VAR_COUNT];
 let mut a_next_indexes = [usize::MAX; VAR_COUNT];
 let mut col_indexes = [usize::MAX; {col_count}];
 "
-    ));
+    )
+    .unwrap();
 }
 
 pub(crate) fn generate_resumable_query_closure(
