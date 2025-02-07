@@ -54,13 +54,7 @@ let bk = &world.bookkeeping;
             &self.opt_components,
             &self.unrelations,
         );
-        generate_fsm_context(
-            &mut result,
-            &self.vars,
-            &self.prefills,
-            &self.components,
-            &self.relations,
-        );
+        generate_fsm_context(&mut result, &self.vars, &self.components, &self.relations);
 
         generate_resumable_query_closure(
             &mut result,
@@ -297,7 +291,6 @@ pub(crate) fn generate_archetype_sets(
 pub(crate) fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
-    _prefills: &HashMap<isize, String>, // TODO remove
     components: &[Component],
     relations: &[Relation],
 ) {
@@ -816,10 +809,9 @@ mod test {
         let relations = vec![("Attack".into(), 1, 0)];
         let vars = vec![0, 1];
         let mut result = String::new();
-        let prefills = HashMap::new();
 
         insta::assert_snapshot!({
-            generate_fsm_context(&mut result, &vars, &prefills, &components, &relations);
+            generate_fsm_context(&mut result, &vars, &components, &relations);
             result
         }, @r#"
         // result set
