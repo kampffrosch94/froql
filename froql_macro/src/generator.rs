@@ -385,7 +385,7 @@ pub(crate) fn generate_resumable_query_closure(
             new,
             new_components: new_info.component_range.clone(),
             unequal_constraints,
-            rel_constraints: rel_constraints,
+            rel_constraints,
             opt_components: new_info.opt_components.clone(),
             new_relation_helpers: new_info.relation_helpers.clone(),
             new_helper_nr: new_info
