@@ -76,47 +76,6 @@ pub fn compute_join_order(
         }
         result
     };
-    let newly_available_constraints =
-        |available: &mut Vec<isize>,
-         work_left: &mut Vec<Relation>,
-         infos: &mut [VarInfo],
-         relation_helper_nr: &mut usize| {
-            let mut result = Vec::new();
-            while let Some(index) = work_left
-                .iter()
-                .position(|(_, a, b)| available.contains(a) && available.contains(b))
-            {
-                let (comp_name, a, b) = work_left[index].clone();
-                let (old, new) = if infos[a as usize].init_rank.unwrap()
-                    < infos[b as usize].init_rank.unwrap()
-                {
-                    (a, b)
-                } else {
-                    (b, a)
-                };
-                let old_info = &mut infos[old as usize];
-                assert_eq!(old, old_info.index);
-                let column_index = old_info.related_with[&(comp_name, new)];
-                result.push(RelationConstraint {
-                    helper_nr: *relation_helper_nr,
-                    checked_invar: Some(new),
-                });
-                work_left.swap_remove(index);
-
-                let cid_index = column_index - old_info.component_range.start;
-                old_info.relation_helpers.push(RelationHelperInfo {
-                    column_index,
-                    old_var: old,
-                    new_var: new,
-                    nr: *relation_helper_nr,
-                    cid_index,
-                });
-                let new_info = &mut infos[new as usize];
-                new_info.join_helper_index = Some(*relation_helper_nr);
-                *relation_helper_nr += 1;
-            }
-            result
-        };
 
     let invar_unequals = newly_available_unequals(&mut available);
     let invar_rel_constraints = newly_available_constraints(
@@ -188,4 +147,46 @@ pub fn compute_join_order(
         invar_rel_constraints,
         join_order: result,
     };
+}
+
+fn newly_available_constraints(
+    available: &mut Vec<isize>,
+    relations_left: &mut Vec<Relation>,
+    infos: &mut [VarInfo],
+    relation_helper_nr: &mut usize,
+) -> Vec<RelationConstraint> {
+    let mut result = Vec::new();
+    while let Some(index) = relations_left
+        .iter()
+        .position(|(_, a, b)| available.contains(a) && available.contains(b))
+    {
+        let (comp_name, a, b) = relations_left[index].clone();
+        let (old, new) =
+            if infos[a as usize].init_rank.unwrap() < infos[b as usize].init_rank.unwrap() {
+                (a, b)
+            } else {
+                (b, a)
+            };
+        let old_info = &mut infos[old as usize];
+        assert_eq!(old, old_info.index);
+        let column_index = old_info.related_with[&(comp_name, new)];
+        result.push(RelationConstraint {
+            helper_nr: *relation_helper_nr,
+            checked_invar: Some(new),
+        });
+        relations_left.swap_remove(index);
+
+        let cid_index = column_index - old_info.component_range.start;
+        old_info.relation_helpers.push(RelationHelperInfo {
+            column_index,
+            old_var: old,
+            new_var: new,
+            nr: *relation_helper_nr,
+            cid_index,
+        });
+        let new_info = &mut infos[new as usize];
+        new_info.join_helper_index = Some(*relation_helper_nr);
+        *relation_helper_nr += 1;
+    }
+    return result;
 }
