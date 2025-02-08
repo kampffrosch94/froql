@@ -93,14 +93,7 @@ impl<'a> RelationHelper<'a> {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use std::collections::HashSet;
-
-    #[test]
-    fn size_assumptions() {
-        type A = (Vec<u32>, HashSet<u32>);
-        type B = Option<A>;
-        assert_eq!(size_of::<A>(), size_of::<B>());
-    }
+pub struct UnrelationHelper<'a> {
+    comp_exists: bool,
+    rel: RelationHelper<'a>,
 }

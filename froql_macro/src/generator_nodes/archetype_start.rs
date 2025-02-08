@@ -1,5 +1,6 @@
 use super::relation_helper::{
     relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+    UnrelationHelperInfo,
 };
 use super::relation_join::insert_optional_comps;
 use super::GeneratorNode;
@@ -12,6 +13,7 @@ pub struct ArchetypeStart {
     pub components: Range<usize>,
     pub opt_components: Vec<(String, usize)>,
     pub relation_helpers: Vec<RelationHelperInfo>,
+    pub unrelation_helpers: Vec<UnrelationHelperInfo>,
 }
 
 impl GeneratorNode for ArchetypeStart {
@@ -46,7 +48,12 @@ impl GeneratorNode for ArchetypeStart {
 
         // handle optional components
         insert_optional_comps(prepend, append, &self.opt_components);
-        relation_helpers_init_and_set_col(prepend, append, &self.relation_helpers);
+        relation_helpers_init_and_set_col(
+            prepend,
+            append,
+            &self.relation_helpers,
+            &self.unrelation_helpers,
+        );
 
         write!(
             append,
@@ -77,7 +84,7 @@ impl GeneratorNode for ArchetypeStart {
         )
         .unwrap();
 
-        relation_helpers_set_rows(append, &self.relation_helpers);
+        relation_helpers_set_rows(append, &self.relation_helpers, &self.unrelation_helpers);
 
         write!(
             append,
@@ -104,6 +111,7 @@ mod test {
             components: 0..2,
             opt_components: vec![],
             relation_helpers: vec![],
+            unrelation_helpers: vec![],
         };
 
         let mut prepend = String::new();

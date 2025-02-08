@@ -28,6 +28,8 @@ pub fn query(input: TokenStream) -> TokenStream {
 pub(crate) type Relation = (String, isize, isize);
 /// ComponentType, source_var
 pub(crate) type Component = (String, isize);
+/// RelationType, from_var, to_var, index
+pub(crate) type Unrelation = (String, isize, isize, usize);
 
 // we need to preserve the order of the query in the result
 // this is why we put result entities and components in the same vec via enum
@@ -91,7 +93,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut relations: Vec<Relation> = Vec::new();
 
     let mut unequals = Vec::new();
-    let mut unrelations: Vec<Relation> = Vec::new();
+    let mut unrelations: Vec<Unrelation> = Vec::new();
     let mut opt_components = Vec::new();
     let mut prefills = HashMap::new();
 
@@ -260,36 +262,36 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                         }
                         _ => (),
                     }
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(ty, RVK::Var(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(var_a);
                     let b = ANYVAR;
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(ty, RVK::InVar(var_a), RVK::AnyVar) => {
                     let a = variables.var_number(&var_a);
                     let b = ANYVAR;
                     prefills.insert(a, var_a);
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(ty, RVK::AnyVar, RVK::Var(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(var_b);
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(ty, RVK::AnyVar, RVK::InVar(var_b)) => {
                     let a = ANYVAR;
                     let b = variables.var_number(&var_b);
                     prefills.insert(b, var_b);
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(ty, RVK::InVar(var_a), RVK::InVar(var_b)) => {
                     let a = variables.var_number(&var_a);
                     let b = variables.var_number(&var_b);
                     prefills.insert(a, var_a);
                     prefills.insert(b, var_b);
-                    unrelations.push((ty, a, b));
+                    unrelations.push((ty, a, b, unrelations.len()));
                 }
                 Term::Unrelation(_ty, RVK::AnyVar, RVK::AnyVar) => {
                     panic!("!Rel(_,_) does not make sense.")

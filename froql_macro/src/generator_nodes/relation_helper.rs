@@ -11,22 +11,22 @@ pub struct RelationHelperInfo {
     pub nr: usize,
 }
 
-#[allow(unused)]
-impl RelationHelperInfo {
-    /// generates code that returns the next entity in the relation
-    pub fn get_next(append: &mut String) {
-        todo!();
-    }
-
-    pub fn has_relation(append: &mut String) {
-        todo!();
-    }
+#[derive(Clone, PartialEq, Eq, Debug)]
+pub struct UnrelationHelperInfo {
+    /// Index where the relationship cid is in the cid array for `old_var`
+    pub ty: String,
+    pub flip_target: bool,
+    pub old_var: isize,
+    pub new_var: isize,
+    /// nr of this RelationHelper, used when generating variable name
+    pub nr: usize,
 }
 
 pub fn relation_helpers_init_and_set_col(
     prepend: &mut String,
     append: &mut String,
     helpers: &[RelationHelperInfo],
+    unhelpers: &[UnrelationHelperInfo],
 ) {
     for helper in helpers {
         let old = helper.old_var;
@@ -49,9 +49,25 @@ let mut rel_helper_{nr} = ::froql::query_helper::RelationHelper::new
         )
         .unwrap();
     }
+
+    for unhelper in unhelpers {
+        let old = unhelper.old_var;
+        let nr = unhelper.nr;
+        if unhelper.flip_target {
+            write!(prepend, "").unwrap();
+            todo!();
+        } else {
+            write!(prepend, "").unwrap();
+            todo!();
+        }
+    }
 }
 
-pub fn relation_helpers_set_rows(append: &mut String, helpers: &[RelationHelperInfo]) {
+pub fn relation_helpers_set_rows(
+    append: &mut String,
+    helpers: &[RelationHelperInfo],
+    unhelpers: &[UnrelationHelperInfo],
+) {
     for helper in helpers {
         let nr = helper.nr;
         let var = helper.old_var;

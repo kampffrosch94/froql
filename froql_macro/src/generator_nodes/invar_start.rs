@@ -1,9 +1,10 @@
 use super::{
     relation_helper::{
         relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+        UnrelationHelperInfo,
     },
     relation_join::{insert_checks, insert_optional_comps},
-    types::RelationConstraint,
+    types::{RelationConstraint, UnrelationConstraint},
     GeneratorNode,
 };
 use std::{fmt::Write, ops::Range};
@@ -15,12 +16,14 @@ pub struct InvarInfo {
     /// type, index part of context variable name
     pub opt_components: Vec<(String, usize)>,
     pub relation_helpers: Vec<RelationHelperInfo>,
+    pub unrelation_helpers: Vec<UnrelationHelperInfo>,
 }
 
 #[derive(Debug)]
 pub struct InvarStart {
     pub unequalities: Vec<(isize, isize)>,
     pub rel_constraints: Vec<RelationConstraint>,
+    pub unrel_constraints: Vec<UnrelationConstraint>,
     pub invars: Vec<InvarInfo>,
 }
 
@@ -28,7 +31,10 @@ impl GeneratorNode for InvarStart {
     fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
         self.generate_invar_archetype_fill(prepend);
 
-        if self.unequalities.is_empty() && self.rel_constraints.is_empty() {
+        if self.unequalities.is_empty()
+            && self.rel_constraints.is_empty()
+            && self.unrel_constraints.is_empty()
+        {
             assert_eq!(step, 0);
             write!(
                 append,
@@ -53,7 +59,12 @@ current_step = 1;",
 "#
             )
             .unwrap();
-            insert_checks(append, &self.unequalities, &self.rel_constraints);
+            insert_checks(
+                append,
+                &self.unequalities,
+                &self.rel_constraints,
+                &self.unrel_constraints,
+            );
             append.push_str(
                 "
     {
@@ -99,8 +110,17 @@ impl InvarStart {
             .unwrap();
 
             insert_optional_comps(prepend, &mut append, &invar.opt_components);
-            relation_helpers_init_and_set_col(prepend, &mut append, &invar.relation_helpers);
-            relation_helpers_set_rows(&mut append, &invar.relation_helpers);
+            relation_helpers_init_and_set_col(
+                prepend,
+                &mut append,
+                &invar.relation_helpers,
+                &invar.unrelation_helpers,
+            );
+            relation_helpers_set_rows(
+                &mut append,
+                &invar.relation_helpers,
+                &invar.unrelation_helpers,
+            );
 
             write!(
                 &mut append,
@@ -123,11 +143,13 @@ mod test {
         let gen = InvarStart {
             unequalities: vec![],
             rel_constraints: vec![],
+            unrel_constraints: vec![],
             invars: vec![InvarInfo {
                 var_index: 0,
                 component_range: 0..2,
                 opt_components: vec![],
                 relation_helpers: vec![],
+                unrelation_helpers: vec![],
             }],
         };
 

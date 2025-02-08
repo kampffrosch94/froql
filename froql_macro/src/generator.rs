@@ -11,8 +11,10 @@ use crate::generator_nodes::archetype_start::ArchetypeStart;
 use crate::generator_nodes::invar_start::InvarInfo;
 use crate::generator_nodes::invar_start::InvarStart;
 use crate::generator_nodes::relation_helper::RelationHelperInfo;
+use crate::generator_nodes::relation_helper::UnrelationHelperInfo;
 use crate::generator_nodes::relation_join::RelationJoin;
 use crate::generator_nodes::GeneratorNode;
+use crate::Unrelation;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 mod join_order;
@@ -24,10 +26,11 @@ pub struct Generator {
     pub components: Vec<Component>,
     pub relations: Vec<Relation>,
     pub uncomponents: Vec<Component>,
+    /// Type, variable, opt component number
     pub opt_components: Vec<(String, isize, usize)>,
     pub unequals: Vec<(isize, isize)>,
     pub accessors: Vec<Accessor>,
-    pub unrelations: Vec<Relation>,
+    pub unrelations: Vec<Unrelation>,
 }
 
 impl Generator {
@@ -67,6 +70,7 @@ let bk = &world.bookkeeping;
             &self.relations,
             &self.unequals,
             &self.accessors,
+            &self.unrelations,
         );
 
         result.push_str("\n}");
@@ -94,6 +98,8 @@ pub struct VarInfo {
     /// When a join is added the already existing variable (`old`) gets a relationship helper added.
     /// This is then used for code gen in steps leading up to the join.
     relation_helpers: Vec<RelationHelperInfo>,
+    /// Unrelationhelpers are optional (!) RelationHelpers that are negated in checks.
+    unrelation_helpers: Vec<UnrelationHelperInfo>,
     /// if this var is set by a relation join, then this is the index of the RelationHelper
     /// for that join
     join_helper_index: Option<usize>,
@@ -152,7 +158,7 @@ pub(crate) fn generate_archetype_sets(
     relations: &[Relation],
     uncomponents: &[Component],
     opt_components: &[(String, isize, usize)],
-    unrelations: &[Relation], // only care about unrelations with anyvars here
+    unrelations: &[Unrelation], // only care about unrelations with anyvars here
 ) -> Vec<VarInfo> {
     assert_ne!(
         0,
@@ -178,6 +184,7 @@ pub(crate) fn generate_archetype_sets(
             relation_helpers: Vec::new(),
             join_helper_index: None,
             init_rank: None,
+            unrelation_helpers: Vec::new(),
         };
         write!(result, "let components_{var} = [").unwrap();
         // component
@@ -251,9 +258,9 @@ pub(crate) fn generate_archetype_sets(
             }
 
             // unrelations from var to anyvar
-            for (ty, _, _) in unrelations
+            for (ty, _, _, _) in unrelations
                 .iter()
-                .filter(|(_, id, any)| *any == ANYVAR && id == var)
+                .filter(|(_, id, any, _)| *any == ANYVAR && id == var)
             {
                 write!(
                     result,
@@ -263,9 +270,9 @@ pub(crate) fn generate_archetype_sets(
             }
 
             // unrelations from anyvar to var
-            for (ty, _, _) in unrelations
+            for (ty, _, _, _) in unrelations
                 .iter()
-                .filter(|(_, any, id)| *any == ANYVAR && id == var)
+                .filter(|(_, any, id, _)| *any == ANYVAR && id == var)
             {
                 result.push_str("\n    ");
                 write!(
@@ -329,6 +336,7 @@ pub(crate) fn generate_resumable_query_closure(
     relations: &[Relation],
     unequals: &[(isize, isize)],
     accessors: &[Accessor],
+    unrelations: &[Unrelation],
 ) {
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
@@ -337,8 +345,9 @@ pub(crate) fn generate_resumable_query_closure(
         first,
         invar_unequals,
         invar_rel_constraints,
+        invar_unrel_constraints,
         join_order,
-    } = compute_join_order(relations, infos, prefills, unequals);
+    } = compute_join_order(relations, infos, prefills, unequals, unrelations);
 
     assert!(
         infos.iter().all(|it| it.init_rank.is_some()),
@@ -360,6 +369,7 @@ pub(crate) fn generate_resumable_query_closure(
             components: first_info.component_range.clone(),
             opt_components: first_info.opt_components.clone(),
             relation_helpers: first_info.relation_helpers.clone(),
+            unrelation_helpers: first_info.unrelation_helpers.clone(),
         }
         .generate(0, prepend, &mut append);
     } else {
@@ -367,6 +377,7 @@ pub(crate) fn generate_resumable_query_closure(
         step_count = InvarStart {
             unequalities: invar_unequals,
             rel_constraints: invar_rel_constraints,
+            unrel_constraints: invar_unrel_constraints,
             invars: infos
                 .iter()
                 .filter(|it| prefills.contains_key(&it.index))
@@ -375,6 +386,7 @@ pub(crate) fn generate_resumable_query_closure(
                     component_range: info.component_range.clone(),
                     opt_components: info.opt_components.clone(),
                     relation_helpers: info.relation_helpers.clone(),
+                    unrelation_helpers: info.unrelation_helpers.clone(),
                 })
                 .collect(),
         }
@@ -386,7 +398,7 @@ pub(crate) fn generate_resumable_query_closure(
             new,
             unequal_constraints,
             rel_constraints,
-            ..
+            unrel_constraints,
         } = new_join;
         let new_info = &infos[new as usize];
         step_count = RelationJoin {
@@ -394,11 +406,13 @@ pub(crate) fn generate_resumable_query_closure(
             new_components: new_info.component_range.clone(),
             unequal_constraints,
             rel_constraints,
+            unrel_constraints,
             opt_components: new_info.opt_components.clone(),
             new_relation_helpers: new_info.relation_helpers.clone(),
             new_helper_nr: new_info
                 .join_helper_index
                 .expect("Internal: RelationHelper needs to exist for Join"),
+            new_unrelation_helpers: new_info.unrelation_helpers.clone(),
         }
         .generate(step_count, prepend, &mut append);
     }
@@ -572,29 +586,32 @@ mod test {
         ]
         "#);
 
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[]);
+        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
         insta::assert_debug_snapshot!(join_order, @r#"
         JoinOrder {
             first: 0,
             invar_unequals: [],
             invar_rel_constraints: [],
+            invar_unrel_constraints: [],
             join_order: [
                 NewJoin {
                     new: 1,
                     unequal_constraints: [],
                     rel_constraints: [],
+                    unrel_constraints: [],
                 },
             ],
         }
         "#);
 
         let unequals = vec![(0, 1)];
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals);
+        let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals, &[]);
         insta::assert_debug_snapshot!(join_order, @r#"
         JoinOrder {
             first: 0,
             invar_unequals: [],
             invar_rel_constraints: [],
+            invar_unrel_constraints: [],
             join_order: [
                 NewJoin {
                     new: 1,
@@ -605,6 +622,7 @@ mod test {
                         ),
                     ],
                     rel_constraints: [],
+                    unrel_constraints: [],
                 },
             ],
         }

@@ -1,7 +1,8 @@
 use super::relation_helper::{
     relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
+    UnrelationHelperInfo,
 };
-use super::types::RelationConstraint;
+use super::types::{RelationConstraint, UnrelationConstraint};
 use super::GeneratorNode;
 use std::fmt::Write;
 use std::ops::Range;
@@ -14,9 +15,13 @@ pub struct RelationJoin {
     pub unequal_constraints: Vec<(isize, isize)>,
     /// RelationHelpers that constrain the new var
     pub rel_constraints: Vec<RelationConstraint>,
+    /// UnrelationHelpers that constrain the new var
+    pub unrel_constraints: Vec<UnrelationConstraint>,
     pub opt_components: Vec<(String, usize)>,
     /// RelationHelpers that depend on the new var
     pub new_relation_helpers: Vec<RelationHelperInfo>,
+    /// UnrelationHelpers that depend on the new var
+    pub new_unrelation_helpers: Vec<UnrelationHelperInfo>,
     /// the relationhelper that contains the Relation(old, new)
     pub new_helper_nr: usize,
 }
@@ -51,10 +56,22 @@ impl GeneratorNode for RelationJoin {
         .unwrap();
 
         // check constraints if there are any
-        if self.unequal_constraints.is_empty() && self.rel_constraints.is_empty() {
+        if self.unequal_constraints.is_empty()
+            && self.rel_constraints.is_empty()
+            && self.unrel_constraints.is_empty()
+        {
             insert_optional_comps(prepend, append, &self.opt_components);
-            relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
-            relation_helpers_set_rows(append, &self.new_relation_helpers);
+            relation_helpers_init_and_set_col(
+                prepend,
+                append,
+                &self.new_relation_helpers,
+                &self.new_unrelation_helpers,
+            );
+            relation_helpers_set_rows(
+                append,
+                &self.new_relation_helpers,
+                &self.new_unrelation_helpers,
+            );
             write!(
                 append,
                 "
@@ -62,7 +79,12 @@ impl GeneratorNode for RelationJoin {
             )
             .unwrap();
         } else {
-            insert_checks(append, &self.unequal_constraints, &self.rel_constraints);
+            insert_checks(
+                append,
+                &self.unequal_constraints,
+                &self.rel_constraints,
+                &self.unrel_constraints,
+            );
             append.push_str(
                 "
             {
@@ -71,8 +93,17 @@ impl GeneratorNode for RelationJoin {
             );
             // handle optional components only in positive branch
             insert_optional_comps(prepend, append, &self.opt_components);
-            relation_helpers_init_and_set_col(prepend, append, &self.new_relation_helpers);
-            relation_helpers_set_rows(append, &self.new_relation_helpers);
+            relation_helpers_init_and_set_col(
+                prepend,
+                append,
+                &self.new_relation_helpers,
+                &self.new_unrelation_helpers,
+            );
+            relation_helpers_set_rows(
+                append,
+                &self.new_relation_helpers,
+                &self.new_unrelation_helpers,
+            );
             append.push_str(
                 "
                 current_step += 1;
@@ -99,6 +130,7 @@ pub fn insert_checks(
     append: &mut String,
     unequalities: &[(isize, isize)],
     rel_constraints: &[RelationConstraint],
+    unrel_constraints: &[UnrelationConstraint],
 ) {
     append.push_str(
         r#"
@@ -182,8 +214,10 @@ mod test {
             new_components: 3..5,
             unequal_constraints: vec![(0, 2), (2, 1)],
             rel_constraints: vec![],
+            unrel_constraints: vec![],
             opt_components: vec![],
             new_relation_helpers: vec![],
+            new_unrelation_helpers: vec![],
             new_helper_nr: 0,
         };
 
@@ -205,8 +239,10 @@ mod test {
                 helper_nr: 0,
                 checked_invar: None,
             }],
+            unrel_constraints: vec![],
             opt_components: vec![],
             new_relation_helpers: vec![],
+            new_unrelation_helpers: vec![],
             new_helper_nr: 0,
         };
 
@@ -225,8 +261,10 @@ mod test {
             new_components: 3..5,
             unequal_constraints: vec![],
             rel_constraints: vec![],
+            unrel_constraints: vec![],
             opt_components: vec![("OptA".into(), 0), ("OptB".into(), 1)],
             new_relation_helpers: vec![],
+            new_unrelation_helpers: vec![],
             new_helper_nr: 0,
         };
 
