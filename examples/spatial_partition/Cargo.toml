@@ -1,0 +1,8 @@
+[package]
+name = "spatial_partition"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+froql = { path = "../../froql" }
+macroquad = "0.4.13"

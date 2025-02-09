@@ -7,18 +7,21 @@ use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId, RELATION},
     entity_store::Entity,
+    entity_view_deferred::DeferredOperation,
     entity_view_mut::EntityViewMut,
     relation::Relation,
 };
 
 pub struct World {
     pub bookkeeping: Bookkeeping,
+    pub(crate) deferred_queue: RefCell<Vec<DeferredOperation>>,
 }
 
 impl World {
     pub fn new() -> Self {
         World {
             bookkeeping: Bookkeeping::new(),
+            deferred_queue: RefCell::new(Vec::new()),
         }
     }
 
@@ -142,6 +145,38 @@ impl World {
 
     pub fn destroy(&mut self, e: Entity) {
         self.bookkeeping.destroy(e);
+    }
+
+    pub fn process(&mut self) {
+        let mut tmp = Vec::new();
+        let queue = self.deferred_queue.get_mut();
+        std::mem::swap(&mut tmp, queue); // too lazy to work around partial borrows here atm
+        for command in tmp {
+            match command {
+                DeferredOperation::DeleteEntity(e) => {
+                    self.destroy(e);
+                }
+                DeferredOperation::AddComponent(func) => {
+                    func(self);
+                }
+                DeferredOperation::RemoveComponent(tid, e) => {
+                    let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+                    self.bookkeeping.remove_component(e, cid);
+                }
+                DeferredOperation::AddRelation(tid, from, to) => {
+                    let Some(cid) = self.bookkeeping.get_component_id(tid) else {
+                        panic!("Can't register relation in deferred context.");
+                    };
+                    self.bookkeeping.add_relation(cid, from, to);
+                }
+                DeferredOperation::RemoveRelation(tid, from, to) => {
+                    let Some(cid) = self.bookkeeping.get_component_id(tid) else {
+                        panic!("Can't register relation in deferred context.");
+                    };
+                    self.bookkeeping.remove_relation(cid, from, to);
+                }
+            }
+        }
     }
 }
 

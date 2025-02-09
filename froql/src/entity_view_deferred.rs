@@ -1,4 +1,5 @@
 use std::{
+    any::TypeId,
     cell::{Ref, RefMut},
     ops::Deref,
 };
@@ -7,6 +8,7 @@ use std::fmt::Debug;
 
 use crate::{
     entity_store::{Entity, EntityId},
+    relation::Relation,
     world::World,
 };
 
@@ -14,6 +16,19 @@ pub struct EntityViewDeferred<'a> {
     pub id: Entity,
     pub world: &'a World,
 }
+
+pub enum DeferredOperation {
+    DeleteEntity(Entity),
+    /// Boxed, because we have to hide the type somehow
+    AddComponent(Box<dyn FnOnce(&mut World)>),
+    /// tid, entity
+    RemoveComponent(TypeId, Entity),
+    /// tid, from, to
+    AddRelation(TypeId, Entity, Entity),
+    /// tid, from, to
+    RemoveRelation(TypeId, Entity, Entity),
+}
+use DeferredOperation as D;
 
 impl<'a> Deref for EntityViewDeferred<'a> {
     type Target = Entity;
@@ -50,16 +65,22 @@ impl<'me> EntityViewDeferred<'me> {
         todo!("Deferred")
     }
 
-    pub fn relate_to<T: 'static>(self, _to: Entity) -> Self {
-        todo!("Deferred");
-        //self.world.add_relation::<T>(self.id, to);
-        //self
+    pub fn relate_to<T: 'static>(self, to: Entity) -> Self {
+        let tid = TypeId::of::<Relation<T>>();
+        self.world
+            .deferred_queue
+            .borrow_mut()
+            .push(D::AddRelation(tid, self.id, to));
+        self
     }
 
-    pub fn relate_from<T: 'static>(self, _from: Entity) -> Self {
-        todo!("Deferred");
-        //self.world.add_relation::<T>(from, self.id);
-        //self
+    pub fn relate_from<T: 'static>(self, from: Entity) -> Self {
+        let tid = TypeId::of::<Relation<T>>();
+        self.world
+            .deferred_queue
+            .borrow_mut()
+            .push(D::AddRelation(tid, from, self.id));
+        self
     }
 
     pub fn is_related_to<T: 'static>(&self, to: Entity) -> bool {
