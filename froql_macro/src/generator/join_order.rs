@@ -32,7 +32,7 @@ pub struct NewJoin {
     pub unrel_constraints: Vec<UnrelationConstraint>,
 }
 
-pub struct JoinOrderComputer<'a> {
+struct JoinOrderComputer<'a> {
     infos: &'a mut [VarInfo],
     prefills: &'a HashMap<isize, String>,
     work_left: Vec<Relation>,
@@ -40,10 +40,12 @@ pub struct JoinOrderComputer<'a> {
     unrelations_left: Vec<Unrelation>,
     available: Vec<isize>,
     result: Vec<JoinKind>,
+    init_rank: u32,
+    relation_helper_nr: usize,
 }
 
 impl<'a> JoinOrderComputer<'a> {
-    pub fn new(
+    fn new(
         relations: &'a [Relation],
         infos: &'a mut [VarInfo],
         prefills: &'a HashMap<isize, String>,
@@ -70,10 +72,12 @@ impl<'a> JoinOrderComputer<'a> {
             unequals: Vec::from(unequals),
             available: Vec::new(),
             result: Vec::new(),
+            init_rank: 0,
+            relation_helper_nr: 0,
         }
     }
 
-    pub fn newly_available_unequals(&mut self) -> Vec<(isize, isize)> {
+    fn newly_available_unequals(&mut self) -> Vec<(isize, isize)> {
         let mut result = Vec::new();
         while let Some(index) = self
             .unequals
@@ -87,11 +91,8 @@ impl<'a> JoinOrderComputer<'a> {
         result
     }
 
-    pub fn compute_join_order(mut self) -> Vec<JoinKind> {
+    fn compute_join_order(mut self) -> Vec<JoinKind> {
         // figure out what to start with
-        let mut init_rank = 0;
-        let mut relation_helper_nr = 0;
-
         if self.prefills.is_empty() {
             // I think its a decent metric to use the most constrained variable first
             let first = self
@@ -126,7 +127,7 @@ impl<'a> JoinOrderComputer<'a> {
                 &mut self.unrelations_left,
                 self.infos,
             );
-            result.push(JoinKind::InitInvars(InitInvars {
+            self.result.push(JoinKind::InitInvars(InitInvars {
                 invar_unequals,
                 invar_rel_constraints,
                 invar_unrel_constraints,
@@ -134,73 +135,7 @@ impl<'a> JoinOrderComputer<'a> {
         }
 
         // compute join
-        let mut compute_joins = || {
-            while !work_left.is_empty() {
-                // find next viable for joining and remove it from working list
-                // always handle constraints first, because it may let us skip work
-                // when we are executing the query at runtime
-                let next_join = {
-                    let pos = work_left.iter().position(|rel| {
-                        available
-                            .iter()
-                            .any(|avail| *avail == rel.1 || *avail == rel.2)
-                    });
-                    pos.map(|pos| work_left.remove(pos))
-                };
-                if let Some(join) = next_join {
-                    let reversed = available.iter().any(|avail| *avail == join.2);
-                    let old_var = if reversed { join.2 } else { join.1 };
-                    let new_var = if reversed { join.1 } else { join.2 };
-                    let old_info = &mut infos[old_var as usize];
-                    assert_eq!(old_var, old_info.index);
-                    let column_index = old_info.related_with[&(join.0, new_var)];
-                    let cid_index = column_index - old_info.component_range.start;
-
-                    old_info.relation_helpers.push(RelationHelperInfo {
-                        column_index,
-                        old_var,
-                        new_var,
-                        nr: relation_helper_nr,
-                        cid_index,
-                    });
-                    let new_info = &mut self.infos[new_var as usize];
-                    new_info.join_helper_index = Some(relation_helper_nr);
-                    new_info.init_rank = Some(init_rank);
-                    init_rank += 1;
-                    relation_helper_nr += 1;
-
-                    self.available.push(new_var);
-
-                    let unequal_constraints = self.newly_available_unequals();
-                    let mut rel_constraints = newly_available_constraints(
-                        &self.available,
-                        &mut self.work_left,
-                        self.infos,
-                        &mut relation_helper_nr,
-                    );
-                    let mut unrel_constraints = newly_available_unrelations(
-                        &self.available,
-                        &mut self.unrelations_left,
-                        self.infos,
-                    );
-                    for rc in &mut rel_constraints {
-                        rc.checked_invar = None; // there must be a better design than this, lol
-                    }
-                    for urc in &mut unrel_constraints {
-                        urc.checked_invar = None; // there must be a better design than this, lol
-                    }
-                    self.result.push(JoinKind::InnerJoin(NewJoin {
-                        new: new_var,
-                        unequal_constraints,
-                        rel_constraints,
-                        unrel_constraints,
-                    }));
-                } else {
-                    panic!("Cross joins are not supported. Use nested queries instead.")
-                }
-            }
-        };
-        compute_joins();
+        self.compute_inner_joins();
         assert!(self.unequals.is_empty());
         assert!(
             self.unrelations_left.is_empty(),
@@ -209,101 +144,25 @@ impl<'a> JoinOrderComputer<'a> {
 
         return self.result;
     }
-}
 
-pub fn compute_join_order(
-    relations: &[Relation],
-    infos: &mut [VarInfo],
-    prefills: &HashMap<isize, String>,
-    unequals: &[(isize, isize)],
-    unrelations: &[Unrelation],
-) -> Vec<JoinKind> {
-    let mut result = Vec::new();
-    let mut available: Vec<isize> = Vec::new();
-    let mut unequals = Vec::from(unequals);
-    let mut work_left: Vec<Relation> = relations
-        .iter()
-        .cloned()
-        // anyvars only matter as components for constraining archetype sets
-        .filter(|(_, from, to)| *from != ANYVAR && *to != ANYVAR)
-        .collect();
-    let mut unrelations_left: Vec<Unrelation> = unrelations
-        .iter()
-        .cloned()
-        // anyvars only matter as components for constraining archetype sets
-        .filter(|(_, from, to, _)| *from != ANYVAR && *to != ANYVAR)
-        .collect();
-
-    // figure out what to start with
-    let mut init_rank = 0;
-    let mut relation_helper_nr = 0;
-
-    // using a closure so I don't have to duplicate this part
-    let mut newly_available_unequals = |available: &Vec<isize>| {
-        let mut result = Vec::new();
-        while let Some(index) = unequals
-            .iter()
-            .position(|(a, b)| available.contains(a) && available.contains(b))
-        {
-            let (a, b) = unequals[index];
-            result.push((a, b));
-            unequals.swap_remove(index);
-        }
-        result
-    };
-
-    if prefills.is_empty() {
-        // I think its a decent metric to use the most constrained variable first
-        let first = infos
-            .iter_mut()
-            .max_by_key(|it| it.component_range.len())
-            .unwrap();
-        first.init_rank = Some(init_rank);
-        init_rank += 1;
-        available.push(first.index);
-        result.push(JoinKind::InitVar(first.index));
-    } else {
-        // if we have prefills we just start with those
-        for (var, _) in prefills {
-            available.push(*var);
-        }
-        available.sort();
-        for var in &available {
-            infos[*var as usize].init_rank = Some(init_rank);
-            init_rank += 1;
-        }
-
-        let invar_unequals = newly_available_unequals(&available);
-        let invar_rel_constraints =
-            newly_available_constraints(&available, &mut work_left, infos, &mut relation_helper_nr);
-        let invar_unrel_constraints =
-            newly_available_unrelations(&available, &mut unrelations_left, infos);
-        result.push(JoinKind::InitInvars(InitInvars {
-            invar_unequals,
-            invar_rel_constraints,
-            invar_unrel_constraints,
-        }));
-    }
-
-    // compute join
-    let mut compute_joins = || {
-        while !work_left.is_empty() {
+    fn compute_inner_joins(&mut self) {
+        while !self.work_left.is_empty() {
             // find next viable for joining and remove it from working list
             // always handle constraints first, because it may let us skip work
             // when we are executing the query at runtime
             let next_join = {
-                let pos = work_left.iter().position(|rel| {
-                    available
+                let pos = self.work_left.iter().position(|rel| {
+                    self.available
                         .iter()
                         .any(|avail| *avail == rel.1 || *avail == rel.2)
                 });
-                pos.map(|pos| work_left.remove(pos))
+                pos.map(|pos| self.work_left.remove(pos))
             };
             if let Some(join) = next_join {
-                let reversed = available.iter().any(|avail| *avail == join.2);
+                let reversed = self.available.iter().any(|avail| *avail == join.2);
                 let old_var = if reversed { join.2 } else { join.1 };
                 let new_var = if reversed { join.1 } else { join.2 };
-                let old_info = &mut infos[old_var as usize];
+                let old_info = &mut self.infos[old_var as usize];
                 assert_eq!(old_var, old_info.index);
                 let column_index = old_info.related_with[&(join.0, new_var)];
                 let cid_index = column_index - old_info.component_range.start;
@@ -315,30 +174,33 @@ pub fn compute_join_order(
                     nr: relation_helper_nr,
                     cid_index,
                 });
-                let new_info = &mut infos[new_var as usize];
+                let new_info = &mut self.infos[new_var as usize];
                 new_info.join_helper_index = Some(relation_helper_nr);
                 new_info.init_rank = Some(init_rank);
                 init_rank += 1;
                 relation_helper_nr += 1;
 
-                available.push(new_var);
+                self.available.push(new_var);
 
-                let unequal_constraints = newly_available_unequals(&mut available);
+                let unequal_constraints = self.newly_available_unequals();
                 let mut rel_constraints = newly_available_constraints(
-                    &available,
-                    &mut work_left,
-                    infos,
+                    &self.available,
+                    &mut self.work_left,
+                    self.infos,
                     &mut relation_helper_nr,
                 );
-                let mut unrel_constraints =
-                    newly_available_unrelations(&available, &mut unrelations_left, infos);
+                let mut unrel_constraints = newly_available_unrelations(
+                    &self.available,
+                    &mut self.unrelations_left,
+                    self.infos,
+                );
                 for rc in &mut rel_constraints {
                     rc.checked_invar = None; // there must be a better design than this, lol
                 }
                 for urc in &mut unrel_constraints {
                     urc.checked_invar = None; // there must be a better design than this, lol
                 }
-                result.push(JoinKind::InnerJoin(NewJoin {
+                self.result.push(JoinKind::InnerJoin(NewJoin {
                     new: new_var,
                     unequal_constraints,
                     rel_constraints,
@@ -348,15 +210,17 @@ pub fn compute_join_order(
                 panic!("Cross joins are not supported. Use nested queries instead.")
             }
         }
-    };
-    compute_joins();
-    assert!(unequals.is_empty());
-    assert!(
-        unrelations_left.is_empty(),
-        "Not all unrelations were inserted:\n{unrelations_left:?}\nAvail: {available:?}\n{infos:#?}"
-    );
+    }
+}
 
-    return result;
+pub fn compute_join_order(
+    relations: &[Relation],
+    infos: &mut [VarInfo],
+    prefills: &HashMap<isize, String>,
+    unequals: &[(isize, isize)],
+    unrelations: &[Unrelation],
+) -> Vec<JoinKind> {
+    JoinOrderComputer::new(relations, infos, prefills, unequals, unrelations).compute_join_order()
 }
 
 fn newly_available_constraints(
