@@ -531,38 +531,39 @@ fn proc_query_unrelation_invar() {
 #[test]
 fn proc_query_relation_multihop() {
     enum Inside {}
-    struct Comp(usize);
 
     let mut world = World::new();
     let container1 = world.create();
     let container2 = world.create();
-    let a = world
-        .create_mut()
-        .add(Comp(0))
-        .relate_to::<Inside>(container1)
-        .id;
-    let b = world
-        .create_mut()
-        .add(Comp(1))
-        .relate_to::<Inside>(container1)
-        .id;
-    let _c = world
-        .create_mut()
-        .add(Comp(2))
-        .relate_to::<Inside>(container2)
-        .id;
+    let a = world.create_mut().relate_to::<Inside>(container1).id;
+    let b = world.create_mut().relate_to::<Inside>(container1).id;
+    let _c = world.create_mut().relate_to::<Inside>(container2).id;
 
     let mut counter = 0;
     // find all entites that are inside the same container as a
-    for (comp,) in query!(
-        world,
-        Comp,
-        Inside(this, container),
-        Inside(*a, container)
-    ) {
-        println!("{x:?} {}", comp.0);
+    for (x,) in query!(world, &this, Inside(this, container), Inside(*a, container)) {
+        println!("{x:?}");
         assert!(*x == a || *x == b);
         counter += 1;
     }
     assert_eq!(counter, 2);
+}
+
+#[test]
+fn proc_query_invar_wrong_components() {
+    enum Rel {}
+    #[allow(unused)]
+    struct Comp(usize);
+
+    let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_component::<Comp>();
+    let a = world.create();
+    let _b = world.create();
+
+    let mut counter = 0;
+    for _x in query!(world, &x, Comp(a), Rel(x, *a)) {
+        counter += 1;
+    }
+    assert_eq!(counter, 0);
 }
