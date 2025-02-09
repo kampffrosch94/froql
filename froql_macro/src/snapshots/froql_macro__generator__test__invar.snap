@@ -40,11 +40,17 @@ let mut opt_col_0 = None;
 let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
     (components_1[1]);
 
+
+::std::iter::from_fn(move || { loop { match current_step {
+0 => {
+
 {
     let (aid, arow) = bk.entities.get_archetype(invar_1);
     let a_ref = &mut a_refs[1];
     *a_ref = &bk.archetypes[aid.as_index()];
-    a_ref.find_multiple_columns(&components_1, &mut col_indexes[3..5]);
+    if !a_ref.find_multiple_columns_fallible(&components_1, &mut col_indexes[3..5]) {
+        return None;
+    }
     a_rows[1] = arow;
             opt_col_0 = a_ref.find_column_opt(opt_cid_0);
 
@@ -54,15 +60,14 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
 
 }
 
-current_step = 1;
-
-::std::iter::from_fn(move || { loop { match current_step {
-0 => {
+    current_step += 2;
+}
+1 => {
     return None;
 }
 
 // follow relation
-1 => {
+2 => {
     const REL_VAR: usize = 0;
     const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..3;
     if let Some(id) = rel_helper_0.next_related() {
@@ -87,7 +92,7 @@ current_step = 1;
 }
 
 // yield row
-2 => {
+3 => {
     current_step -= 1;
     return Some(unsafe {
         (

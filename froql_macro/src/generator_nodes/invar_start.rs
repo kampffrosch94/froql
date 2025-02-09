@@ -29,36 +29,25 @@ pub struct InvarStart {
 
 impl GeneratorNode for InvarStart {
     fn generate(&self, step: usize, prepend: &mut String, append: &mut String) -> usize {
-        self.generate_invar_archetype_fill(prepend);
+        write!(
+            append,
+            r#"
+{step} => {{
+"#
+        )
+        .unwrap();
+        self.generate_invar_archetype_fill(prepend, append);
 
         if self.unequalities.is_empty()
             && self.rel_constraints.is_empty()
             && self.unrel_constraints.is_empty()
         {
-            assert_eq!(step, 0);
-            write!(
-                append,
-                r#"
-{step} => {{
-    return None;
-}}
-"#
-            )
-            .unwrap();
-            // because 0 is our exit we have to start at 1
-            prepend.push_str(
+            append.push_str(
                 "
-current_step = 1;",
+    current_step += 2;
+}",
             );
-            return step + 1;
         } else {
-            write!(
-                append,
-                r#"
-{step} => {{
-"#
-            )
-            .unwrap();
             insert_checks(
                 append,
                 &self.unequalities,
@@ -74,63 +63,59 @@ current_step = 1;",
     }
 }",
             );
-            let next_step = step + 1;
-            // end state
-            write!(
-                append,
-                r#"
+        }
+        let next_step = step + 1;
+        // end state
+        write!(
+            append,
+            r#"
 {next_step} => {{
     return None;
 }}
 "#
-            )
-            .unwrap();
-            return step + 2;
-        }
+        )
+        .unwrap();
+        return step + 2;
     }
 }
 
 impl InvarStart {
-    fn generate_invar_archetype_fill(&self, prepend: &mut String) {
+    fn generate_invar_archetype_fill(&self, prepend: &mut String, append: &mut String) {
         // another string is needed because we prepend optional components before this block
-        let mut append = String::new();
         for invar in &self.invars {
             let var_index = invar.var_index;
             let Range { start, end } = &invar.component_range;
             write!(
-                &mut append,
+                append,
                 "
 {{
     let (aid, arow) = bk.entities.get_archetype(invar_{var_index});
     let a_ref = &mut a_refs[{var_index}];
     *a_ref = &bk.archetypes[aid.as_index()];
-    a_ref.find_multiple_columns(&components_{var_index}, &mut col_indexes[{start}..{end}]);
+    if !a_ref.find_multiple_columns_fallible(&components_{var_index}, &mut col_indexes[{start}..{end}]) {{
+        return None;
+    }}
     a_rows[{var_index}] = arow;"
             )
             .unwrap();
 
-            insert_optional_comps(prepend, &mut append, &invar.opt_components);
+            insert_optional_comps(prepend, append, &invar.opt_components);
             relation_helpers_init_and_set_col(
                 prepend,
-                &mut append,
+                append,
                 &invar.relation_helpers,
                 &invar.unrelation_helpers,
             );
-            relation_helpers_set_rows(
-                &mut append,
-                &invar.relation_helpers,
-                &invar.unrelation_helpers,
-            );
+            relation_helpers_set_rows(append, &invar.relation_helpers, &invar.unrelation_helpers);
 
             write!(
-                &mut append,
+                append,
                 "
 }}
 "
             )
             .unwrap();
         }
-        prepend.push_str(&append);
     }
 }
 
@@ -156,20 +141,24 @@ mod test {
         let mut prepend = String::new();
         let mut append = String::new();
         let r = gen.generate(0, &mut prepend, &mut append);
-        assert_eq!(1, r);
-        insta::assert_snapshot!(prepend, @r#"
+        assert_eq!(2, r);
+        insta::assert_snapshot!(prepend, @"");
+        insta::assert_snapshot!(append, @r#"
+        0 => {
+
         {
             let (aid, arow) = bk.entities.get_archetype(invar_0);
             let a_ref = &mut a_refs[0];
             *a_ref = &bk.archetypes[aid.as_index()];
-            a_ref.find_multiple_columns(&components_0, &mut col_indexes[0..2]);
+            if !a_ref.find_multiple_columns_fallible(&components_0, &mut col_indexes[0..2]) {
+                return None;
+            }
             a_rows[0] = arow;
         }
 
-        current_step = 1;
-        "#);
-        insta::assert_snapshot!(append, @r#"
-        0 => {
+            current_step += 2;
+        }
+        1 => {
             return None;
         }
         "#);

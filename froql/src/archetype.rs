@@ -106,7 +106,11 @@ impl Archetype {
 
     // we use an outvar so that we don't have to allocate
     // ideally the results can live in an array on the stack
-    pub fn find_multiple_columns(&self, cids: &[ComponentId], result_indexes: &mut [usize]) {
+    fn find_multiple_columns_internal(
+        &self,
+        cids: &[ComponentId],
+        result_indexes: &mut [usize],
+    ) -> usize {
         debug_assert_eq!(cids.len(), result_indexes.len());
         debug_assert!(cids.is_sorted());
         let mut j = 0;
@@ -119,11 +123,26 @@ impl Archetype {
                 }
             }
         }
+        return j;
+    }
+
+    pub fn find_multiple_columns(&self, cids: &[ComponentId], result_indexes: &mut [usize]) {
+        let j = self.find_multiple_columns_internal(cids, result_indexes);
         debug_assert_eq!(
             cids.len(),
             j,
             "Internal: did not find as many cids as requested."
         );
+    }
+
+    /// returns false on failure
+    pub fn find_multiple_columns_fallible(
+        &self,
+        cids: &[ComponentId],
+        result_indexes: &mut [usize],
+    ) -> bool {
+        let j = self.find_multiple_columns_internal(cids, result_indexes);
+        cids.len() == j
     }
 }
 

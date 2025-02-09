@@ -102,9 +102,7 @@ async fn main() {
         }
         */
 
-        for (e_circle, c) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
-            let r = c.r * circle_scale;
-            draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
+        for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
             let e = *e_circle; // TODO fix this via into
             for (c,) in query!(world, Circle, Inside(this, rect), Inside(*e, rect)) {
                 let r = c.r * circle_scale;
