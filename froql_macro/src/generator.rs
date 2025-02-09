@@ -1,4 +1,5 @@
 use std::collections::BTreeMap;
+use std::collections::HashSet;
 use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
@@ -188,7 +189,13 @@ pub(crate) fn generate_archetype_sets(
         };
         write!(result, "let components_{var} = [").unwrap();
         // component
+        let mut dedup = HashSet::new();
         for (ty, _) in components.iter().filter(|(_, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
             write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
             info.components.insert(ty.clone(), index);
             index += 1;
@@ -196,7 +203,13 @@ pub(crate) fn generate_archetype_sets(
         }
 
         // relation from
+        dedup.clear();
         for (ty, _, other) in relations.iter().filter(|(_, id, _)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
             write!(
                 result,
                 "\n    bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()),"
@@ -207,7 +220,13 @@ pub(crate) fn generate_archetype_sets(
             info.component_range.end += 1;
         }
         // relation to
+        dedup.clear();
         for (ty, other, _) in relations.iter().filter(|(_, _, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
             result.push_str("\n    ");
             write!(
                 result,

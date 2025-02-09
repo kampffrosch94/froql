@@ -119,7 +119,11 @@ impl Archetype {
                 }
             }
         }
-        debug_assert_eq!(cids.len(), j);
+        debug_assert_eq!(
+            cids.len(),
+            j,
+            "Internal: did not find as many cids as requested."
+        );
     }
 }
 

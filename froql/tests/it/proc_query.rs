@@ -527,3 +527,42 @@ fn proc_query_unrelation_invar() {
     }
     assert_eq!(counter, 1);
 }
+
+#[test]
+fn proc_query_relation_multihop() {
+    enum Inside {}
+    struct Comp(usize);
+
+    let mut world = World::new();
+    let container1 = world.create();
+    let container2 = world.create();
+    let a = world
+        .create_mut()
+        .add(Comp(0))
+        .relate_to::<Inside>(container1)
+        .id;
+    let b = world
+        .create_mut()
+        .add(Comp(1))
+        .relate_to::<Inside>(container1)
+        .id;
+    let _c = world
+        .create_mut()
+        .add(Comp(2))
+        .relate_to::<Inside>(container2)
+        .id;
+
+    let mut counter = 0;
+    // find all entites that are inside the same container as a
+    for (comp,) in query!(
+        world,
+        Comp,
+        Inside(this, container),
+        Inside(*a, container)
+    ) {
+        println!("{x:?} {}", comp.0);
+        assert!(*x == a || *x == b);
+        counter += 1;
+    }
+    assert_eq!(counter, 2);
+}
