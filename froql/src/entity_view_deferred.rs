@@ -110,3 +110,9 @@ impl<'me> EntityViewDeferred<'me> {
     }
     */
 }
+
+impl<'a> Into<Entity> for EntityViewDeferred<'a> {
+    fn into(self) -> Entity {
+        self.id
+    }
+}
