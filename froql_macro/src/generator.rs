@@ -6,7 +6,7 @@ use std::{collections::HashMap, ops::Range};
 
 use join_order::compute_join_order;
 use join_order::InitInvars;
-use join_order::JoinOrder;
+use join_order::JoinKind;
 use join_order::NewJoin;
 
 use crate::generator_nodes::archetype_start::ArchetypeStart;
@@ -348,7 +348,7 @@ let mut col_indexes = [usize::MAX; {col_count}];
     .unwrap();
 }
 
-pub(crate) fn generate_resumable_query_closure(
+pub fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
     prefills: &HashMap<isize, String>,
@@ -361,16 +361,7 @@ pub(crate) fn generate_resumable_query_closure(
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let JoinOrder {
-        first,
-        invars:
-            InitInvars {
-                invar_unequals,
-                invar_rel_constraints,
-                invar_unrel_constraints,
-            },
-        join_order,
-    } = compute_join_order(relations, infos, prefills, unequals, unrelations);
+    let join_order = compute_join_order(relations, infos, prefills, unequals, unrelations);
 
     assert!(
         infos.iter().all(|it| it.init_rank.is_some()),
@@ -382,62 +373,70 @@ pub(crate) fn generate_resumable_query_closure(
 ::std::iter::from_fn(move || { loop { match current_step {",
     );
 
-    let mut step_count;
+    let mut step_count = 0;
 
-    if prefills.is_empty() {
-        // select first archetype
-        let first_info = &infos[first as usize];
-        step_count = ArchetypeStart {
-            var: first,
-            components: first_info.component_range.clone(),
-            opt_components: first_info.opt_components.clone(),
-            relation_helpers: first_info.relation_helpers.clone(),
-            unrelation_helpers: first_info.unrelation_helpers.clone(),
-        }
-        .generate(0, prepend, &mut append);
-    } else {
-        // TODO: include invar gen here and add it via prepend
-        step_count = InvarStart {
-            unequalities: invar_unequals,
-            rel_constraints: invar_rel_constraints,
-            unrel_constraints: invar_unrel_constraints,
-            invars: infos
-                .iter()
-                .filter(|it| prefills.contains_key(&it.index))
-                .map(|info| InvarInfo {
-                    var_index: info.index,
-                    component_range: info.component_range.clone(),
-                    opt_components: info.opt_components.clone(),
-                    relation_helpers: info.relation_helpers.clone(),
-                    unrelation_helpers: info.unrelation_helpers.clone(),
-                })
-                .collect(),
-        }
-        .generate(0, prepend, &mut append);
-    }
-    // follow relations/constraints
-    for new_join in join_order {
-        let NewJoin {
-            new,
-            unequal_constraints,
-            rel_constraints,
-            unrel_constraints,
-        } = new_join;
-        let new_info = &infos[new as usize];
-        step_count = RelationJoin {
-            new,
-            new_components: new_info.component_range.clone(),
-            unequal_constraints,
-            rel_constraints,
-            unrel_constraints,
-            opt_components: new_info.opt_components.clone(),
-            new_relation_helpers: new_info.relation_helpers.clone(),
-            new_helper_nr: new_info
-                .join_helper_index
-                .expect("Internal: RelationHelper needs to exist for Join"),
-            new_unrelation_helpers: new_info.unrelation_helpers.clone(),
-        }
-        .generate(step_count, prepend, &mut append);
+    for join in join_order {
+        match join {
+            JoinKind::InitInvars(init_invars) => {
+                let InitInvars {
+                    invar_unequals,
+                    invar_rel_constraints,
+                    invar_unrel_constraints,
+                } = init_invars;
+                step_count = InvarStart {
+                    unequalities: invar_unequals,
+                    rel_constraints: invar_rel_constraints,
+                    unrel_constraints: invar_unrel_constraints,
+                    invars: infos
+                        .iter()
+                        .filter(|it| prefills.contains_key(&it.index))
+                        .map(|info| InvarInfo {
+                            var_index: info.index,
+                            component_range: info.component_range.clone(),
+                            opt_components: info.opt_components.clone(),
+                            relation_helpers: info.relation_helpers.clone(),
+                            unrelation_helpers: info.unrelation_helpers.clone(),
+                        })
+                        .collect(),
+                }
+                .generate(0, prepend, &mut append);
+            }
+            JoinKind::InitVar(first) => {
+                // select first archetype
+                let first_info = &infos[first as usize];
+                step_count = ArchetypeStart {
+                    var: first,
+                    components: first_info.component_range.clone(),
+                    opt_components: first_info.opt_components.clone(),
+                    relation_helpers: first_info.relation_helpers.clone(),
+                    unrelation_helpers: first_info.unrelation_helpers.clone(),
+                }
+                .generate(0, prepend, &mut append);
+            }
+            JoinKind::InnerJoin(new_join) => {
+                let NewJoin {
+                    new,
+                    unequal_constraints,
+                    rel_constraints,
+                    unrel_constraints,
+                } = new_join;
+                let new_info = &infos[new as usize];
+                step_count = RelationJoin {
+                    new,
+                    new_components: new_info.component_range.clone(),
+                    unequal_constraints,
+                    rel_constraints,
+                    unrel_constraints,
+                    opt_components: new_info.opt_components.clone(),
+                    new_relation_helpers: new_info.relation_helpers.clone(),
+                    new_helper_nr: new_info
+                        .join_helper_index
+                        .expect("Internal: RelationHelper needs to exist for Join"),
+                    new_unrelation_helpers: new_info.unrelation_helpers.clone(),
+                }
+                .generate(step_count, prepend, &mut append);
+            }
+        };
     }
 
     // TODO put yield into generator node
@@ -611,35 +610,29 @@ mod test {
 
         let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
         insta::assert_debug_snapshot!(join_order, @r#"
-        JoinOrder {
-            first: 0,
-            invars: InitInvars {
-                invar_unequals: [],
-                invar_rel_constraints: [],
-                invar_unrel_constraints: [],
-            },
-            join_order: [
+        [
+            InitVar(
+                0,
+            ),
+            InnerJoin(
                 NewJoin {
                     new: 1,
                     unequal_constraints: [],
                     rel_constraints: [],
                     unrel_constraints: [],
                 },
-            ],
-        }
+            ),
+        ]
         "#);
 
         let unequals = vec![(0, 1)];
         let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals, &[]);
         insta::assert_debug_snapshot!(join_order, @r#"
-        JoinOrder {
-            first: 0,
-            invars: InitInvars {
-                invar_unequals: [],
-                invar_rel_constraints: [],
-                invar_unrel_constraints: [],
-            },
-            join_order: [
+        [
+            InitVar(
+                0,
+            ),
+            InnerJoin(
                 NewJoin {
                     new: 1,
                     unequal_constraints: [
@@ -651,8 +644,8 @@ mod test {
                     rel_constraints: [],
                     unrel_constraints: [],
                 },
-            ],
-        }
+            ),
+        ]
         "#);
     }
 

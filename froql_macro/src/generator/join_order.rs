@@ -11,8 +11,8 @@ use crate::{
 use super::VarInfo;
 
 #[derive(Debug)]
-enum JoinKind {
-    InitInvars(isize),
+pub enum JoinKind {
+    InitInvars(InitInvars),
     InitVar(isize),
     InnerJoin(NewJoin),
 }
@@ -32,20 +32,13 @@ pub struct NewJoin {
     pub unrel_constraints: Vec<UnrelationConstraint>,
 }
 
-#[derive(Debug)]
-pub struct JoinOrder {
-    pub first: isize,
-    pub invars: InitInvars,
-    pub join_order: Vec<NewJoin>,
-}
-
 pub fn compute_join_order(
     relations: &[Relation],
     infos: &mut [VarInfo],
     prefills: &HashMap<isize, String>,
     unequals: &[(isize, isize)],
     unrelations: &[Unrelation],
-) -> JoinOrder {
+) -> Vec<JoinKind> {
     let mut result = Vec::new();
     let mut available: Vec<isize> = Vec::new();
     let mut unequals = Vec::from(unequals);
@@ -64,27 +57,6 @@ pub fn compute_join_order(
 
     // figure out what to start with
     let mut init_rank = 0;
-    if prefills.is_empty() {
-        // I think its a decent metric to use the most constrained variable first
-        let first = infos
-            .iter_mut()
-            .max_by_key(|it| it.component_range.len())
-            .unwrap();
-        first.init_rank = Some(init_rank);
-        init_rank += 1;
-        available.push(first.index);
-    } else {
-        // if we have prefills we just start with those
-        for (var, _) in prefills {
-            available.push(*var);
-        }
-        available.sort();
-        for var in &available {
-            infos[*var as usize].init_rank = Some(init_rank);
-            init_rank += 1;
-        }
-    }
-
     let mut relation_helper_nr = 0;
 
     // using a closure so I don't have to duplicate this part
@@ -101,11 +73,38 @@ pub fn compute_join_order(
         result
     };
 
-    let invar_unequals = newly_available_unequals(&available);
-    let invar_rel_constraints =
-        newly_available_constraints(&available, &mut work_left, infos, &mut relation_helper_nr);
-    let invar_unrel_constraints =
-        newly_available_unrelations(&available, &mut unrelations_left, infos);
+    if prefills.is_empty() {
+        // I think its a decent metric to use the most constrained variable first
+        let first = infos
+            .iter_mut()
+            .max_by_key(|it| it.component_range.len())
+            .unwrap();
+        first.init_rank = Some(init_rank);
+        init_rank += 1;
+        available.push(first.index);
+        result.push(JoinKind::InitVar(available[0]));
+    } else {
+        // if we have prefills we just start with those
+        for (var, _) in prefills {
+            available.push(*var);
+        }
+        available.sort();
+        for var in &available {
+            infos[*var as usize].init_rank = Some(init_rank);
+            init_rank += 1;
+        }
+
+        let invar_unequals = newly_available_unequals(&available);
+        let invar_rel_constraints =
+            newly_available_constraints(&available, &mut work_left, infos, &mut relation_helper_nr);
+        let invar_unrel_constraints =
+            newly_available_unrelations(&available, &mut unrelations_left, infos);
+        result.push(JoinKind::InitInvars(InitInvars {
+            invar_unequals,
+            invar_rel_constraints,
+            invar_unrel_constraints,
+        }));
+    }
 
     // compute join
     while !work_left.is_empty() {
@@ -159,12 +158,12 @@ pub fn compute_join_order(
             for urc in &mut unrel_constraints {
                 urc.checked_invar = None; // there must be a better design than this, lol
             }
-            result.push(NewJoin {
+            result.push(JoinKind::InnerJoin(NewJoin {
                 new: new_var,
                 unequal_constraints,
                 rel_constraints,
                 unrel_constraints,
-            });
+            }));
         } else {
             panic!("Cross joins are not supported. Use nested queries instead.")
         }
@@ -175,15 +174,7 @@ pub fn compute_join_order(
         "Not all unrelations were inserted:\n{unrelations_left:?}\nAvail: {available:?}\n{infos:#?}"
     );
 
-    return JoinOrder {
-        first: available[0],
-        invars: InitInvars {
-            invar_unequals,
-            invar_rel_constraints,
-            invar_unrel_constraints,
-        },
-        join_order: result,
-    };
+    return result;
 }
 
 fn newly_available_constraints(
