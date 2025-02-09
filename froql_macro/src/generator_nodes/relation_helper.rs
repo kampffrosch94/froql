@@ -51,15 +51,35 @@ let mut rel_helper_{nr} = ::froql::query_helper::RelationHelper::new
     }
 
     for unhelper in unhelpers {
-        let old = unhelper.old_var;
         let nr = unhelper.nr;
+        let ty = &unhelper.ty;
         if unhelper.flip_target {
-            write!(prepend, "").unwrap();
-            todo!();
+            write!(
+                prepend,
+                "
+let mut unrel_helper_{nr} = ::froql::query_helper::UnrelationHelper::new
+    (bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>())
+            .flip_target());
+"
+            )
+            .unwrap();
         } else {
-            write!(prepend, "").unwrap();
-            todo!();
+            write!(
+                prepend,
+                "
+let mut unrel_helper_{nr} = ::froql::query_helper::UnrelationHelper::new
+    (bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()));
+"
+            )
+            .unwrap();
         }
+        write!(
+            append,
+            "
+    unrel_helper_{nr}.set_col(a_ref);
+"
+        )
+        .unwrap();
     }
 }
 
@@ -75,6 +95,17 @@ pub fn relation_helpers_set_rows(
             append,
             "
         rel_helper_{nr}.set_row(bk, a_rows[{var}].0);
+"
+        )
+        .unwrap();
+    }
+    for unhelper in unhelpers {
+        let nr = unhelper.nr;
+        let var = unhelper.old_var;
+        write!(
+            append,
+            "
+        unrel_helper_{nr}.set_row(bk, a_rows[{var}].0);
 "
         )
         .unwrap();

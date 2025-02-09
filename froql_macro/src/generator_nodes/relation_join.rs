@@ -179,6 +179,29 @@ pub fn insert_checks(
         .unwrap();
         not_first = true;
     }
+    for rc in unrel_constraints {
+        let helper_nr = &rc.helper_nr;
+        let id = &rc
+            .checked_invar
+            .map(|it| format!("invar_{it}.id"))
+            .unwrap_or_else(|| "id".to_string());
+        if not_first {
+            write!(
+                append,
+                "
+            ||"
+            )
+            .unwrap();
+        }
+        write!(
+            append,
+            "
+                !unrel_helper_{helper_nr}.satisfied({id})
+                "
+        )
+        .unwrap();
+        not_first = true;
+    }
 }
 
 pub fn insert_optional_comps(

@@ -395,6 +395,23 @@ fn proc_query_relation_constraint_simple() {
 }
 
 #[test]
+fn proc_query_relation_constraint_invar() {
+    enum Rel {}
+    enum Rel2 {}
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel2>(a, b);
+
+    let mut counter = 0;
+    for (_a,) in query!(world, &a, Rel(*a, *b), Rel2(a, b)) {
+        counter += 1;
+    }
+    assert_eq!(1, counter);
+}
+
+#[test]
 fn proc_query_relation_transitive() {
     enum Rel {}
     let mut world = World::new();
@@ -467,4 +484,46 @@ fn proc_query_unrelation_anyvars() {
         counter += 1;
     }
     assert_eq!(2, counter);
+}
+
+#[test]
+fn proc_query_unrelation() {
+    enum Rel {}
+    enum Rel2 {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(a, c);
+    world.add_relation::<Rel2>(a, c);
+
+    let mut counter = 0;
+    for (x,) in query!(world, &x, Rel(x, y), !Rel2(x, y)) {
+        println!("{x:?}");
+        counter += 1;
+    }
+    assert_eq!(counter, 1);
+}
+
+#[test]
+fn proc_query_unrelation_invar() {
+    enum Rel {}
+    enum Rel2 {}
+
+    let mut world = World::new();
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(a, c);
+    world.add_relation::<Rel2>(a, c);
+
+    let mut counter = 0;
+    for (x,) in query!(world, &a, Rel(*a, b), !Rel2(a, *b)) {
+        println!("{x:?}");
+        counter += 1;
+    }
+    assert_eq!(counter, 1);
 }

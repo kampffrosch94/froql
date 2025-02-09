@@ -67,7 +67,8 @@ This is needed for allowing transitive relations in queries.
 - [X] invar constraints
 - [X] remove old variant
 - [X] transitive relations
-** NEXT unrelations
+** DONE unrelations
+CLOSED: [2025-02-09 Sun 10:29]
 - ~!Rel(a,b)~
 Similar to relation constraints and optional components
 - [X] need to handle transitivity first
@@ -76,12 +77,20 @@ CLOSED: [2025-02-07 Fri 10:23]
 ~!Rel(a,_)~
 - this can be handled at the archetype constraint level
 - an archetype just needs to not have this relation as component to qualify
-*** TODO unrelation with regular vars and invars
+*** DONE unrelation with regular vars and invars
+CLOSED: [2025-02-09 Sun 10:29]
 satisfied if either the component is not in the archetype
 or if it exists it the RelVec does not contain the entity_id bound to the other var
-- [ ] compute place to insert relationhelper and check
-- [ ] add to optional component init
-- [ ] check constraint on relation join
+- [X] compute place to insert relationhelper and check
+- [X] init
+- [X] check constraint on relation join
+- [X] test
+** TODO queries involving ZSTs
+- ZST are not stored in archetype
+  - need to search for them when creating archetype sets
+  - don't need them in output array, can just create from NonNull::dangling()
+  - maybe I should insert checks that outputs are not ZSTs
+- I think I'll just handle ZSTs like any type other so I don't end in type hell
 ** TODO create Entities for components
 - should those exist for relationships as well?
 ** TODO singletons
@@ -89,12 +98,6 @@ or if it exists it the RelVec does not contain the entity_id bound to the other 
 - singletons should be entities with only one component
 - => need to add them to the component register
 - probably good to add an API for them at the world/bk level before worrying about queries
-** TODO queries involving ZSTs
-- ZST are not stored in archetype
-  - need to search for them when creating archetype sets
-  - don't need them in output array, can just create from NonNull::dangling()
-  - maybe I should insert checks that outputs are not ZSTs
-- I think I'll just handle ZSTs like any type other so I don't end in type hell
 ** TODO work on a demo before continuing here
 The possibilities for more and more involved queries are endless.
 But at some point I need to actually try them out in the field and gain insights there.

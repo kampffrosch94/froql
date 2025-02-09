@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
 use crate::{
-    bookkeeping::Bookkeeping, component::ComponentId, entity_store::EntityId,
+    archetype::Archetype, bookkeeping::Bookkeeping, component::ComponentId, entity_store::EntityId,
     layout_vec::LayoutVec, relation_vec::RelationVec,
 };
 
@@ -93,7 +93,34 @@ impl<'a> RelationHelper<'a> {
     }
 }
 
+#[repr(transparent)] // same size as RelationHelper
 pub struct UnrelationHelper<'a> {
-    comp_exists: bool,
     rel: RelationHelper<'a>,
+}
+
+impl<'a> UnrelationHelper<'a> {
+    pub fn new(cid: ComponentId) -> Self {
+        Self {
+            rel: RelationHelper::new(cid),
+        }
+    }
+
+    pub fn set_col(&mut self, archetype: &'a Archetype) {
+        self.rel.column = archetype.find_column_opt(self.rel.cid);
+    }
+
+    pub fn set_row(&mut self, bk: &Bookkeeping, row_counter: u32) {
+        if self.rel.column.is_some() {
+            self.rel.set_row(bk, row_counter);
+        }
+    }
+
+    /// an unrelation is satisfied if either the RelationComponent does not exist in the or
+    /// it does not contain the other entity
+    pub fn satisfied(&self, other: EntityId) -> bool {
+        if self.rel.column.is_none() {
+            return true;
+        }
+        return !self.rel.has_relation(other);
+    }
 }
