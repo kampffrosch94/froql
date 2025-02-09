@@ -160,7 +160,7 @@ pub fn compute_join_order(
     assert!(unequals.is_empty());
     assert!(
         unrelations_left.is_empty(),
-        "Not all unrelations were inserted {unrelations_left:?} \n{available:?}"
+        "Not all unrelations were inserted:\n{unrelations_left:?}\nAvail: {available:?}\n{infos:#?}"
     );
 
     return JoinOrder {
