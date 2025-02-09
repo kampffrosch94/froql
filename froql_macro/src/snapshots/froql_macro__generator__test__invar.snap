@@ -3,7 +3,7 @@ source: froql_macro/src/generator.rs
 expression: result
 ---
 {
-let invar_1: Entity = player;
+let invar_1: Entity = player.into();
 
 let world: &World = &world;
 let bk = &world.bookkeeping;

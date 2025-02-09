@@ -658,8 +658,8 @@ mod test {
             generate_invar_captures(&mut result, &prefills);
             result
         }, @r#"
-        let invar_1: Entity = player;
-        let invar_2: Entity = somebody;
+        let invar_1: Entity = player.into();
+        let invar_2: Entity = somebody.into();
         "#);
 
         let mut result = String::new();
@@ -668,7 +668,7 @@ mod test {
         insta::assert_snapshot!({
             generate_invar_captures(&mut result, &prefills);
             result
-        }, @"let invar_1: Entity = player;");
+        }, @"let invar_1: Entity = player.into();");
 
         // empty
         let mut result = String::new();
