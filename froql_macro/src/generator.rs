@@ -5,6 +5,7 @@ use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
 use join_order::compute_join_order;
+use join_order::InitInvars;
 use join_order::JoinOrder;
 use join_order::NewJoin;
 
@@ -362,9 +363,12 @@ pub(crate) fn generate_resumable_query_closure(
     let mut append = String::new();
     let JoinOrder {
         first,
-        invar_unequals,
-        invar_rel_constraints,
-        invar_unrel_constraints,
+        invars:
+            InitInvars {
+                invar_unequals,
+                invar_rel_constraints,
+                invar_unrel_constraints,
+            },
         join_order,
     } = compute_join_order(relations, infos, prefills, unequals, unrelations);
 
@@ -609,9 +613,11 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         JoinOrder {
             first: 0,
-            invar_unequals: [],
-            invar_rel_constraints: [],
-            invar_unrel_constraints: [],
+            invars: InitInvars {
+                invar_unequals: [],
+                invar_rel_constraints: [],
+                invar_unrel_constraints: [],
+            },
             join_order: [
                 NewJoin {
                     new: 1,
@@ -628,9 +634,11 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         JoinOrder {
             first: 0,
-            invar_unequals: [],
-            invar_rel_constraints: [],
-            invar_unrel_constraints: [],
+            invars: InitInvars {
+                invar_unequals: [],
+                invar_rel_constraints: [],
+                invar_unrel_constraints: [],
+            },
             join_order: [
                 NewJoin {
                     new: 1,

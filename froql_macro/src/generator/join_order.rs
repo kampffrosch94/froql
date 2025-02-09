@@ -11,6 +11,20 @@ use crate::{
 use super::VarInfo;
 
 #[derive(Debug)]
+enum JoinKind {
+    InitInvars(isize),
+    InitVar(isize),
+    InnerJoin(NewJoin),
+}
+
+#[derive(Debug)]
+pub struct InitInvars {
+    pub invar_unequals: Vec<(isize, isize)>,
+    pub invar_rel_constraints: Vec<RelationConstraint>,
+    pub invar_unrel_constraints: Vec<UnrelationConstraint>,
+}
+
+#[derive(Debug)]
 pub struct NewJoin {
     pub new: isize,
     pub unequal_constraints: Vec<(isize, isize)>,
@@ -21,9 +35,7 @@ pub struct NewJoin {
 #[derive(Debug)]
 pub struct JoinOrder {
     pub first: isize,
-    pub invar_unequals: Vec<(isize, isize)>,
-    pub invar_rel_constraints: Vec<RelationConstraint>,
-    pub invar_unrel_constraints: Vec<UnrelationConstraint>,
+    pub invars: InitInvars,
     pub join_order: Vec<NewJoin>,
 }
 
@@ -165,9 +177,11 @@ pub fn compute_join_order(
 
     return JoinOrder {
         first: available[0],
-        invar_unequals,
-        invar_rel_constraints,
-        invar_unrel_constraints,
+        invars: InitInvars {
+            invar_unequals,
+            invar_rel_constraints,
+            invar_unrel_constraints,
+        },
         join_order: result,
     };
 }
