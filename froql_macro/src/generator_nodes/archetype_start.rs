@@ -119,6 +119,44 @@ mod test {
         let r = gen.generate(0, &mut prepend, &mut append);
         assert_eq!(2, r);
         assert_eq!(prepend, "");
-        insta::assert_snapshot!(append);
+        insta::assert_snapshot!(append, @r#"
+        0 => {
+            const CURRENT_VAR: usize = 0;
+            const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..2;
+            let next_index = &mut a_next_indexes[CURRENT_VAR];
+            let archetype_ids = &archetype_id_sets[CURRENT_VAR];
+            *next_index = next_index.wrapping_add(1);
+            if *next_index >= archetype_ids.len() {
+                return None;
+            }
+            let next_id = archetype_ids[*next_index];
+
+            // gets rolled over to 0 by wrapping_add
+            a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+            let a_ref = &mut a_refs[CURRENT_VAR];
+            *a_ref = &bk.archetypes[next_id.as_index()];
+            a_ref.find_multiple_columns(
+                &components_0,
+                &mut col_indexes[CURRENT_VAR_COMPONENTS],
+            );
+            a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+            current_step += 1;
+        }
+
+        // next row in archetype
+        1 => {
+            const CURRENT_VAR: usize = 0;
+            let row_counter = &mut a_rows[CURRENT_VAR].0;
+            let max_row = a_max_rows[CURRENT_VAR];
+            // rolls over to 0 for u32::MAX, which is our start value
+            *row_counter = row_counter.wrapping_add(1);
+
+            if *row_counter >= max_row {
+                current_step -= 1;
+            } else {
+                current_step += 1;
+            }
+        }
+        "#);
     }
 }

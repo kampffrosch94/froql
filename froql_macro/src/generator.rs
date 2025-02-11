@@ -114,11 +114,13 @@ impl Debug for VarInfo {
         let components = self.components.iter().collect::<BTreeMap<_, _>>();
         f.debug_struct("VarInfo")
             .field("index", &self.index)
+            .field("init_rank", &self.init_rank)
             .field("related_with", &related_with)
             .field("component_range", &self.component_range)
             .field("components", &components)
             .field("opt_components", &self.opt_components)
             .field("relation_helpers", &self.relation_helpers)
+            .field("unrelation_helpers", &self.unrelation_helpers)
             .field("join_helper_index", &self.join_helper_index)
             .finish()
     }
@@ -363,11 +365,6 @@ pub fn generate_resumable_query_closure(
     let mut append = String::new();
     let join_order = compute_join_order(relations, infos, prefills, unequals, unrelations);
 
-    assert!(
-        infos.iter().all(|it| it.init_rank.is_some()),
-        "Internal: init_rank not set."
-    );
-
     append.push_str(
         "
 ::std::iter::from_fn(move || { loop { match current_step {",
@@ -574,6 +571,7 @@ mod test {
         [
             VarInfo {
                 index: 0,
+                init_rank: None,
                 related_with: {
                     (
                         "Attack",
@@ -587,10 +585,12 @@ mod test {
                 },
                 opt_components: [],
                 relation_helpers: [],
+                unrelation_helpers: [],
                 join_helper_index: None,
             },
             VarInfo {
                 index: 1,
+                init_rank: None,
                 related_with: {
                     (
                         "Attack",
@@ -603,6 +603,7 @@ mod test {
                 },
                 opt_components: [],
                 relation_helpers: [],
+                unrelation_helpers: [],
                 join_helper_index: None,
             },
         ]

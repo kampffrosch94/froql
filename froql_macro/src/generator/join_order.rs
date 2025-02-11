@@ -35,7 +35,7 @@ pub struct NewJoin {
 struct JoinOrderComputer<'a> {
     infos: &'a mut [VarInfo],
     prefills: &'a HashMap<isize, String>,
-    work_left: Vec<Relation>,
+    relations_left: Vec<Relation>,
     unequals: Vec<(isize, isize)>,
     unrelations_left: Vec<Unrelation>,
     available: Vec<isize>,
@@ -65,7 +65,7 @@ impl<'a> JoinOrderComputer<'a> {
             .filter(|(_, from, to, _)| *from != ANYVAR && *to != ANYVAR)
             .collect();
         Self {
-            work_left,
+            relations_left: work_left,
             unrelations_left,
             infos,
             prefills,
@@ -75,6 +75,80 @@ impl<'a> JoinOrderComputer<'a> {
             init_rank: 0,
             relation_helper_nr: 0,
         }
+    }
+
+    fn compute_join_order(mut self) -> Vec<JoinKind> {
+        // figure out what to start with
+        if !self.prefills.is_empty() {
+            // if we have prefills we just start with those
+            for (var, _) in self.prefills {
+                self.available.push(*var);
+            }
+            self.available.sort();
+            for var in &self.available {
+                self.infos[*var as usize].init_rank = Some(self.init_rank);
+                self.init_rank += 1;
+            }
+
+            let invar_unequals = self.newly_available_unequals();
+            let invar_rel_constraints = newly_available_constraints(
+                &self.available,
+                &mut self.relations_left,
+                self.infos,
+                &mut self.relation_helper_nr,
+            );
+            let invar_unrel_constraints = newly_available_unrelations(
+                &self.available,
+                &mut self.unrelations_left,
+                self.infos,
+            );
+            self.result.push(JoinKind::InitInvars(InitInvars {
+                invar_unequals,
+                invar_rel_constraints,
+                invar_unrel_constraints,
+            }));
+        }
+
+        // compute join
+        let mut join_count = 0;
+        while !self.compute_inner_joins() || self.available.len() != self.infos.len() {
+            join_count += 1;
+            if join_count > 1 {
+                panic!("Cross joins are not supported. Use nested queries instead.");
+            }
+
+            // I think its a decent metric to use the most constrained variable first
+            let first = self
+                .infos
+                .iter_mut()
+                .filter(|it| !self.available.contains(&it.index))
+                .max_by_key(|it| it.component_range.len())
+                .expect("Internal: first join init unwrap");
+            first.init_rank = Some(self.init_rank);
+            self.init_rank += 1;
+            self.available.push(first.index);
+            self.result.push(JoinKind::InitVar(first.index));
+        }
+
+        assert_eq!(
+            self.available.len(),
+            self.infos.len(),
+            "Not all variables were joined."
+        );
+        assert!(self.unequals.is_empty());
+        assert!(
+            self.unrelations_left.is_empty(),
+            "Not all unrelations were inserted.\n{:#?}\n{:#?}",
+            self.unrelations_left,
+            self.result,
+        );
+        assert!(
+            self.infos.iter().all(|it| it.init_rank.is_some()),
+            "Internal: init_rank not set.\n{:#?}",
+            self.infos
+        );
+
+        return self.result;
     }
 
     fn newly_available_unequals(&mut self) -> Vec<(isize, isize)> {
@@ -91,72 +165,19 @@ impl<'a> JoinOrderComputer<'a> {
         result
     }
 
-    fn compute_join_order(mut self) -> Vec<JoinKind> {
-        // figure out what to start with
-        if self.prefills.is_empty() {
-            // I think its a decent metric to use the most constrained variable first
-            let first = self
-                .infos
-                .iter_mut()
-                .max_by_key(|it| it.component_range.len())
-                .unwrap();
-            first.init_rank = Some(init_rank);
-            init_rank += 1;
-            self.available.push(first.index);
-            self.result.push(JoinKind::InitVar(first.index));
-        } else {
-            // if we have prefills we just start with those
-            for (var, _) in self.prefills {
-                self.available.push(*var);
-            }
-            self.available.sort();
-            for var in &self.available {
-                self.infos[*var as usize].init_rank = Some(init_rank);
-                init_rank += 1;
-            }
-
-            let invar_unequals = self.newly_available_unequals();
-            let invar_rel_constraints = newly_available_constraints(
-                &self.available,
-                &mut self.work_left,
-                self.infos,
-                &mut relation_helper_nr,
-            );
-            let invar_unrel_constraints = newly_available_unrelations(
-                &self.available,
-                &mut self.unrelations_left,
-                self.infos,
-            );
-            self.result.push(JoinKind::InitInvars(InitInvars {
-                invar_unequals,
-                invar_rel_constraints,
-                invar_unrel_constraints,
-            }));
-        }
-
-        // compute join
-        self.compute_inner_joins();
-        assert!(self.unequals.is_empty());
-        assert!(
-            self.unrelations_left.is_empty(),
-            "Not all unrelations were inserted."
-        );
-
-        return self.result;
-    }
-
-    fn compute_inner_joins(&mut self) {
-        while !self.work_left.is_empty() {
+    /// returns true when done
+    fn compute_inner_joins(&mut self) -> bool {
+        while !self.relations_left.is_empty() {
             // find next viable for joining and remove it from working list
             // always handle constraints first, because it may let us skip work
             // when we are executing the query at runtime
             let next_join = {
-                let pos = self.work_left.iter().position(|rel| {
+                let pos = self.relations_left.iter().position(|rel| {
                     self.available
                         .iter()
                         .any(|avail| *avail == rel.1 || *avail == rel.2)
                 });
-                pos.map(|pos| self.work_left.remove(pos))
+                pos.map(|pos| self.relations_left.remove(pos))
             };
             if let Some(join) = next_join {
                 let reversed = self.available.iter().any(|avail| *avail == join.2);
@@ -171,23 +192,23 @@ impl<'a> JoinOrderComputer<'a> {
                     column_index,
                     old_var,
                     new_var,
-                    nr: relation_helper_nr,
+                    nr: self.relation_helper_nr,
                     cid_index,
                 });
                 let new_info = &mut self.infos[new_var as usize];
-                new_info.join_helper_index = Some(relation_helper_nr);
-                new_info.init_rank = Some(init_rank);
-                init_rank += 1;
-                relation_helper_nr += 1;
+                new_info.join_helper_index = Some(self.relation_helper_nr);
+                new_info.init_rank = Some(self.init_rank);
+                self.init_rank += 1;
+                self.relation_helper_nr += 1;
 
                 self.available.push(new_var);
 
                 let unequal_constraints = self.newly_available_unequals();
                 let mut rel_constraints = newly_available_constraints(
                     &self.available,
-                    &mut self.work_left,
+                    &mut self.relations_left,
                     self.infos,
-                    &mut relation_helper_nr,
+                    &mut self.relation_helper_nr,
                 );
                 let mut unrel_constraints = newly_available_unrelations(
                     &self.available,
@@ -207,9 +228,10 @@ impl<'a> JoinOrderComputer<'a> {
                     unrel_constraints,
                 }));
             } else {
-                panic!("Cross joins are not supported. Use nested queries instead.")
+                return false;
             }
         }
+        return true;
     }
 }
 
@@ -301,4 +323,109 @@ fn newly_available_unrelations(
         new_info.join_helper_index = Some(number);
     }
     return result;
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::generate_archetype_sets;
+
+    #[test]
+    fn test_join_order_single_var() {
+        let components = vec![("Unit".into(), 0), ("Health".into(), 0)];
+        let relations = vec![];
+        let uncomponents = vec![];
+        let vars = vec![0];
+        let mut result = String::new();
+        let prefills = HashMap::new();
+        let mut infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+            &[],
+            &[],
+        );
+
+        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
+        insta::assert_debug_snapshot!(join_order, @r#"
+        [
+            InitVar(
+                0,
+            ),
+        ]
+        "#);
+
+        insta::assert_debug_snapshot!(infos, @r#"
+        [
+            VarInfo {
+                index: 0,
+                init_rank: Some(
+                    0,
+                ),
+                related_with: {},
+                component_range: 0..2,
+                components: {
+                    "Health": 1,
+                    "Unit": 0,
+                },
+                opt_components: [],
+                relation_helpers: [],
+                unrelation_helpers: [],
+                join_helper_index: None,
+            },
+        ]
+        "#);
+    }
+
+    #[test]
+    fn test_join_order_unrelation_hop() {
+        // query!(world, Circle, !Inside(this, rect), Inside(*e_circle, rect))
+        let components = vec![("Circle".into(), 0)];
+        let relations = vec![("Inside".into(), 2, 1)];
+        let unrelations = vec![("Inside".into(), 0, 1, 0)];
+        let uncomponents = vec![];
+        let vars = vec![0, 1, 2];
+        let prefills = vec![(2, "e_circle".into())].into_iter().collect();
+        let unequals = vec![];
+
+        let mut result = String::new();
+        let mut infos = generate_archetype_sets(
+            &mut result,
+            &vars,
+            &prefills,
+            &components,
+            &relations,
+            &uncomponents,
+            &[],
+            &unrelations,
+        );
+
+        let join_order =
+            compute_join_order(&relations, &mut infos, &prefills, &unequals, &unrelations);
+        insta::assert_debug_snapshot!(join_order, @r#"
+        [
+            InitInvars(
+                InitInvars {
+                    invar_unequals: [],
+                    invar_rel_constraints: [],
+                    invar_unrel_constraints: [],
+                },
+            ),
+            InnerJoin(
+                NewJoin {
+                    new: 1,
+                    unequal_constraints: [],
+                    rel_constraints: [],
+                    unrel_constraints: [],
+                },
+            ),
+            InitVar(
+                0,
+            ),
+        ]
+        "#);
+    }
 }
