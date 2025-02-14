@@ -8,6 +8,7 @@ use froql::entity_store::Entity;
 use froql::entity_view_deferred::EntityViewDeferred;
 use froql::relation::Relation;
 use std::any::TypeId;
+use std::cell::Cell;
 use std::cell::RefCell;
 
 fn window_conf() -> Conf {
@@ -107,34 +108,12 @@ async fn main() {
         }
         */
 
-        // for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
-        //     for (c,) in query!(world, Circle, Inside(this, rect), Inside(*e_circle, rect)) {
-        //         let r = c.r * circle_scale;
-        //         draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
-        //     }
-        // }
-
-        // for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
-        //     for (my_rect,) in query!(world, &rect, Inside(*e_circle, rect)) {
-        //         for (c, rect) in query!(world, Circle, &rect, Inside(this, rect)) {
-        //             if rect != my_rect {
-        //                 let r = c.r * circle_scale;
-        //                 draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
-        //             }
-        //         }
-        //         for (c,) in query!(world, Circle, !Inside(this, _)) {
-        //             let r = c.r * circle_scale;
-        //             draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
-        //         }
-        //     }
-        // }
-
-        // for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
-        //     for (c, rect) in query!(world, Circle, !Inside(this, rect), Inside(*e_circle, rect)) {
-        //         let r = c.r * circle_scale;
-        //         draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
-        //     }
-        // }
+        for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
+            for (c,) in query!(world, Circle, !Inside(this, rect), Inside(*e_circle, rect)) {
+                let r = c.r * circle_scale;
+                draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
+            }
+        }
 
         draw_circle(
             mouse.x * screen_width(),

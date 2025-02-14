@@ -24,7 +24,6 @@ expression: append
                 !rel_helper_0.has_relation(id)
                 
             {
-                current_step -= 1;
             } else {
                 current_step += 1;
             }

@@ -88,7 +88,6 @@ impl GeneratorNode for RelationJoin {
             append.push_str(
                 "
             {
-                current_step -= 1;
             } else {",
             );
             // handle optional components only in positive branch

@@ -567,3 +567,4 @@ fn proc_query_invar_wrong_components() {
     }
     assert_eq!(counter, 0);
 }
+

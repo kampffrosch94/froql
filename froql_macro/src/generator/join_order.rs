@@ -13,8 +13,29 @@ use super::VarInfo;
 #[derive(Debug)]
 pub enum JoinKind {
     InitInvars(InitInvars),
-    InitVar(isize),
+    InitVar(InitVar),
     InnerJoin(NewJoin),
+}
+
+#[derive(Debug)]
+pub struct Checks {
+    pub unequals: Vec<(isize, isize)>,
+    pub rel_constraints: Vec<RelationConstraint>,
+    pub unrel_constraints: Vec<UnrelationConstraint>,
+}
+
+impl Checks {
+    pub fn is_empty(&self) -> bool {
+        self.unequals.is_empty()
+            && self.rel_constraints.is_empty()
+            && self.unrel_constraints.is_empty()
+    }
+}
+
+#[derive(Debug)]
+pub struct InitVar {
+    pub var: isize,
+    pub checks: Checks,
 }
 
 #[derive(Debug)]
@@ -127,7 +148,20 @@ impl<'a> JoinOrderComputer<'a> {
             first.init_rank = Some(self.init_rank);
             self.init_rank += 1;
             self.available.push(first.index);
-            self.result.push(JoinKind::InitVar(first.index));
+            let var = first.index;
+            let mut checks = self.newly_available_checks();
+
+            // TODO find a better design than overwriting this
+            checks
+                .rel_constraints
+                .iter_mut()
+                .for_each(|it| it.checked_invar = None);
+            checks
+                .unrel_constraints
+                .iter_mut()
+                .for_each(|it| it.checked_invar = None);
+
+            self.result.push(JoinKind::InitVar(InitVar { var, checks }));
         }
 
         assert_eq!(
@@ -149,6 +183,23 @@ impl<'a> JoinOrderComputer<'a> {
         );
 
         return self.result;
+    }
+
+    fn newly_available_checks(&mut self) -> Checks {
+        Checks {
+            unequals: self.newly_available_unequals(),
+            rel_constraints: newly_available_constraints(
+                &self.available,
+                &mut self.relations_left,
+                self.infos,
+                &mut self.relation_helper_nr,
+            ),
+            unrel_constraints: newly_available_unrelations(
+                &self.available,
+                &mut self.unrelations_left,
+                self.infos,
+            ),
+        }
     }
 
     fn newly_available_unequals(&mut self) -> Vec<(isize, isize)> {
@@ -268,7 +319,7 @@ fn newly_available_constraints(
         let column_index = old_info.related_with[&(comp_name, new)];
         result.push(RelationConstraint {
             helper_nr: *relation_helper_nr,
-            checked_invar: Some(new),
+            checked_invar: Some(new), // TODO only set this for actual invars
         });
         relations_left.swap_remove(index);
 
@@ -308,7 +359,7 @@ fn newly_available_unrelations(
         assert_eq!(old, old_info.index);
         result.push(UnrelationConstraint {
             helper_nr: number,
-            checked_invar: Some(new),
+            checked_invar: Some(new), // TODO only set this for actual invars
         });
         unrelations_left.swap_remove(index);
 
@@ -353,7 +404,14 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
-                0,
+                InitVar {
+                    var: 0,
+                    checks: Checks {
+                        unequals: [],
+                        rel_constraints: [],
+                        unrel_constraints: [],
+                    },
+                },
             ),
         ]
         "#);
@@ -423,7 +481,19 @@ mod test {
                 },
             ),
             InitVar(
-                0,
+                InitVar {
+                    var: 0,
+                    checks: Checks {
+                        unequals: [],
+                        rel_constraints: [],
+                        unrel_constraints: [
+                            UnrelationConstraint {
+                                helper_nr: 0,
+                                checked_invar: None,
+                            },
+                        ],
+                    },
+                },
             ),
         ]
         "#);

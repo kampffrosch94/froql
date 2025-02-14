@@ -15,6 +15,13 @@ impl ArchetypeId {
     }
 }
 
+impl ArchetypeRow {
+    pub fn as_index(&self) -> usize {
+        self.0 as usize
+    }
+}
+
+
 /// Standin for erased types
 pub enum Erased {}
 pub type ErasedPointer = *const RefCell<Erased>;

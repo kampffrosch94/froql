@@ -6,6 +6,7 @@ use std::{collections::HashMap, ops::Range};
 
 use join_order::compute_join_order;
 use join_order::InitInvars;
+use join_order::InitVar;
 use join_order::JoinKind;
 use join_order::NewJoin;
 
@@ -20,6 +21,7 @@ use crate::Unrelation;
 use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 mod join_order;
+pub use join_order::Checks;
 
 #[derive(Default, Debug)]
 pub struct Generator {
@@ -396,19 +398,20 @@ pub fn generate_resumable_query_closure(
                         })
                         .collect(),
                 }
-                .generate(0, prepend, &mut append);
+                .generate(step_count, prepend, &mut append);
             }
-            JoinKind::InitVar(first) => {
+            JoinKind::InitVar(InitVar { var, checks }) => {
                 // select first archetype
-                let first_info = &infos[first as usize];
+                let first_info = &infos[var as usize];
                 step_count = ArchetypeStart {
-                    var: first,
+                    var,
                     components: first_info.component_range.clone(),
                     opt_components: first_info.opt_components.clone(),
                     relation_helpers: first_info.relation_helpers.clone(),
                     unrelation_helpers: first_info.unrelation_helpers.clone(),
+                    checks,
                 }
-                .generate(0, prepend, &mut append);
+                .generate(step_count, prepend, &mut append);
             }
             JoinKind::InnerJoin(new_join) => {
                 let NewJoin {
@@ -613,7 +616,14 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
-                0,
+                InitVar {
+                    var: 0,
+                    checks: Checks {
+                        unequals: [],
+                        rel_constraints: [],
+                        unrel_constraints: [],
+                    },
+                },
             ),
             InnerJoin(
                 NewJoin {
@@ -631,7 +641,14 @@ mod test {
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
-                0,
+                InitVar {
+                    var: 0,
+                    checks: Checks {
+                        unequals: [],
+                        rel_constraints: [],
+                        unrel_constraints: [],
+                    },
+                },
             ),
             InnerJoin(
                 NewJoin {
