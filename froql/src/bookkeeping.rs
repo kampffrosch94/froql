@@ -20,6 +20,8 @@ pub struct Bookkeeping {
     /// for relationships only the Origin Relationship ID is returned
     /// to get the ID for the target use `.flip_target()`
     pub component_map: HashMap<TypeId, ComponentId>,
+    // used for hotreloading
+    pub component_name_map: HashMap<String, TypeId>,
     /// Indexed by ComponentId
     pub components: Vec<Component>,
     /// Indexed by ArchetypeId
@@ -43,6 +45,7 @@ impl Bookkeeping {
         exact_archetype.insert(Vec::new(), ArchetypeId(0));
         Bookkeeping {
             component_map: HashMap::new(),
+            component_name_map: HashMap::new(),
             components: Vec::new(),
             archetypes,
             entities: EntityStore::new(),
@@ -99,11 +102,8 @@ impl Bookkeeping {
         comp.has_archetype(aid, cid)
     }
 
-    /// for ZSTs use `add_component_zst`
     #[must_use]
     pub fn add_component(&mut self, e: Entity, cid: ComponentId) -> *mut u8 {
-        debug_assert!(self.components[cid.as_index()].layout.size() > 0);
-
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
             e.id,
@@ -135,35 +135,6 @@ impl Bookkeeping {
         // the caller must move the new component into the new archetype
         let r = unsafe { new.columns[new_column].half_push() };
         r
-    }
-
-    pub fn add_component_zst(&mut self, e: Entity, cid: ComponentId) {
-        debug_assert!(self.components[cid.as_index()].layout.size() == 0);
-        let (old_a_id, old_a_row) = self.entities.get_archetype(e);
-        debug_assert_eq!(
-            e.id,
-            self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
-        );
-        let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
-        components.push(cid);
-        components.sort();
-        let new_a_id = self.find_archetype_or_create(components);
-
-        let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
-
-        Archetype::move_row(old, new, old_a_row);
-
-        // update entities in the entity storage
-        let new_row = (new.entities.len() - 1) as u32;
-        self.entities
-            .set_archetype(e, new_a_id, ArchetypeRow(new_row));
-        if old_a_row.0 < old.entities.len() as u32 {
-            // in this case we need to update the entity we swapped into the hole
-            let eid = old.entities[old_a_row.0 as usize];
-            debug_assert_ne!(eid, e.id);
-            self.entities
-                .set_archetype_unchecked(eid, old_a_id, old_a_row);
-        }
     }
 
     fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {

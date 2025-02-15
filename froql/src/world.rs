@@ -1,5 +1,5 @@
 use std::{
-    any::TypeId,
+    any::{type_name, TypeId},
     cell::{Ref, RefCell, RefMut},
 };
 
@@ -37,25 +37,45 @@ impl World {
         cid = cid.set_flags(flags);
         self.bookkeeping.components.push(Component::new::<T>(cid));
         self.bookkeeping.component_map.insert(tid, cid);
+        let tname = type_name::<T>().to_string();
+        let old = self.bookkeeping.component_name_map.insert(tname, tid);
+        assert_eq!(None, old, "Typename was already registered.");
         return cid;
     }
 
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
-        if size_of::<T>() > 0 {
-            self.register_component_inner::<RefCell<T>>(0)
-        } else {
-            self.register_component_inner::<T>(0)
-        }
+        self.register_component_inner::<RefCell<T>>(0)
+    }
+
+    pub unsafe fn re_register_component<T: 'static>(&mut self) {
+        let tid = TypeId::of::<RefCell<T>>();
+        let name = type_name::<RefCell<T>>();
+        let old_tid = self
+            .bookkeeping
+            .component_name_map
+            .get(name)
+            .expect("Type {name} was not registered as component.");
+        let cid = self.bookkeeping.component_map.remove(old_tid).unwrap();
+        // TODO check size
+        self.bookkeeping.component_map.insert(tid, cid);
+    }
+
+    pub unsafe fn re_register_relation<T: 'static>(&mut self) {
+        let tid = TypeId::of::<Relation<T>>();
+        let name = type_name::<Relation<T>>();
+        let old_tid = self
+            .bookkeeping
+            .component_name_map
+            .get(name)
+            .expect("Type {name} was not registered as component.");
+        let cid = self.bookkeeping.component_map.remove(old_tid).unwrap();
+        self.bookkeeping.component_map.insert(tid, cid);
     }
 
     // mostly there for use in query
     #[doc(hidden)]
     pub fn get_component_id<T: 'static>(&self) -> ComponentId {
-        let tid = if size_of::<T>() > 0 {
-            TypeId::of::<RefCell<T>>()
-        } else {
-            TypeId::of::<T>()
-        };
+        let tid = TypeId::of::<RefCell<T>>();
         self.bookkeeping
             .get_component_id(tid)
             // TODO general error msg handler for T
@@ -79,66 +99,41 @@ impl World {
 
     pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
         let cid = self.register_component::<T>();
-
-        if size_of::<T>() > 0 {
-            let val = RefCell::new(val);
-            let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
-            unsafe {
-                std::ptr::write(dst, val);
-            }
-        } else {
-            self.bookkeeping.add_component_zst(e, cid);
+        let val = RefCell::new(val);
+        let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
+        unsafe {
+            std::ptr::write(dst, val);
         }
     }
 
     #[track_caller]
     pub fn get_component<T: 'static>(&self, e: Entity) -> Ref<T> {
-        if size_of::<T>() > 0 {
-            let tid = TypeId::of::<RefCell<T>>();
-            let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
-            let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
-            let cell = unsafe { &*ptr };
-            cell.borrow()
-        } else {
-            // if we don't panic here we can't return a Ref<T> in the other branch
-            // with `generic_const_exprs` this could be a compile time error
-            panic!("Can't get reference to ZST component.")
-        }
+        let tid = TypeId::of::<RefCell<T>>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
+        let cell = unsafe { &*ptr };
+        cell.borrow()
     }
 
     #[track_caller]
     pub fn get_component_mut<T: 'static>(&self, e: Entity) -> RefMut<T> {
-        if size_of::<T>() > 0 {
-            let tid = TypeId::of::<RefCell<T>>();
-            let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
-            let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
-            let cell = unsafe { &*ptr };
-            cell.borrow_mut()
-        } else {
-            // if we don't panic here we can't return a Ref<T> in the other branch
-            // with `generic_const_exprs` this could be a compile time error
-            panic!("Can't get reference to ZST component.")
-        }
+        let tid = TypeId::of::<RefCell<T>>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
+        let cell = unsafe { &*ptr };
+        cell.borrow_mut()
     }
 
     #[track_caller]
     pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
-        let tid: TypeId = if size_of::<T>() > 0 {
-            TypeId::of::<RefCell<T>>()
-        } else {
-            TypeId::of::<T>()
-        };
+        let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.has_component(e, cid)
     }
 
     #[track_caller]
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
-        let tid: TypeId = if size_of::<T>() > 0 {
-            TypeId::of::<RefCell<T>>()
-        } else {
-            TypeId::of::<T>()
-        };
+        let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.remove_component(e, cid);
     }
@@ -347,6 +342,11 @@ mod test {
         assert!(!world.has_component::<Comp>(a));
         world.add_component(a, Comp {});
         assert!(world.has_component::<Comp>(a));
+
+        {
+            let _comp: Ref<Comp> = world.get_component::<Comp>(a);
+        }
+
         world.remove_component::<Comp>(a);
         assert!(!world.has_component::<Comp>(a));
     }
