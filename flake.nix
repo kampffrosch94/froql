@@ -31,15 +31,19 @@
         default = (pkgs.mkShell.override { stdenv = pkgs.useMoldLinker pkgs.clangStdenv; }) {
           packages = with pkgs; [
             # rust stuff
-            (with pkgs.fenix; with complete; combine [
-            #(with pkgs.fenix; with stable; combine [
-              cargo
-              clippy
-              rust-src
-              rustc
-              rustfmt
-              miri
-            ])
+            (
+              with pkgs.fenix;
+              with complete;
+              combine [
+                #(with pkgs.fenix; with stable; combine [
+                cargo
+                clippy
+                rust-src
+                rustc
+                rustfmt
+                miri
+              ]
+            )
             rust-analyzer-nightly # optional
 
             # necessary to build
@@ -52,7 +56,33 @@
             cargo-expand
             cargo-criterion
             cargo-insta
+
+            ### begin macroquad
+            # necessary to build
+            pkg-config # locate C dependencies
+            alsa-lib # sound
+            libxkbcommon # keyboard
+
+            # X
+            xorg.libX11
+            xorg.libXcursor
+            xorg.libXi
+            xorg.libXrandr
+
+            # gl
+            libGL
           ];
+          LD_LIBRARY_PATH =
+            with pkgs;
+            lib.makeLibraryPath [
+              alsa-lib # sound
+              libGL
+              libxkbcommon # keyboard
+              xorg.libX11
+              xorg.libXi
+            ];
+          env.LIBCLANG_PATH = "${pkgs.llvmPackages.clang-unwrapped.lib}/lib/libclang.so";
+          ### end macroquad
         };
       });
     };
