@@ -38,7 +38,7 @@ impl GeneratorNode for ArchetypeStart {
     let next_id = archetype_ids[*next_index];
 
     // gets rolled over to 0 by wrapping_add
-    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+    a_rows[CURRENT_VAR] = ::froql::archetype::ArchetypeRow(u32::MAX);
     let a_ref = &mut a_refs[CURRENT_VAR];
     *a_ref = &bk.archetypes[next_id.as_index()];
     a_ref.find_multiple_columns(
@@ -170,7 +170,7 @@ mod test {
             let next_id = archetype_ids[*next_index];
 
             // gets rolled over to 0 by wrapping_add
-            a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+            a_rows[CURRENT_VAR] = ::froql::archetype::ArchetypeRow(u32::MAX);
             let a_ref = &mut a_refs[CURRENT_VAR];
             *a_ref = &bk.archetypes[next_id.as_index()];
             a_ref.find_multiple_columns(
@@ -231,7 +231,7 @@ mod test {
             let next_id = archetype_ids[*next_index];
 
             // gets rolled over to 0 by wrapping_add
-            a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+            a_rows[CURRENT_VAR] = ::froql::archetype::ArchetypeRow(u32::MAX);
             let a_ref = &mut a_refs[CURRENT_VAR];
             *a_ref = &bk.archetypes[next_id.as_index()];
             a_ref.find_multiple_columns(

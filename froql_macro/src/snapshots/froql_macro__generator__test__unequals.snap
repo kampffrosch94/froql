@@ -9,12 +9,12 @@ let bk = &world.bookkeeping;
 let components_0 = [
     world.get_component_id::<Unit>(),
     world.get_component_id::<Health>(),
-    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()).flip_target(),
+    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()).flip_target(),
 ];
 
 let components_1 = [
     world.get_component_id::<Unit>(),
-    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()),
 ];
 
 let archetype_id_sets = [
@@ -26,7 +26,7 @@ let archetype_id_sets = [
 // result set
 const VAR_COUNT: usize = 2;
 let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
-let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+let mut a_rows = [::froql::archetype::ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
 let mut current_step = 0;
@@ -51,7 +51,7 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
     let next_id = archetype_ids[*next_index];
 
     // gets rolled over to 0 by wrapping_add
-    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+    a_rows[CURRENT_VAR] = ::froql::archetype::ArchetypeRow(u32::MAX);
     let a_ref = &mut a_refs[CURRENT_VAR];
     *a_ref = &bk.archetypes[next_id.as_index()];
     a_ref.find_multiple_columns(
@@ -117,13 +117,13 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
     current_step -= 1;
     return Some(unsafe {
         (
-            EntityViewDeferred::from_id_unchecked(world,
+            ::froql::entity_view_deferred::EntityViewDeferred::from_id_unchecked(world,
                                 a_refs[0].entities[a_rows[0].0 as usize]),
             (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
-                as *const RefCell<Unit>))
+                as *const ::std::cell::RefCell<Unit>))
                 .borrow(),
             (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
-                as *const RefCell<Unit>))
+                as *const ::std::cell::RefCell<Unit>))
                 .borrow(),
             (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
                 as *const RefCell<Health>))

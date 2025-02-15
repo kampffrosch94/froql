@@ -3,31 +3,31 @@ source: froql_macro/src/generator.rs
 expression: result
 ---
 {
-let invar_1: Entity = player.into();
+let invar_1: ::froql::entity_store::Entity = player.into();
 
 let world: &World = &world;
 let bk = &world.bookkeeping;
 let components_0 = [
     world.get_component_id::<Unit>(),
     world.get_component_id::<Health>(),
-    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()).flip_target(),
+    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()).flip_target(),
 ];
 
 let components_1 = [
     world.get_component_id::<Unit>(),
-    bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()),
 ];
 
 let archetype_id_sets = [
     bk.matching_archetypes(&components_0, &[]),
-    Vec::<ArchetypeId>::new(),
+    Vec::<::froql::archetype::ArchetypeId>::new(),
 ];
 
 
 // result set
 const VAR_COUNT: usize = 2;
 let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
-let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+let mut a_rows = [::froql::archetype::ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
 let mut current_step = 0;
@@ -97,10 +97,10 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
     return Some(unsafe {
         (
             (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
-                as *const RefCell<Unit>))
+                as *const ::std::cell::RefCell<Unit>))
                 .borrow(),
             (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
-                as *const RefCell<Unit>))
+                as *const ::std::cell::RefCell<Unit>))
                 .borrow(),
             (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
                 as *const RefCell<Health>))

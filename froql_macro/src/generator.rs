@@ -148,7 +148,7 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     for (index, name) in v {
         write!(
             result,
-            "let invar_{index}: Entity = {name}.into();
+            "let invar_{index}: ::froql::entity_store::Entity = {name}.into();
 "
         )
         .unwrap();
@@ -217,7 +217,7 @@ pub(crate) fn generate_archetype_sets(
 
             write!(
                 result,
-                "\n    bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()),"
+                "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
             )
             .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
@@ -235,7 +235,7 @@ pub(crate) fn generate_archetype_sets(
             result.push_str("\n    ");
             write!(
                 result,
-                "bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()).flip_target(),"
+                "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
             )
             .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
@@ -258,7 +258,7 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                result.push_str("    Vec::<ArchetypeId>::new(),\n");
+                result.push_str("    Vec::<::froql::archetype::ArchetypeId>::new(),\n");
             } else {
                 write!(
                     result,
@@ -288,7 +288,7 @@ pub(crate) fn generate_archetype_sets(
             {
                 write!(
                     result,
-                    "\n    bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()),"
+                    "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
                 )
                 .unwrap();
             }
@@ -301,7 +301,7 @@ pub(crate) fn generate_archetype_sets(
                 result.push_str("\n    ");
                 write!(
                     result,
-                    "bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()).flip_target(),"
+                    "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
                 )
                 .unwrap();
             }
@@ -312,7 +312,11 @@ pub(crate) fn generate_archetype_sets(
         for var in vars {
             if prefills.contains_key(var) {
                 // don't need this for prefills
-                write!(result, "    Vec::<ArchetypeId>::new(),\n").unwrap();
+                write!(
+                    result,
+                    "    Vec::<::froql::archetype::ArchetypeId>::new(),\n"
+                )
+                .unwrap();
             } else {
                 write!(
                     result,
@@ -340,7 +344,7 @@ pub(crate) fn generate_fsm_context(
 // result set
 const VAR_COUNT: usize = {var_count};
 let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
-let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+let mut a_rows = [::froql::archetype::ArchetypeRow(u32::MAX); VAR_COUNT];
 
 // general context for statemachine
 let mut current_step = 0;
@@ -460,7 +464,7 @@ pub fn generate_resumable_query_closure(
                     &mut append,
                     "
             (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
-                as *const RefCell<{ty}>))
+                as *const ::std::cell::RefCell<{ty}>))
                 .borrow(),"
                 )
                 .unwrap();
@@ -480,7 +484,7 @@ pub fn generate_resumable_query_closure(
                 write!(
                     &mut append,
                     "
-            EntityViewDeferred::from_id_unchecked(world,
+            ::froql::entity_view_deferred::EntityViewDeferred::from_id_unchecked(world,
                                 a_refs[{var}].entities[a_rows[{var}].0 as usize]),"
                 )
                 .unwrap();
@@ -490,7 +494,7 @@ pub fn generate_resumable_query_closure(
                     &mut append,
                     "
             (opt_col_{opt_id}.map(|col| {{
-                (&*(col.get(a_rows[{var}].0) as *const RefCell<{ty}>)).borrow()
+                (&*(col.get(a_rows[{var}].0) as *const ::std::cell::RefCell<{ty}>)).borrow()
             }})),"
                 )
                 .unwrap();
@@ -547,12 +551,12 @@ mod test {
         let components_0 = [
             world.get_component_id::<Unit>(),
             world.get_component_id::<Health>(),
-            bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()).flip_target(),
+            bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()).flip_target(),
         ];
 
         let components_1 = [
             world.get_component_id::<Unit>(),
-            bk.get_component_id_unchecked(TypeId::of::<Relation<Attack>>()),
+            bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<Attack>>()),
         ];
 
         let uncomponents_0 = [
@@ -677,8 +681,8 @@ mod test {
             generate_invar_captures(&mut result, &prefills);
             result
         }, @r#"
-        let invar_1: Entity = player.into();
-        let invar_2: Entity = somebody.into();
+        let invar_1: ::froql::entity_store::Entity = player.into();
+        let invar_2: ::froql::entity_store::Entity = somebody.into();
         "#);
 
         let mut result = String::new();
@@ -687,7 +691,7 @@ mod test {
         insta::assert_snapshot!({
             generate_invar_captures(&mut result, &prefills);
             result
-        }, @"let invar_1: Entity = player.into();");
+        }, @"let invar_1: ::froql::entity_store::Entity = player.into();");
 
         // empty
         let mut result = String::new();
@@ -715,7 +719,7 @@ mod test {
         // result set
         const VAR_COUNT: usize = 2;
         let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
-        let mut a_rows = [ArchetypeRow(u32::MAX); VAR_COUNT];
+        let mut a_rows = [::froql::archetype::ArchetypeRow(u32::MAX); VAR_COUNT];
 
         // general context for statemachine
         let mut current_step = 0;

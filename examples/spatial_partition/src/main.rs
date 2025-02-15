@@ -1,15 +1,6 @@
 use froql::{query, world::World};
 use macroquad::prelude::*;
 
-// TODO macro hygiene
-use froql::archetype::ArchetypeId;
-use froql::archetype::ArchetypeRow;
-use froql::entity_store::Entity;
-use froql::entity_view_deferred::EntityViewDeferred;
-use froql::relation::Relation;
-use std::any::TypeId;
-use std::cell::RefCell;
-
 fn window_conf() -> Conf {
     Conf {
         window_title: "Spatial Partion Example".to_string(),

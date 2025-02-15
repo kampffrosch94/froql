@@ -58,7 +58,7 @@ let mut rel_helper_{nr} = ::froql::query_helper::RelationHelper::new
                 prepend,
                 "
 let mut unrel_helper_{nr} = ::froql::query_helper::UnrelationHelper::new
-    (bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>())
+    (bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>())
             .flip_target());
 "
             )
@@ -68,7 +68,7 @@ let mut unrel_helper_{nr} = ::froql::query_helper::UnrelationHelper::new
                 prepend,
                 "
 let mut unrel_helper_{nr} = ::froql::query_helper::UnrelationHelper::new
-    (bk.get_component_id_unchecked(TypeId::of::<Relation<{ty}>>()));
+    (bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()));
 "
             )
             .unwrap();
