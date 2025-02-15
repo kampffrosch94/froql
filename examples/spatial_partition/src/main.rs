@@ -8,7 +8,6 @@ use froql::entity_store::Entity;
 use froql::entity_view_deferred::EntityViewDeferred;
 use froql::relation::Relation;
 use std::any::TypeId;
-use std::cell::Cell;
 use std::cell::RefCell;
 
 fn window_conf() -> Conf {
