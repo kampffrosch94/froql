@@ -21,7 +21,6 @@ impl ArchetypeRow {
     }
 }
 
-
 /// Standin for erased types
 pub enum Erased {}
 pub type ErasedPointer = *const RefCell<Erased>;
@@ -120,6 +119,9 @@ impl Archetype {
     ) -> usize {
         debug_assert_eq!(cids.len(), result_indexes.len());
         debug_assert!(cids.is_sorted());
+        if cids.len() == 0 {
+            return 0;
+        }
         let mut j = 0;
         for i in 0..self.components.len() {
             if self.components[i] == cids[j] {

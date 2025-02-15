@@ -4,10 +4,6 @@ use froql::query;
 use froql::world::World;
 
 // TODO this is bleed from unhygienic macros
-use froql::archetype::{ArchetypeId, ArchetypeRow};
-use froql::entity_view_deferred::EntityViewDeferred;
-use froql::relation::Relation;
-use std::any::TypeId;
 use std::cell::RefCell;
 
 #[test]
@@ -567,4 +563,3 @@ fn proc_query_invar_wrong_components() {
     }
     assert_eq!(counter, 0);
 }
-

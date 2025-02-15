@@ -1,9 +1,6 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use froql::archetype::ArchetypeRow;
 use froql::query;
-use froql::relation::Relation;
 use froql::*;
-use std::any::TypeId;
 
 use std::hint::black_box;
 use world::World;
