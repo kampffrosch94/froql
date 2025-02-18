@@ -6,7 +6,7 @@ use std::{
 use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId, RELATION},
-    entity_store::Entity,
+    entity_store::{Entity, EntityId},
     entity_view_deferred::DeferredOperation,
     entity_view_mut::EntityViewMut,
     relation::Relation,
@@ -106,7 +106,6 @@ impl World {
         }
     }
 
-    #[track_caller]
     pub fn get_component<T: 'static>(&self, e: Entity) -> Ref<T> {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
@@ -115,7 +114,17 @@ impl World {
         cell.borrow()
     }
 
-    #[track_caller]
+    pub fn get_component_by_entityid<T: 'static>(&self, id: EntityId) -> Ref<T> {
+        let tid = TypeId::of::<RefCell<T>>();
+        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let ptr = self
+            .bookkeeping
+            .get_component_opt_unchecked(id, cid)
+            .unwrap() as *const RefCell<T>;
+        let cell = unsafe { &*ptr };
+        cell.borrow()
+    }
+
     pub fn get_component_mut<T: 'static>(&self, e: Entity) -> RefMut<T> {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
@@ -124,14 +133,12 @@ impl World {
         cell.borrow_mut()
     }
 
-    #[track_caller]
     pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.has_component(e, cid)
     }
 
-    #[track_caller]
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg

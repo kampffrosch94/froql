@@ -1,8 +1,8 @@
-use std::collections::HashSet;
+use std::{any::TypeId, collections::HashSet};
 
 use crate::{
     archetype::Archetype, bookkeeping::Bookkeeping, component::ComponentId, entity_store::EntityId,
-    layout_vec::LayoutVec, relation_vec::RelationVec,
+    layout_vec::LayoutVec, relation_vec::RelationVec, world::World,
 };
 
 /// Helps with Relation Traversal
@@ -123,4 +123,20 @@ impl<'a> UnrelationHelper<'a> {
         }
         return !self.rel.has_relation(other);
     }
+}
+
+/// This function exists as a helper for user macros that care about compile time
+/// You need to wrap the Type you care about in RefCell<>, since all components are RefCells
+pub fn trivial_query_one_component(world: &World, ty: TypeId) -> Vec<EntityId> {
+    let bk = &world.bookkeeping;
+    let cid = bk
+        .component_map
+        .get(&ty)
+        .expect("Type is not registered as component.");
+    let c = &bk.components[cid.as_index()];
+    let archetypes = c.get_archetypes();
+    archetypes
+        .flat_map(|aid| bk.archetypes[aid.as_index()].entities.iter())
+        .copied()
+        .collect()
 }

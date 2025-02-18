@@ -133,6 +133,8 @@ check that everything is nicely formatted or fail the build
 set ~export CI=true~ in CI
 
 * Publication
+** Naming conventions
+- what I called unchecked is often not really unchecked, it just doesn't have an EntityGeneration and calls via EntityId
 ** Write Readme
 *** Goals
 - single threaded

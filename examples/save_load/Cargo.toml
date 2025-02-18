@@ -1,0 +1,9 @@
+[package]
+name = "save_load"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+froql = { path = "../../froql" }
+macroquad = "0.4.13"
+nanoserde = "0.1.37"
