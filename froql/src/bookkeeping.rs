@@ -66,6 +66,21 @@ impl Bookkeeping {
         e
     }
 
+    pub fn ensure_alive(&mut self, id: EntityId) -> Entity {
+        use crate::entity_store::ForceAliveResult as R;
+        match self.entities.force_alive(id) {
+            R::WasAliveBefore(e) => e,
+            R::MadeAlive(e) => {
+                // put in empty archetype, like create() above
+                let empty_archetype = &mut self.archetypes[EMPTY_ARCHETYPE_ID.0 as usize];
+                let row = ArchetypeRow(empty_archetype.entities.len() as u32);
+                empty_archetype.entities.push(e.id);
+                self.entities.set_archetype(e, EMPTY_ARCHETYPE_ID, row);
+                e
+            }
+        }
+    }
+
     pub fn get_component_id(&self, tid: TypeId) -> Option<ComponentId> {
         self.component_map.get(&tid).copied()
     }

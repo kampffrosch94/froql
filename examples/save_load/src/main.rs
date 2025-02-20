@@ -1,7 +1,12 @@
-use std::{any::TypeId, cell::RefCell, collections::HashMap};
+use std::{
+    any::{type_name, TypeId},
+    cell::RefCell,
+    collections::HashMap,
+};
 
 use froql::{
-    component::CASCADING_DESTRUCT, query, query_helper::trivial_query_one_component, world::World,
+    component::CASCADING_DESTRUCT, entity_store::EntityId, query,
+    query_helper::trivial_query_one_component, world::World,
 };
 use macroquad::prelude::*;
 use nanoserde::{DeJson, SerJson};
@@ -27,7 +32,9 @@ struct MyRect {
     h: f32,
 }
 
-#[derive(Debug, DeJson, SerJson)]
+//trace_macros!(true);
+
+#[derive(Default, Debug, DeJson, SerJson)]
 struct SerializedState {
     // TypeName, Vec<(EntityId, ComponentPayload)>
     components: HashMap<String, Vec<(u32, String)>>,
@@ -36,21 +43,21 @@ struct SerializedState {
 }
 
 macro_rules! generate_register {
-    (@rel $world:ident $ty:tt ($flags:expr)) => {
+    (@rel $world:ident $ty:tt $flags:tt) => {
         $world.register_relation_flags::<$ty>($flags);
     };
     (@rel $world:ident $ty:tt) => {
         $world.register_relation::<$ty>();
     };
-    (Components[$($components:ty),*], Relations[$($relations:tt ($flags:expr)),*]) => {
+    (Components($($components:ty),*), Relations($($relations:tt $(($flags:tt))?),*)) => {
         fn register_components(world: &mut World) {
             $(world.register_component::<$components>();)*
-            $(generate_register!(@rel world $relations))*;
+            $(generate_register!(@rel world $relations $($flags)?);)*
         }
     };
 }
 
-generate_register!(Components[MyRect], Relations[Link(CASCADING_DESTRUCT)]);
+generate_register!(Components(MyRect), Relations(Link(CASCADING_DESTRUCT)));
 
 // fn register_components(world: &mut World) {
 //     world.register_relation_flags::<Link>(CASCADING_DESTRUCT);
@@ -58,25 +65,38 @@ generate_register!(Components[MyRect], Relations[Link(CASCADING_DESTRUCT)]);
 // }
 
 fn save_world(world: &World) -> String {
-    let mut result: Vec<String> = Vec::new();
+    let mut state = SerializedState::default();
 
+    let mut buffer = Vec::new();
     for id in trivial_query_one_component(world, TypeId::of::<RefCell<MyRect>>()) {
         let r = world.get_component_by_entityid::<MyRect>(id);
         let s = r.serialize_json();
-        result.push(s);
+        buffer.push((id.0, s));
     }
-    result.serialize_json()
+    state
+        .components
+        .insert(type_name::<MyRect>().to_string(), buffer);
+
+    state.serialize_json()
 }
 
 fn load_world(s: &str) -> World {
     let mut world = World::new();
     register_components(&mut world);
 
-    let buffer: Vec<String> = Vec::deserialize_json(s).unwrap();
+    let state: SerializedState = SerializedState::deserialize_json(s).unwrap();
 
-    for rect_s in buffer {
-        let rect = MyRect::deserialize_json(&rect_s).unwrap();
-        world.create_mut().add(rect);
+    for (ty, payloads) in &state.components {
+        match ty.as_str() {
+            var if var == type_name::<MyRect>() => {
+                for (entity_id, payload) in payloads {
+                    let val = MyRect::deserialize_json(payload).unwrap();
+                    let e = world.ensure_alive(EntityId(*entity_id));
+                    world.add_component(e, val);
+                }
+            }
+            _ => panic!(),
+        }
     }
 
     world

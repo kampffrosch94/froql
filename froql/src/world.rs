@@ -86,6 +86,10 @@ impl World {
         self.bookkeeping.create()
     }
 
+    pub fn ensure_alive(&mut self, id: EntityId) -> Entity {
+        self.bookkeeping.ensure_alive(id)
+    }
+
     pub fn create_mut(&mut self) -> EntityViewMut {
         EntityViewMut {
             id: self.bookkeeping.create(),

@@ -4,8 +4,16 @@ use crate::archetype::{ArchetypeId, ArchetypeRow};
 pub struct EntityId(pub u32);
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct EntityGeneration(pub u32);
+
+impl EntityId {
+    fn as_index(self) -> usize {
+        self.0 as usize
+    }
+}
+
 impl EntityGeneration {
     fn is_alive(self) -> bool {
+        debug_assert!(self.0 != 0); // Sentinel value
         self.0 % 2 == 1
     }
 }
@@ -42,11 +50,23 @@ impl EntitySlot {
         }
     }
 
+    fn new_empty(previous_free: usize) -> Self {
+        // start with 2 so that we can use 0 as sentinel
+        let gen = EntityGeneration(2);
+        let row = ArchetypeRow(previous_free as u32);
+        EntitySlot {
+            archetype: EMPTY_ARCHETYPE,
+            row,
+            gen,
+        }
+    }
+
     fn is_empty(&self) -> bool {
         !self.gen.is_alive()
     }
 
     fn next_free(&self) -> usize {
+        debug_assert!(self.is_empty());
         self.row.0 as usize
     }
 
@@ -77,7 +97,7 @@ impl EntityStore {
         }
     }
 
-    pub fn create(&mut self) -> Entity {
+    pub(crate) fn create(&mut self) -> Entity {
         if self.next_free >= self.slots.len() {
             let id = EntityId(self.slots.len() as u32);
             let slot = EntitySlot::new();
@@ -92,6 +112,17 @@ impl EntityStore {
             let gen = slot.fill();
             let id = EntityId(index as u32);
             return Entity { gen, id };
+        }
+    }
+
+    pub fn destroy(&mut self, e: Entity) {
+        let index = e.id.0 as usize;
+        if let Some(slot) = self.slots.get_mut(index) {
+            if slot.gen != e.gen {
+                return;
+            }
+            slot.empty_out(self.next_free);
+            self.next_free = index;
         }
     }
 
@@ -115,8 +146,10 @@ impl EntityStore {
 
     pub fn is_alive(&self, e: Entity) -> bool {
         let index = e.id.0 as usize;
-        let slot = &self.slots[index];
-        slot.gen == e.gen
+        self.slots
+            .get(index)
+            .map(|slot| slot.gen == e.gen)
+            .unwrap_or(false)
     }
 
     pub fn get_archetype(&self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
@@ -126,7 +159,6 @@ impl EntityStore {
         (slot.archetype, slot.row)
     }
 
-    #[track_caller]
     pub fn get_archetype_unchecked(&self, id: EntityId) -> (ArchetypeId, ArchetypeRow) {
         let index = id.0 as usize;
         let slot = &self.slots[index];
@@ -134,24 +166,61 @@ impl EntityStore {
         (slot.archetype, slot.row)
     }
 
-    pub fn destroy(&mut self, e: Entity) {
-        let index = e.id.0 as usize;
-        if let Some(slot) = self.slots.get_mut(index) {
-            if slot.gen != e.gen {
-                return;
-            }
-            slot.empty_out(self.next_free);
-            self.next_free = index;
-        }
-    }
-
-    #[track_caller]
     pub fn get_from_id(&self, id: EntityId) -> Entity {
         let index = id.0 as usize;
         let slot = &self.slots[index];
         assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
         Entity { gen: slot.gen, id }
     }
+
+    /// If the entity was not alive before it needs to be moved into the correct archetype row
+    #[must_use]
+    pub(crate) fn force_alive(&mut self, id: EntityId) -> ForceAliveResult {
+        let index = id.as_index();
+        if index < self.slots.len() {
+            let slot = &mut self.slots[index];
+            if slot.gen.is_alive() {
+                return ForceAliveResult::WasAliveBefore(Entity { gen: slot.gen, id });
+            } else {
+                if self.next_free == index {
+                    self.next_free = slot.next_free();
+                    slot.fill();
+                    return ForceAliveResult::MadeAlive(Entity { gen: slot.gen, id });
+                } else {
+                    // update free list, because we may not force the head to be alive
+                    // but an entity somewhere in the middle of the free list or the end
+                    let mut prev = self.next_free;
+                    while self.slots[prev].next_free() != index {
+                        prev = self.slots[prev].next_free();
+                    }
+                    self.slots[prev].row.0 = self.slots[index].row.0;
+                    let slot = &mut self.slots[index];
+                    slot.fill();
+                    return ForceAliveResult::MadeAlive(Entity { gen: slot.gen, id });
+                }
+            }
+        } else {
+            while index >= self.slots.len() {
+                if self.next_free == self.slots.len() {
+                    // the slot is still empty, so don't need to update self.next_free
+                    // u32::MAX is more or less always bigger than the end of the slotarray
+                    self.slots.push(EntitySlot::new_empty(u32::MAX as usize));
+                } else {
+                    self.slots.push(EntitySlot::new_empty(self.next_free));
+                    self.next_free = self.slots.len() - 1;
+                }
+            }
+            let slot = &mut self.slots[index];
+            self.next_free = slot.next_free();
+            slot.fill();
+            return ForceAliveResult::MadeAlive(Entity { gen: slot.gen, id });
+        }
+    }
+}
+
+pub(crate) enum ForceAliveResult {
+    MadeAlive(Entity),
+    WasAliveBefore(Entity),
 }
 
 #[cfg(test)]
@@ -187,5 +256,61 @@ mod test {
         let e = store.create();
         assert_eq!(0, e.id.0);
         assert_eq!(5, e.gen.0);
+    }
+
+    #[test]
+    fn force_alive() {
+        let mut store = EntityStore::new();
+        let e1 = store.create();
+        assert_eq!(0, e1.id.0);
+        assert_eq!(1, e1.gen.0);
+        let e = match store.force_alive(EntityId(5)) {
+            ForceAliveResult::MadeAlive(entity) => entity,
+            ForceAliveResult::WasAliveBefore(_) => unreachable!(),
+        };
+        assert_eq!(5, e.id.0);
+        assert_eq!(3, e.gen.0);
+
+        let e = store.create();
+        assert_eq!(4, e.id.0);
+        assert_eq!(3, e.gen.0);
+        let e = match store.force_alive(e.id) {
+            ForceAliveResult::MadeAlive(_) => unreachable!("Wrong result."),
+            ForceAliveResult::WasAliveBefore(ent) => ent,
+        };
+        assert_eq!(4, e.id.0);
+        assert_eq!(3, e.gen.0);
+
+        assert_eq!(3, store.create().id.0);
+        assert_eq!(2, store.create().id.0);
+        assert_eq!(1, store.create().id.0);
+        assert_eq!(6, store.create().id.0);
+    }
+
+    #[test]
+    fn force_alive_twice() {
+        let mut store = EntityStore::new();
+        let e1 = store.create();
+        assert_eq!(0, e1.id.0);
+        assert_eq!(1, e1.gen.0);
+        let e = match store.force_alive(EntityId(5)) {
+            ForceAliveResult::MadeAlive(entity) => entity,
+            ForceAliveResult::WasAliveBefore(_) => unreachable!(),
+        };
+        assert_eq!(5, e.id.0);
+        assert_eq!(3, e.gen.0);
+
+        let e2 = match store.force_alive(EntityId(3)) {
+            ForceAliveResult::MadeAlive(entity) => entity,
+            ForceAliveResult::WasAliveBefore(_) => unreachable!(),
+        };
+        assert_eq!(3, e2.id.0);
+        assert_eq!(3, e2.gen.0);
+
+        assert_eq!(4, store.create().id.0);
+        assert_eq!(2, store.create().id.0);
+        assert_eq!(1, store.create().id.0);
+        assert_eq!(6, store.create().id.0);
+        assert_eq!(7, store.create().id.0);
     }
 }
