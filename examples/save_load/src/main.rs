@@ -6,7 +6,7 @@ use std::{
 
 use froql::{
     component::CASCADING_DESTRUCT, entity_store::EntityId, query,
-    query_helper::trivial_query_one_component, world::World,
+    query_helper::trivial_query_one_component, relation::Relation, world::World,
 };
 use macroquad::prelude::*;
 use nanoserde::{DeJson, SerJson};
@@ -30,6 +30,12 @@ struct MyRect {
     y: f32,
     w: f32,
     h: f32,
+}
+
+impl MyRect {
+    fn center(&self) -> Vec2 {
+        vec2(self.x + self.w / 2.0, self.y + self.h / 2.0)
+    }
 }
 
 //trace_macros!(true);
@@ -59,11 +65,6 @@ macro_rules! generate_register {
 
 generate_register!(Components(MyRect), Relations(Link(CASCADING_DESTRUCT)));
 
-// fn register_components(world: &mut World) {
-//     world.register_relation_flags::<Link>(CASCADING_DESTRUCT);
-//     world.register_component::<MyRect>();
-// }
-
 fn save_world(world: &World) -> String {
     let mut state = SerializedState::default();
 
@@ -76,6 +77,17 @@ fn save_world(world: &World) -> String {
     state
         .components
         .insert(type_name::<MyRect>().to_string(), buffer);
+
+    // relationships
+    state.relations.insert(
+        type_name::<Link>().to_string(),
+        world
+            .bookkeeping
+            .relation_pairs(TypeId::of::<Relation<Link>>())
+            .into_iter()
+            .map(|(o, t)| (o.id.0, t.id.0))
+            .collect(),
+    );
 
     state.serialize_json()
 }
@@ -95,7 +107,20 @@ fn load_world(s: &str) -> World {
                     world.add_component(e, val);
                 }
             }
-            _ => panic!(),
+            var => panic!("Unknown component type: {var}"),
+        }
+    }
+
+    for (ty, pairs) in &state.relations {
+        match ty.as_str() {
+            var if var == type_name::<Link>() => {
+                for (origin, target) in pairs {
+                    let a = world.ensure_alive(EntityId(*origin));
+                    let b = world.ensure_alive(EntityId(*target));
+                    world.add_relation::<Link>(a, b);
+                }
+            }
+            var => panic!("Unknown relationship type: {var}"),
         }
     }
 
@@ -112,6 +137,8 @@ async fn main() {
     world.process();
 
     let mut saved_state = None;
+
+    let mut prev = None;
 
     loop {
         clear_background(BLACK);
@@ -133,17 +160,29 @@ async fn main() {
         }
 
         let mouse = mouse_position();
-        if is_mouse_button_down(MouseButton::Left) {
-            world.create_mut().add(MyRect {
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let e = world.create_mut().add(MyRect {
                 x: mouse.0,
                 y: mouse.1,
                 w: 200.,
                 h: 50.,
             });
+            let id = e.id;
+            if prev.is_some() {
+                let prev = e.world.ensure_alive(prev.unwrap());
+                e.relate_from::<Link>(prev);
+            }
+            prev = Some(id.id);
         }
 
         for (r,) in query!(world, MyRect) {
             draw_rectangle_lines(r.x, r.y, r.w, r.h, 5., GREEN);
+        }
+
+        for (a, b) in query!(world, MyRect(a), MyRect(b), Link(a, b)) {
+            let a = a.center();
+            let b = b.center();
+            draw_line(a.x, a.y, b.x, b.y, 2.0, YELLOW);
         }
 
         next_frame().await

@@ -350,8 +350,8 @@ impl Bookkeeping {
         debug_assert!(!cid.is_target());
         inner(self, cid, from, to);
         inner(self, cid.flip_target(), to, from);
-        // inner function because adding the necessary component
-        // to Origin and Target works the same, just gotta swap arguments
+        // inner function because removing the relationship component
+        // from Origin and Target works the same, just gotta swap arguments
         fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {
             // all relationtypes are repr(transparent) to RelationVec,
             // so we can just treat pointers to them as RelationVec
@@ -430,12 +430,13 @@ impl Bookkeeping {
         return false;
     }
 
+    /// Returns all directly related partners
+    /// DOES NOT follow transitive relations
     pub fn relation_partners<'a>(
         &'a self,
         relation_cid: ComponentId,
         e: Entity,
     ) -> Option<impl Iterator<Item = Entity> + use<'a>> {
-        debug_assert!(!relation_cid.is_transitive(), "transitive is still TODO");
         if self.has_component(e, relation_cid) {
             let ptr = self.get_component(e, relation_cid) as *mut RelationVec;
             let rel_vec = unsafe { &mut *ptr };
@@ -446,5 +447,24 @@ impl Bookkeeping {
             );
         }
         None
+    }
+
+    /// Returns all directly related pairs
+    /// DOES NOT follow transitive relations
+    pub fn relation_pairs(&self, tid: TypeId) -> Vec<(Entity, Entity)> {
+        let cid = self.get_component_id(tid).unwrap(); // TODO error msg
+        let c = &self.components[cid.as_index()];
+        let archetypes = c.get_archetypes();
+        let entities = archetypes
+            .flat_map(|aid| self.archetypes[aid.as_index()].entities.iter())
+            .map(|id| self.entities.get_from_id(*id));
+        entities
+            .flat_map(|e| {
+                self.relation_partners(cid, e)
+                    .into_iter()
+                    .flatten()
+                    .map(move |other| (e, other))
+            })
+            .collect()
     }
 }

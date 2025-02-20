@@ -213,6 +213,8 @@ impl World {
         self.bookkeeping.remove_relation(cid, from, to);
     }
 
+    /// Returns all directly related targets
+    /// DOES NOT follow transitive relations
     pub fn relation_targets<'a, T: 'static>(
         &'a self,
         from: Entity,
@@ -225,6 +227,8 @@ impl World {
             .flat_map(|it| it)
     }
 
+    /// Returns all directly related origins
+    /// DOES NOT follow transitive relations
     pub fn relation_origins<'a, T: 'static>(
         &'a self,
         to: Entity,
@@ -240,6 +244,13 @@ impl World {
             .relation_partners(target_cid, to)
             .into_iter()
             .flat_map(|it| it)
+    }
+
+    /// Returns all directly related pairs
+    /// DOES NOT follow transitive relations
+    pub fn relation_pairs<T: 'static>(&self) -> Vec<(Entity, Entity)> {
+        let o_tid = TypeId::of::<Relation<T>>();
+        self.bookkeeping.relation_pairs(o_tid)
     }
 }
 
