@@ -33,10 +33,38 @@ struct MyRect {
 }
 
 impl MyRect {
-    fn center(&self) -> Vec2 {
-        vec2(self.x + self.w / 2.0, self.y + self.h / 2.0)
+    fn center(&self) -> Center {
+        Center {
+            x: self.x + self.w / 2.0,
+            y: self.y + self.h / 2.0,
+        }
     }
 }
+
+#[derive(Debug, DeJson, SerJson)]
+struct Center {
+    x: f32,
+    y: f32,
+}
+
+#[derive(Debug, DeJson, SerJson)]
+struct MyCircle {
+    x: f32,
+    y: f32,
+    r: f32,
+}
+
+impl MyCircle {
+    fn center(&self) -> Center {
+        Center {
+            x: self.x,
+            y: self.y,
+        }
+    }
+}
+
+#[derive(Debug, DeJson, SerJson)]
+struct Previous {}
 
 //trace_macros!(true);
 
@@ -101,18 +129,17 @@ macro_rules! generate_save {
 }
 
 macro_rules! generate_load {
-    (@rel $world:ident $state:ident $ty:tt persist) => {
-        $state.relations.insert(
-            type_name::<$ty>().to_string(),
-            $world
-                .bookkeeping
-                .relation_pairs(TypeId::of::<Relation<$ty>>())
-                .into_iter()
-                .map(|(o, t)| (o.id.0, t.id.0))
-                .collect(),
-        );
+    (@rel ($world:expr) $var:ident $pairs:ident $ty:tt persist) => {
+        if $var == type_name::<$ty>() {
+            for (origin, target) in $pairs {
+                let a = $world.ensure_alive(EntityId(*origin));
+                let b = $world.ensure_alive(EntityId(*target));
+                $world.add_relation::<$ty>(a, b);
+            }
+            continue;
+        }
     };
-    (@rel $world:ident $state:ident $ty:tt ) => {};
+    (@rel ($world:expr) $var:ident $payloads:ident $ty:tt) => {};
     (@comp ($world:expr) $var:ident $payloads:ident $ty:tt persist) => {
         if $var == type_name::<$ty>() {
             for (entity_id, payload) in $payloads {
@@ -141,16 +168,9 @@ macro_rules! generate_load {
             }
 
             for (ty, pairs) in &state.relations {
-                match ty.as_str() {
-                    var if var == type_name::<Link>() => {
-                        for (origin, target) in pairs {
-                            let a = world.ensure_alive(EntityId(*origin));
-                            let b = world.ensure_alive(EntityId(*target));
-                            world.add_relation::<Link>(a, b);
-                        }
-                    }
-                    var => panic!("Unknown relationship type: {var}"),
-                }
+                let var = ty.as_str();
+                $(generate_load!(@rel (&mut world) var pairs $relations $($persist_rel)?);)*
+                panic!("Unknown relationship type: {var}");
             }
 
             world
@@ -158,55 +178,28 @@ macro_rules! generate_load {
     };
 }
 
-generate_register!(
-    Components(MyRect[persist]),
+macro_rules! ecs_types {
+    ($($tokens:tt)+) => {
+        generate_register!($($tokens)+);
+        generate_save!($($tokens)+);
+        generate_load!($($tokens)+);
+    }
+}
+
+ecs_types!(
+    Components(
+        MyRect[persist],
+        MyCircle[persist],
+        Center[persist],
+        Previous[persist]
+    ),
     Relations(Link(CASCADING_DESTRUCT)[persist])
 );
 
-generate_save!(
-    Components(MyRect[persist]),
-    Relations(Link(CASCADING_DESTRUCT)[persist])
-);
-
-generate_load!(
-    Components(MyRect[persist]),
-    Relations(Link(CASCADING_DESTRUCT)[persist])
-);
-
-// fn load_world(s: &str) -> World {
-//     let mut world = World::new();
-//     register_components(&mut world);
-
-//     let state: SerializedState = SerializedState::deserialize_json(s).unwrap();
-
-//     for (ty, payloads) in &state.components {
-//         match ty.as_str() {
-//             var if var == type_name::<MyRect>() => {
-//                 for (entity_id, payload) in payloads {
-//                     let val = MyRect::deserialize_json(payload).unwrap();
-//                     let e = world.ensure_alive(EntityId(*entity_id));
-//                     world.add_component(e, val);
-//                 }
-//             }
-//             var => panic!("Unknown component type: {var}"),
-//         }
-//     }
-
-//     for (ty, pairs) in &state.relations {
-//         match ty.as_str() {
-//             var if var == type_name::<Link>() => {
-//                 for (origin, target) in pairs {
-//                     let a = world.ensure_alive(EntityId(*origin));
-//                     let b = world.ensure_alive(EntityId(*target));
-//                     world.add_relation::<Link>(a, b);
-//                 }
-//             }
-//             var => panic!("Unknown relationship type: {var}"),
-//         }
-//     }
-
-//     world
-// }
+enum CurrentShape {
+    Rect,
+    Circle,
+}
 
 #[macroquad::main(window_conf)]
 async fn main() {
@@ -219,17 +212,19 @@ async fn main() {
 
     let mut saved_state = None;
 
-    let mut prev = None;
+    let mut current_shape = CurrentShape::Rect;
 
     loop {
         clear_background(BLACK);
 
-        let s = "Left Click to add a rectangle.";
+        let s = "Left Click to add a shape.";
         draw_text(s, 20.0, 20.0, 30.0, WHITE);
-        let s = "Right Click to remove a rectangle.";
-        draw_text(s, 20.0, 40.0, 30.0, WHITE);
+        let s = "Right Click to remove a shape.";
+        draw_text(s, 20.0, 45.0, 30.0, WHITE);
+        let s = "Q/W to switch shape.";
+        draw_text(s, 20.0, 70.0, 30.0, WHITE);
         let s = "F5 saves. F9 loads.";
-        draw_text(s, 20.0, 60.0, 30.0, WHITE);
+        draw_text(s, 20.0, 95.0, 30.0, WHITE);
 
         if is_key_released(KeyCode::F5) {
             println!("Save.");
@@ -240,29 +235,81 @@ async fn main() {
             world = load_world(saved_state.as_ref().unwrap())
         }
 
-        let mouse = mouse_position();
-        if is_mouse_button_pressed(MouseButton::Left) {
-            let e = world.create_mut().add(MyRect {
-                x: mouse.0,
-                y: mouse.1,
-                w: 200.,
-                h: 50.,
-            });
-            let id = e.id;
-            if prev.is_some() {
-                let prev = e.world.ensure_alive(prev.unwrap());
-                e.relate_from::<Link>(prev);
-            }
-            prev = Some(id.id);
+        if is_key_released(KeyCode::Q) {
+            current_shape = CurrentShape::Rect;
         }
 
+        if is_key_released(KeyCode::W) {
+            current_shape = CurrentShape::Circle;
+        }
+
+        let mouse = mouse_position();
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let e = {
+                match current_shape {
+                    CurrentShape::Rect => {
+                        let r = MyRect {
+                            x: mouse.0,
+                            y: mouse.1,
+                            w: 200.,
+                            h: 50.,
+                        };
+                        let center = r.center();
+                        world.create_mut().add(r).add(center).id
+                    }
+                    CurrentShape::Circle => {
+                        let c = MyCircle {
+                            x: mouse.0,
+                            y: mouse.1,
+                            r: 50.,
+                        };
+                        let center = c.center();
+                        world.create_mut().add(c).add(center).id
+                    }
+                }
+            };
+            for (prev,) in query!(world, &this, _ Previous) {
+                prev.relate_to::<Link>(e);
+                prev.remove::<Previous>();
+            }
+            world.process();
+            world.add_component(e, Previous {});
+        }
+
+        if is_mouse_button_pressed(MouseButton::Right) {
+            let mut destroyed = Vec::new();
+            for (e, r) in query!(world, &this, MyRect) {
+                if Rect::new(r.x, r.y, r.w, r.h).contains(vec2(mouse.0, mouse.1)) {
+                    e.destroy();
+                    destroyed.push(e.id);
+                }
+            }
+            for (e, c) in query!(world, &this, MyCircle) {
+                if Circle::new(c.x, c.y, c.r).contains(&vec2(mouse.0, mouse.1)) {
+                    e.destroy();
+                    destroyed.push(e.id);
+                }
+            }
+
+            // fix up previous
+            for e in destroyed {
+                for (prev,) in query!(world, &prev, Link(prev, *e)) {
+                    prev.add(Previous {});
+                }
+            }
+            world.process();
+        }
+
+        
         for (r,) in query!(world, MyRect) {
             draw_rectangle_lines(r.x, r.y, r.w, r.h, 5., GREEN);
         }
 
-        for (a, b) in query!(world, MyRect(a), MyRect(b), Link(a, b)) {
-            let a = a.center();
-            let b = b.center();
+        for (c,) in query!(world, MyCircle) {
+            draw_circle_lines(c.x, c.y, c.r, 5., BLUE);
+        }
+
+        for (a, b) in query!(world, Center(a), Center(b), Link(a, b)) {
             draw_line(a.x, a.y, b.x, b.y, 2.0, YELLOW);
         }
 

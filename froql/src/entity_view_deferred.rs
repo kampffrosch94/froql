@@ -1,6 +1,6 @@
 use std::{
     any::TypeId,
-    cell::{Ref, RefMut},
+    cell::{Ref, RefCell, RefMut},
     ops::Deref,
 };
 
@@ -18,7 +18,7 @@ pub struct EntityViewDeferred<'a> {
 }
 
 pub enum DeferredOperation {
-    DeleteEntity(Entity),
+    DestroyEntity(Entity),
     /// Boxed, because we have to hide the type somehow
     AddComponent(Box<dyn FnOnce(&mut World)>),
     /// tid, entity
@@ -61,11 +61,20 @@ impl<'me> EntityViewDeferred<'me> {
         self.world.get_component_mut::<T>(self.id)
     }
 
-    pub fn add<T: 'static>(self, _val: T) -> Self {
-        todo!("Deferred")
+    pub fn add<T: 'static>(&self, val: T) -> &Self {
+        let e = self.id;
+        self.world
+            .deferred_queue
+            .borrow_mut()
+            .push(D::AddComponent(Box::new(move |world| {
+                if world.is_alive(e) {
+                    world.add_component(e, val);
+                }
+            })));
+        self
     }
 
-    pub fn relate_to<T: 'static>(self, to: Entity) -> Self {
+    pub fn relate_to<T: 'static>(&self, to: Entity) -> &Self {
         let tid = TypeId::of::<Relation<T>>();
         self.world
             .deferred_queue
@@ -74,7 +83,7 @@ impl<'me> EntityViewDeferred<'me> {
         self
     }
 
-    pub fn relate_from<T: 'static>(self, from: Entity) -> Self {
+    pub fn relate_from<T: 'static>(&self, from: Entity) -> &Self {
         let tid = TypeId::of::<Relation<T>>();
         self.world
             .deferred_queue
@@ -104,11 +113,23 @@ impl<'me> EntityViewDeferred<'me> {
     pub fn get_mut_opt<'a, T: 'static>(&'a self) -> Option<RefMut<'a, T>> {
         self.world.get_component_mut_opt::<T>(self.id)
     }
-
-    pub fn remove<T: 'static>(&mut self) -> Option<T> {
-        self.world.remove_component(self.id)
-    }
     */
+
+    pub fn remove<T: 'static>(&self) -> &Self {
+        let tid = TypeId::of::<RefCell<T>>();
+        self.world
+            .deferred_queue
+            .borrow_mut()
+            .push(D::RemoveComponent(tid, self.id));
+        self
+    }
+
+    pub fn destroy(&self) {
+        self.world
+            .deferred_queue
+            .borrow_mut()
+            .push(D::DestroyEntity(self.id));
+    }
 }
 
 impl<'a> Into<Entity> for EntityViewDeferred<'a> {

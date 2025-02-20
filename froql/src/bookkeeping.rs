@@ -314,20 +314,8 @@ impl Bookkeeping {
                     }
                 }
             }
-            for (cid, other_id) in to_delete {
-                let (a_id, a_row) = self.entities.get_archetype_unchecked(other_id);
-                let a = &mut self.archetypes[a_id.0 as usize];
-                let col = a.components.iter().position(|it| *it == cid).unwrap();
-                let ptr = unsafe { a.columns[col].get(a_row.0) } as *mut RelationVec;
-                let rel_vec = unsafe { &mut *ptr };
-                rel_vec.remove(e.id.0);
-                if rel_vec.len() == 0 {
-                    let other = self.entities.get_from_id(other_id);
-                    self.remove_component(other, cid);
-                }
-            }
 
-            // then delete the row from the archetype
+            // delete the row from the archetype
             let a = &mut self.archetypes[a_id.0 as usize];
             let swapped = a.delete_row(a_row);
             self.entities.destroy(e);
@@ -337,10 +325,25 @@ impl Bookkeeping {
                     .set_archetype_unchecked(swapped_e, a_id, a_row);
             }
 
+            // delete ourselves from our relation partners
+            for (cid, other_id) in to_delete {
+                let (a_id, a_row) = self.entities.get_archetype_unchecked(other_id);
+                let a = &mut self.archetypes[a_id.0 as usize];
+                let col = a.components.iter().position(|it| *it == cid).unwrap();
+                let ptr = unsafe { a.columns[col].get(a_row.0) } as *mut RelationVec;
+                let rel_vec = unsafe { &mut *ptr };
+                rel_vec.remove(e.id.0);
+                if rel_vec.len() == 0 {
+                    let other = self.entities.get_from_id(other_id);
+                    // this moves the other entity
+                    self.remove_component(other, cid);
+                }
+            }
+
             // cascading destruction if necessary
             for other_id in to_destroy {
                 let other_e = self.entities.get_from_id(other_id);
-                self.entities.destroy(other_e);
+                self.destroy(other_e);
             }
         }
     }

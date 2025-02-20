@@ -109,6 +109,13 @@ impl World {
         }
     }
 
+    pub fn create_deferred(&mut self) -> EntityViewDeferred {
+        EntityViewDeferred {
+            id: self.bookkeeping.create(),
+            world: self,
+        }
+    }
+
     pub fn is_alive(&self, e: Entity) -> bool {
         self.bookkeeping.is_alive(e)
     }
@@ -171,7 +178,7 @@ impl World {
         std::mem::swap(&mut tmp, queue); // too lazy to work around partial borrows here atm
         for command in tmp {
             match command {
-                DeferredOperation::DeleteEntity(e) => {
+                DeferredOperation::DestroyEntity(e) => {
                     self.destroy(e);
                 }
                 DeferredOperation::AddComponent(func) => {

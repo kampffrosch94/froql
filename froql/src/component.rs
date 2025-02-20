@@ -102,8 +102,9 @@ impl ComponentId {
         Self(self.0 ^ CASCADING_DESTRUCT)
     }
 
+    /// only returns true for the relation origin
     pub fn is_cascading(&self) -> bool {
-        self.is_relation() && (self.0 & CASCADING_DESTRUCT) > 0
+        self.is_relation() && (self.0 & CASCADING_DESTRUCT) > 0 && !self.is_target()
     }
 
     #[must_use]
@@ -123,7 +124,6 @@ impl ComponentId {
         Self(self.0 ^ TRANSITIVE)
     }
 
-    /// only returns true for the relation origin
     pub fn is_transitive(&self) -> bool {
         self.is_relation() && (self.0 & TRANSITIVE) > 0
     }
