@@ -1,3 +1,5 @@
+use std::u32;
+
 use crate::archetype::{ArchetypeId, ArchetypeRow};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -44,8 +46,8 @@ impl EntitySlot {
         // start with 1 so that we can use 0 as sentinel
         let gen = EntityGeneration(1);
         EntitySlot {
-            archetype: EMPTY_ARCHETYPE,
-            row: EMPTY_ARCHETYPE_ROW,
+            archetype: SENTINEL_ARCHETYPE,
+            row: SENTINEL_ARCHETYPE_ROW,
             gen,
         }
     }
@@ -55,7 +57,7 @@ impl EntitySlot {
         let gen = EntityGeneration(2);
         let row = ArchetypeRow(previous_free as u32);
         EntitySlot {
-            archetype: EMPTY_ARCHETYPE,
+            archetype: SENTINEL_ARCHETYPE,
             row,
             gen,
         }
@@ -73,8 +75,8 @@ impl EntitySlot {
     fn fill(&mut self) -> EntityGeneration {
         debug_assert!(self.is_empty());
         self.gen.0 = self.gen.0.wrapping_add(1);
-        self.row = EMPTY_ARCHETYPE_ROW;
-        self.archetype = EMPTY_ARCHETYPE;
+        self.row = SENTINEL_ARCHETYPE_ROW;
+        self.archetype = SENTINEL_ARCHETYPE;
         self.gen
     }
 
@@ -86,8 +88,8 @@ impl EntitySlot {
     }
 }
 
-const EMPTY_ARCHETYPE: ArchetypeId = ArchetypeId(0);
-const EMPTY_ARCHETYPE_ROW: ArchetypeRow = ArchetypeRow(0);
+const SENTINEL_ARCHETYPE: ArchetypeId = ArchetypeId(u32::MAX);
+const SENTINEL_ARCHETYPE_ROW: ArchetypeRow = ArchetypeRow(u32::MAX);
 
 impl EntityStore {
     pub fn new() -> Self {
@@ -103,7 +105,7 @@ impl EntityStore {
             let slot = EntitySlot::new();
             let gen = slot.gen;
             self.slots.push(slot);
-            self.next_free += 1;
+            self.next_free = self.slots.len();
             return Entity { gen, id };
         } else {
             let index = self.next_free;

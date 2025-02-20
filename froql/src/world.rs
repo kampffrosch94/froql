@@ -7,7 +7,7 @@ use crate::{
     bookkeeping::Bookkeeping,
     component::{Component, ComponentId, RELATION},
     entity_store::{Entity, EntityId},
-    entity_view_deferred::DeferredOperation,
+    entity_view_deferred::{DeferredOperation, EntityViewDeferred},
     entity_view_mut::EntityViewMut,
     relation::Relation,
 };
@@ -15,13 +15,18 @@ use crate::{
 pub struct World {
     pub bookkeeping: Bookkeeping,
     pub(crate) deferred_queue: RefCell<Vec<DeferredOperation>>,
+    // TODO move into query or something
+    singleton: Entity,
 }
 
 impl World {
     pub fn new() -> Self {
+        let mut bookkeeping = Bookkeeping::new();
+        let singleton = bookkeeping.create();
         World {
-            bookkeeping: Bookkeeping::new(),
+            bookkeeping,
             deferred_queue: RefCell::new(Vec::new()),
+            singleton,
         }
     }
 
@@ -41,6 +46,13 @@ impl World {
         let old = self.bookkeeping.component_name_map.insert(tname, tid);
         assert_eq!(None, old, "Typename was already registered.");
         return cid;
+    }
+
+    pub fn singleton(&self) -> EntityViewDeferred {
+        EntityViewDeferred {
+            id: self.singleton,
+            world: self,
+        }
     }
 
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {

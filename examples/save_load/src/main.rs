@@ -55,7 +55,8 @@ macro_rules! generate_register {
     (@rel $world:ident $ty:tt) => {
         $world.register_relation::<$ty>();
     };
-    (Components($($components:ty),*), Relations($($relations:tt $(($flags:tt))?),*)) => {
+    (Components($($components:tt $([persist])?),*),
+     Relations($($relations:tt $(($flags:expr))? $([persist])? ),*)) => {
         fn register_components(world: &mut World) {
             $(world.register_component::<$components>();)*
             $(generate_register!(@rel world $relations $($flags)?);)*
@@ -63,34 +64,48 @@ macro_rules! generate_register {
     };
 }
 
-generate_register!(Components(MyRect), Relations(Link(CASCADING_DESTRUCT)));
-
-fn save_world(world: &World) -> String {
-    let mut state = SerializedState::default();
-
-    let mut buffer = Vec::new();
-    for id in trivial_query_one_component(world, TypeId::of::<RefCell<MyRect>>()) {
-        let r = world.get_component_by_entityid::<MyRect>(id);
-        let s = r.serialize_json();
-        buffer.push((id.0, s));
-    }
-    state
-        .components
-        .insert(type_name::<MyRect>().to_string(), buffer);
-
-    // relationships
-    state.relations.insert(
-        type_name::<Link>().to_string(),
-        world
-            .bookkeeping
-            .relation_pairs(TypeId::of::<Relation<Link>>())
-            .into_iter()
-            .map(|(o, t)| (o.id.0, t.id.0))
-            .collect(),
-    );
-
-    state.serialize_json()
+macro_rules! generate_save {
+    (@rel $world:ident $state:ident $ty:tt persist) => {
+        $state.relations.insert(
+            type_name::<$ty>().to_string(),
+            $world
+                .bookkeeping
+                .relation_pairs(TypeId::of::<Relation<$ty>>())
+                .into_iter()
+                .map(|(o, t)| (o.id.0, t.id.0))
+                .collect(),
+        );
+    };
+    (@rel $world:ident $state:ident $ty:tt ) => {};
+    (@comp $world:ident $state:ident $ty:tt persist) => {
+        let mut buffer = Vec::new();
+        for id in trivial_query_one_component($world, TypeId::of::<RefCell<$ty>>()) {
+            let r = $world.get_component_by_entityid::<$ty>(id);
+            let s = r.serialize_json();
+            buffer.push((id.0, s));
+        }
+        $state
+            .components
+            .insert(type_name::<$ty>().to_string(), buffer);
+    };
+    (@comp $world:ident $state:ident $ty:tt) => {};
+    (Components($($components:tt $([$persist_comp:tt])?),*),
+     Relations($($relations:tt $(($flags:expr))? $([$persist_rel:tt])?),*)) => {
+        fn save_world(world: &World) -> String {
+            let mut state = SerializedState::default();
+            $(generate_save!(@comp world state $components $($persist_comp)?);)*
+            $(generate_save!(@rel world state $relations $($persist_rel)?);)*
+            state.serialize_json()
+        }
+    };
 }
+
+generate_register!(Components( MyRect [persist]), Relations(Link(CASCADING_DESTRUCT) [persist]));
+
+generate_save!(
+    Components(MyRect[persist]),
+    Relations(Link(CASCADING_DESTRUCT|TRANSITIVE)[persist])
+);
 
 fn load_world(s: &str) -> World {
     let mut world = World::new();
