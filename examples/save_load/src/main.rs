@@ -100,47 +100,113 @@ macro_rules! generate_save {
     };
 }
 
-generate_register!(Components( MyRect [persist]), Relations(Link(CASCADING_DESTRUCT) [persist]));
+macro_rules! generate_load {
+    (@rel $world:ident $state:ident $ty:tt persist) => {
+        $state.relations.insert(
+            type_name::<$ty>().to_string(),
+            $world
+                .bookkeeping
+                .relation_pairs(TypeId::of::<Relation<$ty>>())
+                .into_iter()
+                .map(|(o, t)| (o.id.0, t.id.0))
+                .collect(),
+        );
+    };
+    (@rel $world:ident $state:ident $ty:tt ) => {};
+    (@comp ($world:expr) $var:ident $payloads:ident $ty:tt persist) => {
+        if $var == type_name::<$ty>() {
+            for (entity_id, payload) in $payloads {
+                let val = $ty::deserialize_json(payload).unwrap();
+                let e = $world.ensure_alive(EntityId(*entity_id));
+                $world.add_component(e, val);
+            }
+            continue;
+        }
+    };
+    (@comp ($world:expr) $var:ident $payloads:ident $ty:tt) => {};
+    (Components($($components:tt $([$persist_comp:tt])?),*),
+     Relations($($relations:tt $(($flags:expr))? $([$persist_rel:tt])?),*)) => {
+        fn load_world(s: &str) -> World {
+            let mut world = World::new();
+            register_components(&mut world);
+            let state: SerializedState = SerializedState::deserialize_json(s).unwrap();
+
+            //$(generate_load!(@comp world state $components $($persist_comp)?);)*
+            //$(generate_load!(@rel world state $relations $($persist_rel)?);)*
+
+            for (ty, payloads) in &state.components {
+                let var = ty.as_str();
+                $(generate_load!(@comp (&mut world) var payloads $components $($persist_comp)?);)*
+                panic!("Unknown component type: {var}");
+            }
+
+            for (ty, pairs) in &state.relations {
+                match ty.as_str() {
+                    var if var == type_name::<Link>() => {
+                        for (origin, target) in pairs {
+                            let a = world.ensure_alive(EntityId(*origin));
+                            let b = world.ensure_alive(EntityId(*target));
+                            world.add_relation::<Link>(a, b);
+                        }
+                    }
+                    var => panic!("Unknown relationship type: {var}"),
+                }
+            }
+
+            world
+        }
+    };
+}
+
+generate_register!(
+    Components(MyRect[persist]),
+    Relations(Link(CASCADING_DESTRUCT)[persist])
+);
 
 generate_save!(
     Components(MyRect[persist]),
-    Relations(Link(CASCADING_DESTRUCT|TRANSITIVE)[persist])
+    Relations(Link(CASCADING_DESTRUCT)[persist])
 );
 
-fn load_world(s: &str) -> World {
-    let mut world = World::new();
-    register_components(&mut world);
+generate_load!(
+    Components(MyRect[persist]),
+    Relations(Link(CASCADING_DESTRUCT)[persist])
+);
 
-    let state: SerializedState = SerializedState::deserialize_json(s).unwrap();
+// fn load_world(s: &str) -> World {
+//     let mut world = World::new();
+//     register_components(&mut world);
 
-    for (ty, payloads) in &state.components {
-        match ty.as_str() {
-            var if var == type_name::<MyRect>() => {
-                for (entity_id, payload) in payloads {
-                    let val = MyRect::deserialize_json(payload).unwrap();
-                    let e = world.ensure_alive(EntityId(*entity_id));
-                    world.add_component(e, val);
-                }
-            }
-            var => panic!("Unknown component type: {var}"),
-        }
-    }
+//     let state: SerializedState = SerializedState::deserialize_json(s).unwrap();
 
-    for (ty, pairs) in &state.relations {
-        match ty.as_str() {
-            var if var == type_name::<Link>() => {
-                for (origin, target) in pairs {
-                    let a = world.ensure_alive(EntityId(*origin));
-                    let b = world.ensure_alive(EntityId(*target));
-                    world.add_relation::<Link>(a, b);
-                }
-            }
-            var => panic!("Unknown relationship type: {var}"),
-        }
-    }
+//     for (ty, payloads) in &state.components {
+//         match ty.as_str() {
+//             var if var == type_name::<MyRect>() => {
+//                 for (entity_id, payload) in payloads {
+//                     let val = MyRect::deserialize_json(payload).unwrap();
+//                     let e = world.ensure_alive(EntityId(*entity_id));
+//                     world.add_component(e, val);
+//                 }
+//             }
+//             var => panic!("Unknown component type: {var}"),
+//         }
+//     }
 
-    world
-}
+//     for (ty, pairs) in &state.relations {
+//         match ty.as_str() {
+//             var if var == type_name::<Link>() => {
+//                 for (origin, target) in pairs {
+//                     let a = world.ensure_alive(EntityId(*origin));
+//                     let b = world.ensure_alive(EntityId(*target));
+//                     world.add_relation::<Link>(a, b);
+//                 }
+//             }
+//             var => panic!("Unknown relationship type: {var}"),
+//         }
+//     }
+
+//     world
+// }
 
 #[macroquad::main(window_conf)]
 async fn main() {
