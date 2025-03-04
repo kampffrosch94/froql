@@ -109,6 +109,10 @@ impl World {
         }
     }
 
+    pub fn view_mut(&mut self, e: Entity) -> EntityViewMut {
+        EntityViewMut { id: e, world: self }
+    }
+
     pub fn create_deferred(&mut self) -> EntityViewDeferred {
         EntityViewDeferred {
             id: self.bookkeeping.create(),

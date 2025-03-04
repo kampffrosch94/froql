@@ -475,7 +475,7 @@ pub fn generate_resumable_query_closure(
                     &mut append,
                     "
             (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
-                as *const RefCell<{ty}>))
+                as *const ::std::cell::RefCell<{ty}>))
                 .borrow_mut(),"
                 )
                 .unwrap();

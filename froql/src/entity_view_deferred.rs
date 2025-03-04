@@ -53,11 +53,11 @@ impl<'me> EntityViewDeferred<'me> {
         Self { id: entity, world }
     }
 
-    pub fn get<'a, T: 'static>(&'a self) -> Ref<'a, T> {
+    pub fn get<'a, T: 'static>(&'a self) -> Ref<'me, T> {
         self.world.get_component::<T>(self.id)
     }
 
-    pub fn get_mut<'a, T: 'static>(&'a self) -> RefMut<'a, T> {
+    pub fn get_mut<'a, T: 'static>(&'a self) -> RefMut<'me, T> {
         self.world.get_component_mut::<T>(self.id)
     }
 
