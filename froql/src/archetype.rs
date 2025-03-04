@@ -104,6 +104,13 @@ impl Archetype {
     }
 
     /// returns column this component is in
+    /// PANICS if column is not in the archetype
+    pub fn find_column_mut(&mut self, cid: ComponentId) -> &mut LayoutVec {
+        let index = self.components.iter().position(|it| *it == cid).unwrap();
+        &mut self.columns[index]
+    }
+
+    /// returns column this component is in
     /// None if not found
     pub fn find_column_opt(&self, cid: ComponentId) -> Option<&LayoutVec> {
         let index = self.components.iter().position(|it| *it == cid);

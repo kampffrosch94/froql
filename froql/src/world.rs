@@ -48,6 +48,18 @@ impl World {
         return cid;
     }
 
+    /// Counterpart of register_component_inner for hotreloading purposes
+    fn reload_component_inner<T: 'static>(&mut self, cid: ComponentId) -> Result<(), ()> {
+        let component = &mut self.bookkeeping.components[cid.as_index()];
+        component.update_type::<T>()?;
+        for aid in component.get_archetypes() {
+            let arch = &mut self.bookkeeping.archetypes[aid.as_index()];
+            let col = arch.find_column_mut(cid);
+            col.change_drop_function(component.drop_fn.clone());
+        }
+        Ok(())
+    }
+
     pub fn singleton(&self) -> EntityViewDeferred {
         EntityViewDeferred {
             id: self.singleton,
@@ -59,7 +71,7 @@ impl World {
         self.register_component_inner::<RefCell<T>>(0)
     }
 
-    pub unsafe fn re_register_component<T: 'static>(&mut self) {
+    pub unsafe fn re_register_component<T: 'static>(&mut self) -> Result<(), ()> {
         let tid = TypeId::of::<RefCell<T>>();
         let name = type_name::<RefCell<T>>();
         let old_tid = self
@@ -68,11 +80,14 @@ impl World {
             .get(name)
             .expect("Type {name} was not registered as component.");
         let cid = self.bookkeeping.component_map.remove(old_tid).unwrap();
-        // TODO check size
         self.bookkeeping.component_map.insert(tid, cid);
+        self.bookkeeping
+            .component_name_map
+            .insert(name.to_string(), tid);
+        self.reload_component_inner::<RefCell<T>>(cid)
     }
 
-    pub unsafe fn re_register_relation<T: 'static>(&mut self) {
+    pub unsafe fn re_register_relation<T: 'static>(&mut self) -> Result<(), ()> {
         let tid = TypeId::of::<Relation<T>>();
         let name = type_name::<Relation<T>>();
         let old_tid = self
@@ -82,6 +97,10 @@ impl World {
             .expect("Type {name} was not registered as component.");
         let cid = self.bookkeeping.component_map.remove(old_tid).unwrap();
         self.bookkeeping.component_map.insert(tid, cid);
+        self.bookkeeping
+            .component_name_map
+            .insert(name.to_string(), tid);
+        self.reload_component_inner::<Relation<T>>(cid)
     }
 
     // mostly there for use in query

@@ -8,7 +8,6 @@ use world::World;
 struct Pos(i32, i32);
 struct Speed(i32, i32);
 enum Rel {}
-use std::cell::RefCell;
 
 fn create_entities_simple(count: usize) -> World {
     let mut world = World::new();

@@ -30,6 +30,11 @@ impl LayoutVec {
         }
     }
 
+    /// Useful for hotreloading
+    pub fn change_drop_function(&mut self, drop_fn: Box<fn(*mut u8)>) {
+        self.drop_fn = drop_fn;
+    }
+
     pub fn element_size(&self) -> usize {
         self.element_size as usize
     }

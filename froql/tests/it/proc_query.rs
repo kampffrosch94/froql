@@ -3,9 +3,6 @@ use froql::entity_store::Entity;
 use froql::query;
 use froql::world::World;
 
-// TODO this is bleed from unhygienic macros
-use std::cell::RefCell;
-
 #[test]
 fn proc_query_relation() {
     enum Attack {}

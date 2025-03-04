@@ -164,6 +164,19 @@ impl Component {
         }
     }
 
+    /// used for hotreloading
+    /// if we don't update the dropper we likely crash
+    /// when we delete components after we hotreloaded
+    pub fn update_type<T>(&mut self) -> Result<(), ()> {
+        let (layout, drop_fn) = layout_vec_args::<T>();
+        if layout == self.layout {
+            self.drop_fn = drop_fn;
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
     pub fn insert_archetype(&mut self, aid: ArchetypeId, cid: ComponentId) {
         if cid.is_target() {
             self.target_archetypes.insert(aid.0 as usize);
