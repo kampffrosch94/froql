@@ -106,14 +106,20 @@ impl EntityStore {
             let gen = slot.gen;
             self.slots.push(slot);
             self.next_free = self.slots.len();
-            return Entity { generation: gen, id };
+            return Entity {
+                generation: gen,
+                id,
+            };
         } else {
             let index = self.next_free;
             let slot = &mut self.slots[index];
             self.next_free = slot.next_free();
             let gen = slot.fill();
             let id = EntityId(index as u32);
-            return Entity { generation: gen, id };
+            return Entity {
+                generation: gen,
+                id,
+            };
         }
     }
 
@@ -172,7 +178,10 @@ impl EntityStore {
         let index = id.0 as usize;
         let slot = &self.slots[index];
         assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
-        Entity { generation: slot.gen, id }
+        Entity {
+            generation: slot.gen,
+            id,
+        }
     }
 
     /// If the entity was not alive before it needs to be moved into the correct archetype row
@@ -182,12 +191,18 @@ impl EntityStore {
         if index < self.slots.len() {
             let slot = &mut self.slots[index];
             if slot.gen.is_alive() {
-                return ForceAliveResult::WasAliveBefore(Entity { generation: slot.gen, id });
+                return ForceAliveResult::WasAliveBefore(Entity {
+                    generation: slot.gen,
+                    id,
+                });
             } else {
                 if self.next_free == index {
                     self.next_free = slot.next_free();
                     slot.fill();
-                    return ForceAliveResult::MadeAlive(Entity { generation: slot.gen, id });
+                    return ForceAliveResult::MadeAlive(Entity {
+                        generation: slot.gen,
+                        id,
+                    });
                 } else {
                     // update free list, because we may not force the head to be alive
                     // but an entity somewhere in the middle of the free list or the end
@@ -198,7 +213,10 @@ impl EntityStore {
                     self.slots[prev].row.0 = self.slots[index].row.0;
                     let slot = &mut self.slots[index];
                     slot.fill();
-                    return ForceAliveResult::MadeAlive(Entity { generation: slot.gen, id });
+                    return ForceAliveResult::MadeAlive(Entity {
+                        generation: slot.gen,
+                        id,
+                    });
                 }
             }
         } else {
@@ -215,7 +233,10 @@ impl EntityStore {
             let slot = &mut self.slots[index];
             self.next_free = slot.next_free();
             slot.fill();
-            return ForceAliveResult::MadeAlive(Entity { generation: slot.gen, id });
+            return ForceAliveResult::MadeAlive(Entity {
+                generation: slot.gen,
+                id,
+            });
         }
     }
 }
