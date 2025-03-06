@@ -106,20 +106,14 @@ impl EntityStore {
             let generation = slot.generation;
             self.slots.push(slot);
             self.next_free = self.slots.len();
-            return Entity {
-                generation,
-                id,
-            };
+            return Entity { generation, id };
         } else {
             let index = self.next_free;
             let slot = &mut self.slots[index];
             self.next_free = slot.next_free();
             let generation = slot.fill();
             let id = EntityId(index as u32);
-            return Entity {
-                generation,
-                id,
-            };
+            return Entity { generation, id };
         }
     }
 

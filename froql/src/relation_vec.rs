@@ -45,20 +45,24 @@ impl RelationVecOutline {
 
     unsafe fn write(&mut self, index: usize, val: u32) {
         debug_assert!(index < self.cap as usize);
-        let dst = self.ptr.as_ptr().add(index);
-        unsafe { std::ptr::write(dst, val) };
+        unsafe {
+            let dst = self.ptr.as_ptr().add(index);
+            std::ptr::write(dst, val)
+        };
     }
 
     unsafe fn grow(&mut self) {
         let old_layout = RelationVecOutline::layout(self.cap);
         self.cap *= 2;
         let new_layout = RelationVecOutline::layout(self.cap);
-        let ptr = alloc::realloc(self.ptr.as_ptr() as *mut u8, old_layout, new_layout.size());
-        let ptr = match NonNull::new(ptr as *mut u32) {
-            Some(p) => p,
-            None => alloc::handle_alloc_error(new_layout),
-        };
-        self.ptr = ptr;
+        unsafe {
+            let ptr = alloc::realloc(self.ptr.as_ptr() as *mut u8, old_layout, new_layout.size());
+            let ptr = match NonNull::new(ptr as *mut u32) {
+                Some(p) => p,
+                None => alloc::handle_alloc_error(new_layout),
+            };
+            self.ptr = ptr;
+        }
     }
 
     unsafe fn dealloc(&mut self) {

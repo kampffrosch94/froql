@@ -899,72 +899,74 @@ fn manual_query_relation_simple() {
 
         let mut rel_helper_2 = RelationHelper::new(components_1[0]);
 
-        ::std::iter::from_fn(move || loop {
-            match current_step {
-                0 => {
-                    const CURRENT_VAR: usize = 1;
-                    const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 1..2;
-                    let next_index = &mut a_next_indexes[CURRENT_VAR];
-                    let archetype_ids = &archetype_id_sets[CURRENT_VAR];
-                    *next_index = next_index.wrapping_add(1);
-                    if *next_index >= archetype_ids.len() {
-                        return None;
-                    }
-                    let next_id = archetype_ids[*next_index];
-                    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
-                    let a_ref = &mut a_refs[CURRENT_VAR];
-                    *a_ref = &bk.archetypes[next_id.as_index()];
-                    a_ref.find_multiple_columns(
-                        &components_1,
-                        &mut col_indexes[CURRENT_VAR_COMPONENTS],
-                    );
-                    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
-                    current_step += 1;
-
-                    // RELATION_COMP_INDEX from step 2
-                    rel_helper_2.set_col(&a_ref.columns[col_indexes[1]]);
-                }
-                1 => {
-                    const CURRENT_VAR: usize = 1;
-                    let row_counter = &mut a_rows[CURRENT_VAR].0;
-                    let max_row = a_max_rows[CURRENT_VAR];
-                    *row_counter = row_counter.wrapping_add(1);
-                    if *row_counter >= max_row {
-                        current_step -= 1;
-                    } else {
-                        current_step += 1;
-                        rel_helper_2.set_row(bk, a_rows[1].0);
-                    }
-                }
-                2 => {
-                    const REL_VAR: usize = 0;
-                    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..1;
-                    if let Some(id) = rel_helper_2.next_related() {
-                        let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-                        if archetype_id_sets[REL_VAR].contains(&aid) {
-                            let a_ref = &mut a_refs[REL_VAR];
-                            *a_ref = &bk.archetypes[aid.as_index()];
-                            a_ref.find_multiple_columns(
-                                &components_0,
-                                &mut col_indexes[REL_VAR_COMPONENTS],
-                            );
-                            a_rows[REL_VAR] = arow;
-                            current_step += 1;
+        ::std::iter::from_fn(move || {
+            loop {
+                match current_step {
+                    0 => {
+                        const CURRENT_VAR: usize = 1;
+                        const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 1..2;
+                        let next_index = &mut a_next_indexes[CURRENT_VAR];
+                        let archetype_ids = &archetype_id_sets[CURRENT_VAR];
+                        *next_index = next_index.wrapping_add(1);
+                        if *next_index >= archetype_ids.len() {
+                            return None;
                         }
-                    } else {
-                        current_step -= 1;
+                        let next_id = archetype_ids[*next_index];
+                        a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+                        let a_ref = &mut a_refs[CURRENT_VAR];
+                        *a_ref = &bk.archetypes[next_id.as_index()];
+                        a_ref.find_multiple_columns(
+                            &components_1,
+                            &mut col_indexes[CURRENT_VAR_COMPONENTS],
+                        );
+                        a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+                        current_step += 1;
+
+                        // RELATION_COMP_INDEX from step 2
+                        rel_helper_2.set_col(&a_ref.columns[col_indexes[1]]);
                     }
+                    1 => {
+                        const CURRENT_VAR: usize = 1;
+                        let row_counter = &mut a_rows[CURRENT_VAR].0;
+                        let max_row = a_max_rows[CURRENT_VAR];
+                        *row_counter = row_counter.wrapping_add(1);
+                        if *row_counter >= max_row {
+                            current_step -= 1;
+                        } else {
+                            current_step += 1;
+                            rel_helper_2.set_row(bk, a_rows[1].0);
+                        }
+                    }
+                    2 => {
+                        const REL_VAR: usize = 0;
+                        const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..1;
+                        if let Some(id) = rel_helper_2.next_related() {
+                            let (aid, arow) = bk.entities.get_archetype_unchecked(id);
+                            if archetype_id_sets[REL_VAR].contains(&aid) {
+                                let a_ref = &mut a_refs[REL_VAR];
+                                *a_ref = &bk.archetypes[aid.as_index()];
+                                a_ref.find_multiple_columns(
+                                    &components_0,
+                                    &mut col_indexes[REL_VAR_COMPONENTS],
+                                );
+                                a_rows[REL_VAR] = arow;
+                                current_step += 1;
+                            }
+                        } else {
+                            current_step -= 1;
+                        }
+                    }
+                    3 => {
+                        current_step -= 1;
+                        return Some(unsafe {
+                            (EntityViewDeferred::from_id_unchecked(
+                                world,
+                                a_refs[0].entities[a_rows[0].0 as usize],
+                            ),)
+                        });
+                    }
+                    _ => unreachable!(),
                 }
-                3 => {
-                    current_step -= 1;
-                    return Some(unsafe {
-                        (EntityViewDeferred::from_id_unchecked(
-                            world,
-                            a_refs[0].entities[a_rows[0].0 as usize],
-                        ),)
-                    });
-                }
-                _ => unreachable!(),
             }
         })
     }
@@ -1001,71 +1003,73 @@ fn manual_query_relation_simple2() {
         let mut a_next_indexes = [usize::MAX; VAR_COUNT];
         let mut col_indexes = [usize::MAX; 2];
         let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new(components_1[0]);
-        ::std::iter::from_fn(move || loop {
-            match current_step {
-                0 => {
-                    const CURRENT_VAR: usize = 1;
-                    const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 1..2;
-                    let next_index = &mut a_next_indexes[CURRENT_VAR];
-                    let archetype_ids = &archetype_id_sets[CURRENT_VAR];
-                    *next_index = next_index.wrapping_add(1);
-                    if *next_index >= archetype_ids.len() {
-                        return None;
-                    }
-                    let next_id = archetype_ids[*next_index];
-                    a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
-                    let a_ref = &mut a_refs[CURRENT_VAR];
-                    *a_ref = &bk.archetypes[next_id.as_index()];
-                    a_ref.find_multiple_columns(
-                        &components_1,
-                        &mut col_indexes[CURRENT_VAR_COMPONENTS],
-                    );
-                    a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
-                    rel_helper_0.set_col(&a_ref.columns[col_indexes[1]]);
-                    current_step += 1;
-                }
-                1 => {
-                    const CURRENT_VAR: usize = 1;
-                    let row_counter = &mut a_rows[CURRENT_VAR].0;
-                    let max_row = a_max_rows[CURRENT_VAR];
-                    *row_counter = row_counter.wrapping_add(1);
-                    if *row_counter >= max_row {
-                        current_step -= 1;
-                    } else {
-                        rel_helper_0.set_row(bk, a_rows[1].0);
+        ::std::iter::from_fn(move || {
+            loop {
+                match current_step {
+                    0 => {
+                        const CURRENT_VAR: usize = 1;
+                        const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 1..2;
+                        let next_index = &mut a_next_indexes[CURRENT_VAR];
+                        let archetype_ids = &archetype_id_sets[CURRENT_VAR];
+                        *next_index = next_index.wrapping_add(1);
+                        if *next_index >= archetype_ids.len() {
+                            return None;
+                        }
+                        let next_id = archetype_ids[*next_index];
+                        a_rows[CURRENT_VAR] = ArchetypeRow(u32::MAX);
+                        let a_ref = &mut a_refs[CURRENT_VAR];
+                        *a_ref = &bk.archetypes[next_id.as_index()];
+                        a_ref.find_multiple_columns(
+                            &components_1,
+                            &mut col_indexes[CURRENT_VAR_COMPONENTS],
+                        );
+                        a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+                        rel_helper_0.set_col(&a_ref.columns[col_indexes[1]]);
                         current_step += 1;
                     }
-                }
-                2 => {
-                    const REL_VAR: usize = 0;
-                    const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..1;
-                    if let Some(id) = rel_helper_0.next_related() {
-                        let (aid, arow) = bk.entities.get_archetype_unchecked(id);
-                        if archetype_id_sets[REL_VAR].contains(&aid) {
-                            let a_ref = &mut a_refs[REL_VAR];
-                            *a_ref = &bk.archetypes[aid.as_index()];
-                            a_ref.find_multiple_columns(
-                                &components_0,
-                                &mut col_indexes[REL_VAR_COMPONENTS],
-                            );
-                            a_rows[REL_VAR] = arow;
+                    1 => {
+                        const CURRENT_VAR: usize = 1;
+                        let row_counter = &mut a_rows[CURRENT_VAR].0;
+                        let max_row = a_max_rows[CURRENT_VAR];
+                        *row_counter = row_counter.wrapping_add(1);
+                        if *row_counter >= max_row {
+                            current_step -= 1;
+                        } else {
+                            rel_helper_0.set_row(bk, a_rows[1].0);
                             current_step += 1;
                         }
-                    } else {
-                        current_step -= 1;
                     }
-                }
-                3 => {
-                    current_step -= 1;
-                    return Some({
-                        (EntityViewDeferred::from_id_unchecked(
-                            world,
-                            a_refs[0].entities[a_rows[0].0 as usize],
-                        ),)
-                    });
-                }
-                _ => {
-                    unreachable!();
+                    2 => {
+                        const REL_VAR: usize = 0;
+                        const REL_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..1;
+                        if let Some(id) = rel_helper_0.next_related() {
+                            let (aid, arow) = bk.entities.get_archetype_unchecked(id);
+                            if archetype_id_sets[REL_VAR].contains(&aid) {
+                                let a_ref = &mut a_refs[REL_VAR];
+                                *a_ref = &bk.archetypes[aid.as_index()];
+                                a_ref.find_multiple_columns(
+                                    &components_0,
+                                    &mut col_indexes[REL_VAR_COMPONENTS],
+                                );
+                                a_rows[REL_VAR] = arow;
+                                current_step += 1;
+                            }
+                        } else {
+                            current_step -= 1;
+                        }
+                    }
+                    3 => {
+                        current_step -= 1;
+                        return Some({
+                            (EntityViewDeferred::from_id_unchecked(
+                                world,
+                                a_refs[0].entities[a_rows[0].0 as usize],
+                            ),)
+                        });
+                    }
+                    _ => {
+                        unreachable!();
+                    }
                 }
             }
         })

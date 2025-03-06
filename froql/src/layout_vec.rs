@@ -73,15 +73,17 @@ impl LayoutVec {
     /// grows the vec by one element and provides a pointer the caller can write the element to
     #[must_use]
     pub unsafe fn half_push(&mut self) -> *mut u8 {
-        if self.len >= self.capacity {
-            self.grow();
+        unsafe {
+            if self.len >= self.capacity {
+                self.grow();
+            }
+            let r = self
+                .ptr
+                .as_ptr()
+                .add((self.len * self.element_size) as usize);
+            self.len += 1;
+            r
         }
-        let r = self
-            .ptr
-            .as_ptr()
-            .add((self.len * self.element_size) as usize);
-        self.len += 1;
-        r
     }
 
     /// deletes the last element and calls the drop function on it if necessary
@@ -120,12 +122,14 @@ impl LayoutVec {
     #[must_use]
     #[track_caller]
     pub unsafe fn get(&self, index: u32) -> *mut u8 {
-        debug_assert!(
-            self.len > 0 && index < self.len,
-            "Len: {} Index: {index}",
-            self.len
-        );
-        self.ptr.as_ptr().add((index * self.element_size) as usize)
+        unsafe {
+            debug_assert!(
+                self.len > 0 && index < self.len,
+                "Len: {} Index: {index}",
+                self.len
+            );
+            self.ptr.as_ptr().add((index * self.element_size) as usize)
+        }
     }
 
     /// moves entry between two LayoutVecs with the same layout

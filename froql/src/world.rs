@@ -1,5 +1,5 @@
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     cell::{Ref, RefCell, RefMut},
 };
 
