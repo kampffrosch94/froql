@@ -41,7 +41,7 @@ impl<'a> Deref for EntityViewDeferred<'a> {
 impl<'a> Debug for EntityViewDeferred<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EntityViewDeferred")
-            .field("gen", &self.id.gen)
+            .field("generation", &self.id.generation)
             .field("id", &self.id.id)
             .finish()
     }
