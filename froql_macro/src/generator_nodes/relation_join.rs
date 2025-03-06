@@ -231,7 +231,7 @@ mod test {
     use super::*;
     #[test]
     fn relation_join_unequality() {
-        let gen = RelationJoin {
+        let generator = RelationJoin {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![(0, 2), (2, 1)],
@@ -245,7 +245,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(3, &mut prepend, &mut append);
+        let r = generator.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append);
@@ -253,7 +253,7 @@ mod test {
 
     #[test]
     fn relation_join_constraint() {
-        let gen = RelationJoin {
+        let generator = RelationJoin {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
@@ -270,7 +270,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(3, &mut prepend, &mut append);
+        let r = generator.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append);
@@ -278,7 +278,7 @@ mod test {
 
     #[test]
     fn relation_join_optional() {
-        let gen = RelationJoin {
+        let generator = RelationJoin {
             new: 2,
             new_components: 3..5,
             unequal_constraints: vec![],
@@ -292,7 +292,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(3, &mut prepend, &mut append);
+        let r = generator.generate(3, &mut prepend, &mut append);
         assert_eq!(4, r);
         insta::assert_snapshot!(prepend, @r#"
         let opt_cid_0 = world.get_component_id::<OptA>();

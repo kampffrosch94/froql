@@ -315,7 +315,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut vars: Vec<_> = variables.variables.into_values().collect();
     vars.sort();
 
-    let gen = Generator {
+    let generator = Generator {
         vars,
         prefills,
         components,
@@ -327,7 +327,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         unrelations,
     };
 
-    let result = gen.generate(&world);
+    let result = generator.generate(&world);
 
     //eprintln!("{}", &result);
     Ok(result.parse().unwrap())

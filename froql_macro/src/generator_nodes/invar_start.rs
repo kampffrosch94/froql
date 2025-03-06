@@ -125,7 +125,7 @@ mod test {
 
     #[test]
     fn invar_trivial() {
-        let gen = InvarStart {
+        let generator = InvarStart {
             unequalities: vec![],
             rel_constraints: vec![],
             unrel_constraints: vec![],
@@ -140,7 +140,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(0, &mut prepend, &mut append);
+        let r = generator.generate(0, &mut prepend, &mut append);
         assert_eq!(2, r);
         insta::assert_snapshot!(prepend, @"");
         insta::assert_snapshot!(append, @r#"

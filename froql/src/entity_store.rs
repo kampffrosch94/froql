@@ -38,33 +38,33 @@ struct EntitySlot {
     /// if this slot is empty we use it as index for a free list
     row: ArchetypeRow,
     /// even is empty, uneven is filled
-    gen: EntityGeneration,
+    generation: EntityGeneration,
 }
 
 impl EntitySlot {
     fn new() -> Self {
         // start with 1 so that we can use 0 as sentinel
-        let gen = EntityGeneration(1);
+        let generation = EntityGeneration(1);
         EntitySlot {
             archetype: SENTINEL_ARCHETYPE,
             row: SENTINEL_ARCHETYPE_ROW,
-            gen,
+            generation,
         }
     }
 
     fn new_empty(previous_free: usize) -> Self {
         // start with 2 so that we can use 0 as sentinel
-        let gen = EntityGeneration(2);
+        let generation = EntityGeneration(2);
         let row = ArchetypeRow(previous_free as u32);
         EntitySlot {
             archetype: SENTINEL_ARCHETYPE,
             row,
-            gen,
+            generation,
         }
     }
 
     fn is_empty(&self) -> bool {
-        !self.gen.is_alive()
+        !self.generation.is_alive()
     }
 
     fn next_free(&self) -> usize {
@@ -74,17 +74,17 @@ impl EntitySlot {
 
     fn fill(&mut self) -> EntityGeneration {
         debug_assert!(self.is_empty());
-        self.gen.0 = self.gen.0.wrapping_add(1);
+        self.generation.0 = self.generation.0.wrapping_add(1);
         self.row = SENTINEL_ARCHETYPE_ROW;
         self.archetype = SENTINEL_ARCHETYPE;
-        self.gen
+        self.generation
     }
 
     fn empty_out(&mut self, previous_free: usize) -> EntityGeneration {
         debug_assert!(!self.is_empty());
-        self.gen.0 = self.gen.0.wrapping_add(1);
+        self.generation.0 = self.generation.0.wrapping_add(1);
         self.row.0 = previous_free as u32;
-        self.gen
+        self.generation
     }
 }
 
@@ -103,21 +103,21 @@ impl EntityStore {
         if self.next_free >= self.slots.len() {
             let id = EntityId(self.slots.len() as u32);
             let slot = EntitySlot::new();
-            let gen = slot.gen;
+            let generation = slot.generation;
             self.slots.push(slot);
             self.next_free = self.slots.len();
             return Entity {
-                generation: gen,
+                generation,
                 id,
             };
         } else {
             let index = self.next_free;
             let slot = &mut self.slots[index];
             self.next_free = slot.next_free();
-            let gen = slot.fill();
+            let generation = slot.fill();
             let id = EntityId(index as u32);
             return Entity {
-                generation: gen,
+                generation,
                 id,
             };
         }
@@ -126,7 +126,7 @@ impl EntityStore {
     pub fn destroy(&mut self, e: Entity) {
         let index = e.id.0 as usize;
         if let Some(slot) = self.slots.get_mut(index) {
-            if slot.gen != e.generation {
+            if slot.generation != e.generation {
                 return;
             }
             slot.empty_out(self.next_free);
@@ -137,7 +137,7 @@ impl EntityStore {
     pub fn set_archetype(&mut self, e: Entity, id: ArchetypeId, row: ArchetypeRow) {
         let index = e.id.0 as usize;
         let slot = &mut self.slots[index];
-        assert_eq!(slot.gen, e.generation);
+        assert_eq!(slot.generation, e.generation);
         slot.archetype = id;
         slot.row = row;
     }
@@ -156,30 +156,30 @@ impl EntityStore {
         let index = e.id.0 as usize;
         self.slots
             .get(index)
-            .map(|slot| slot.gen == e.generation)
+            .map(|slot| slot.generation == e.generation)
             .unwrap_or(false)
     }
 
     pub fn get_archetype(&self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
         let index = e.id.0 as usize;
         let slot = &self.slots[index];
-        assert_eq!(slot.gen, e.generation);
+        assert_eq!(slot.generation, e.generation);
         (slot.archetype, slot.row)
     }
 
     pub fn get_archetype_unchecked(&self, id: EntityId) -> (ArchetypeId, ArchetypeRow) {
         let index = id.0 as usize;
         let slot = &self.slots[index];
-        assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
+        assert!(slot.generation.is_alive(), "Entity in slot is not alive.");
         (slot.archetype, slot.row)
     }
 
     pub fn get_from_id(&self, id: EntityId) -> Entity {
         let index = id.0 as usize;
         let slot = &self.slots[index];
-        assert!(slot.gen.is_alive(), "Entity in slot is not alive.");
+        assert!(slot.generation.is_alive(), "Entity in slot is not alive.");
         Entity {
-            generation: slot.gen,
+            generation: slot.generation,
             id,
         }
     }
@@ -190,9 +190,9 @@ impl EntityStore {
         let index = id.as_index();
         if index < self.slots.len() {
             let slot = &mut self.slots[index];
-            if slot.gen.is_alive() {
+            if slot.generation.is_alive() {
                 return ForceAliveResult::WasAliveBefore(Entity {
-                    generation: slot.gen,
+                    generation: slot.generation,
                     id,
                 });
             } else {
@@ -200,7 +200,7 @@ impl EntityStore {
                     self.next_free = slot.next_free();
                     slot.fill();
                     return ForceAliveResult::MadeAlive(Entity {
-                        generation: slot.gen,
+                        generation: slot.generation,
                         id,
                     });
                 } else {
@@ -214,7 +214,7 @@ impl EntityStore {
                     let slot = &mut self.slots[index];
                     slot.fill();
                     return ForceAliveResult::MadeAlive(Entity {
-                        generation: slot.gen,
+                        generation: slot.generation,
                         id,
                     });
                 }
@@ -234,7 +234,7 @@ impl EntityStore {
             self.next_free = slot.next_free();
             slot.fill();
             return ForceAliveResult::MadeAlive(Entity {
-                generation: slot.gen,
+                generation: slot.generation,
                 id,
             });
         }

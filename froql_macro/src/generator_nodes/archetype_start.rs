@@ -139,7 +139,7 @@ mod test {
 
     #[test]
     fn normal() {
-        let gen = ArchetypeStart {
+        let generator = ArchetypeStart {
             var: 0,
             components: 0..2,
             opt_components: vec![],
@@ -154,7 +154,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(0, &mut prepend, &mut append);
+        let r = generator.generate(0, &mut prepend, &mut append);
         assert_eq!(2, r);
         assert_eq!(prepend, "");
         insta::assert_snapshot!(append, @r#"
@@ -200,7 +200,7 @@ mod test {
 
     #[test]
     fn check_unequal() {
-        let gen = ArchetypeStart {
+        let generator = ArchetypeStart {
             var: 0,
             components: 0..2,
             opt_components: vec![],
@@ -215,7 +215,7 @@ mod test {
 
         let mut prepend = String::new();
         let mut append = String::new();
-        let r = gen.generate(0, &mut prepend, &mut append);
+        let r = generator.generate(0, &mut prepend, &mut append);
         assert_eq!(2, r);
         assert_eq!(prepend, "");
         insta::assert_snapshot!(append, @r#"
