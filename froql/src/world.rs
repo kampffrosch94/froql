@@ -14,9 +14,13 @@ use crate::{
 
 pub struct World {
     pub bookkeeping: Bookkeeping,
-    pub(crate) deferred_queue: RefCell<Vec<DeferredOperation>>,
+    pub(crate) deferred_queue: RefCell<DeferredQueue>,
     // TODO move into query or something
     singleton: Entity,
+}
+
+pub(crate) struct DeferredQueue {
+    pub operations: Vec<DeferredOperation>,
 }
 
 impl World {
@@ -25,7 +29,9 @@ impl World {
         let singleton = bookkeeping.create();
         World {
             bookkeeping,
-            deferred_queue: RefCell::new(Vec::new()),
+            deferred_queue: RefCell::new(DeferredQueue {
+                operations: Vec::new(),
+            }),
             singleton,
         }
     }
@@ -198,7 +204,8 @@ impl World {
     pub fn process(&mut self) {
         let mut tmp = Vec::new();
         let queue = self.deferred_queue.get_mut();
-        std::mem::swap(&mut tmp, queue); // too lazy to work around partial borrows here atm
+        let ops = &mut queue.operations;
+        std::mem::swap(&mut tmp, ops); // too lazy to work around partial borrows here atm
         for command in tmp {
             match command {
                 DeferredOperation::DestroyEntity(e) => {

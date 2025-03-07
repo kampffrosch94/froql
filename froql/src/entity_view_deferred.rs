@@ -66,6 +66,7 @@ impl<'me> EntityViewDeferred<'me> {
         self.world
             .deferred_queue
             .borrow_mut()
+            .operations
             .push(D::AddComponent(Box::new(move |world| {
                 if world.is_alive(e) {
                     world.add_component(e, val);
@@ -79,6 +80,7 @@ impl<'me> EntityViewDeferred<'me> {
         self.world
             .deferred_queue
             .borrow_mut()
+            .operations
             .push(D::AddRelation(tid, self.id, to));
         self
     }
@@ -88,6 +90,7 @@ impl<'me> EntityViewDeferred<'me> {
         self.world
             .deferred_queue
             .borrow_mut()
+            .operations
             .push(D::AddRelation(tid, from, self.id));
         self
     }
@@ -120,6 +123,7 @@ impl<'me> EntityViewDeferred<'me> {
         self.world
             .deferred_queue
             .borrow_mut()
+            .operations
             .push(D::RemoveComponent(tid, self.id));
         self
     }
@@ -128,6 +132,7 @@ impl<'me> EntityViewDeferred<'me> {
         self.world
             .deferred_queue
             .borrow_mut()
+            .operations
             .push(D::DestroyEntity(self.id));
     }
 }
