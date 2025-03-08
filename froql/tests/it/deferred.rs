@@ -19,10 +19,10 @@ fn scenario_marriage() {
 
     while let Some((first,)) = {
         world.process();
-        query!(world, &me, _ Person(me), !Spouse(me, _)).next()
+        query!(world, &this, _ Person, !Spouse(this, _)).next()
     } {
         if let Some((second,)) =
-            query!(world, &me, _ Person(me), !Spouse(me, _), me != *first).next()
+            query!(world, &this, _ Person, !Spouse(this, _), this != *first).next()
         {
             second.relate_to::<Spouse>(first.id);
         } else {
