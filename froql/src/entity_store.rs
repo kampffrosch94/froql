@@ -1,4 +1,4 @@
-use std::u32;
+use std::{cell::Cell, u32};
 
 use crate::archetype::{ArchetypeId, ArchetypeRow};
 
@@ -30,6 +30,7 @@ pub struct Entity {
 pub struct EntityStore {
     slots: Vec<EntitySlot>,
     next_free: usize,
+    deferred_creations: Cell<usize>,
 }
 
 struct EntitySlot {
@@ -96,6 +97,7 @@ impl EntityStore {
         EntityStore {
             slots: Vec::new(),
             next_free: 0,
+            deferred_creations: Cell::new(0),
         }
     }
 
@@ -117,7 +119,7 @@ impl EntityStore {
         }
     }
 
-    pub fn destroy(&mut self, e: Entity) {
+    pub(crate) fn destroy(&mut self, e: Entity) {
         let index = e.id.0 as usize;
         if let Some(slot) = self.slots.get_mut(index) {
             if slot.generation != e.generation {
@@ -126,6 +128,44 @@ impl EntityStore {
             slot.empty_out(self.next_free);
             self.next_free = index;
         }
+    }
+
+    pub(crate) fn create_deferred(&self) -> Entity {
+        let mut count = self.deferred_creations.get();
+        self.deferred_creations.set(count + 1);
+
+        let mut index = self.next_free;
+        while count > 0 {
+            count -= 1;
+            if index < self.slots.len() {
+                let slot = &self.slots[index];
+                index = slot.next_free();
+            } else {
+                index += 1;
+            }
+        }
+
+        if index < self.slots.len() {
+            let slot = &self.slots[index];
+            debug_assert!(self.slots[index].is_empty());
+            Entity {
+                generation: EntityGeneration(slot.generation.0.wrapping_add(1)),
+                id: EntityId(index as u32),
+            }
+        } else {
+            Entity {
+                generation: EntityGeneration(1),
+                id: EntityId(index as u32),
+            }
+        }
+    }
+
+    /// the caller needs to call `create()` return value amounts of times
+    /// kinda awkward, but otherwise we'd have to do extra allocations for temporaries
+    /// or worse: think
+    #[must_use]
+    pub(crate) fn realize_deferred(&mut self) -> usize {
+        self.deferred_creations.replace(0)
     }
 
     pub fn set_archetype(&mut self, e: Entity, id: ArchetypeId, row: ArchetypeRow) {

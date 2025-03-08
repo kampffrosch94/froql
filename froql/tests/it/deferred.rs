@@ -43,3 +43,62 @@ fn scenario_marriage() {
         println!("{person:?} is not married");
     }
 }
+
+#[test]
+fn deferred_creation_simple() {
+    let mut world = World::new();
+    let e = world.create_deferred().id;
+    dbg!(&e);
+    assert!(!world.is_alive(e));
+    world.process();
+    assert!(world.is_alive(e));
+}
+
+#[test]
+fn deferred_creation_using_freelist() {
+    let mut world = World::new();
+    for _ in 0..5 {
+        world.create();
+    }
+    let a = world.create();
+    let b = world.create();
+    let c = world.create();
+    world.destroy(a);
+    world.destroy(b);
+    world.destroy(c);
+
+    let c_new = world.create_deferred().id;
+    let b_new = world.create_deferred().id;
+    world.create_deferred();
+    world.create_deferred();
+
+    assert!(!world.is_alive(c));
+    assert!(!world.is_alive(c_new));
+    assert_eq!(c_new.id, c.id);
+    assert_ne!(c_new.generation, c.generation);
+
+    assert!(!world.is_alive(b));
+    assert!(!world.is_alive(b_new));
+    assert_eq!(b_new.id, b.id);
+    assert_ne!(b_new.generation, b.generation);
+
+    world.process();
+    assert!(!world.is_alive(b));
+    assert!(!world.is_alive(c));
+    assert!(world.is_alive(b_new));
+    assert!(world.is_alive(c_new));
+}
+
+#[test]
+fn deferred_creation_realised_by_undeferred() {
+    let mut world = World::new();
+    let e = world.create_deferred().id;
+    assert!(!world.is_alive(e));
+    let a = world.create();
+    assert!(world.is_alive(e));
+
+    let e = world.create_deferred().id;
+    assert!(!world.is_alive(e));
+    world.destroy(a);
+    assert!(world.is_alive(e));
+}

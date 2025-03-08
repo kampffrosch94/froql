@@ -57,7 +57,7 @@ impl Bookkeeping {
         self.entities.is_alive(e)
     }
 
-    pub fn create(&mut self) -> Entity {
+    fn create_inner(&mut self) -> Entity {
         let e = self.entities.create();
         let empty_archetype = &mut self.archetypes[EMPTY_ARCHETYPE_ID.0 as usize];
         let row = ArchetypeRow(empty_archetype.entities.len() as u32);
@@ -66,7 +66,24 @@ impl Bookkeeping {
         e
     }
 
+    pub fn create(&mut self) -> Entity {
+        self.realize_deferred();
+        self.create_inner()
+    }
+
+    pub fn create_deferred(&self) -> Entity {
+        self.entities.create_deferred()
+    }
+
+    pub fn realize_deferred(&mut self) {
+        for _ in 0..self.entities.realize_deferred() {
+            self.create_inner();
+        }
+    }
+
     pub fn ensure_alive(&mut self, id: EntityId) -> Entity {
+        self.realize_deferred();
+
         use crate::entity_store::ForceAliveResult as R;
         match self.entities.force_alive(id) {
             R::WasAliveBefore(e) => e,
@@ -289,6 +306,8 @@ impl Bookkeeping {
     }
 
     pub fn destroy(&mut self, e: Entity) {
+        self.realize_deferred(); // need to do that so we don't break the free list
+
         if self.entities.is_alive(e) {
             let (a_id, a_row) = self.entities.get_archetype(e);
             let a = &self.archetypes[a_id.0 as usize];
