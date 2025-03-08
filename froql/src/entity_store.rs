@@ -26,6 +26,13 @@ pub struct Entity {
     pub id: EntityId,
 }
 
+// needed for some trickery in the macro
+impl From<&Entity> for Entity {
+    fn from(value: &Entity) -> Self {
+        *value
+    }
+}
+
 /// A generational Arena that can only store Entities
 pub struct EntityStore {
     slots: Vec<EntitySlot>,

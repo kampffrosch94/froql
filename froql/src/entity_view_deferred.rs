@@ -143,6 +143,12 @@ impl<'a> Into<Entity> for EntityViewDeferred<'a> {
     }
 }
 
+impl<'a> Into<Entity> for &EntityViewDeferred<'a> {
+    fn into(self) -> Entity {
+        self.id
+    }
+}
+
 impl<'a> PartialEq for EntityViewDeferred<'a> {
     fn eq(&self, other: &Self) -> bool {
         self.id == other.id && std::ptr::eq(self.world, other.world)

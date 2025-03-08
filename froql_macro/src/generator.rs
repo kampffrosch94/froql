@@ -148,7 +148,7 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     for (index, name) in v {
         write!(
             result,
-            "let invar_{index}: ::froql::entity_store::Entity = {name}.into();
+            "let invar_{index}: ::froql::entity_store::Entity = (&{name}).into();
 "
         )
         .unwrap();
