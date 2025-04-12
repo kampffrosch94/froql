@@ -120,7 +120,7 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
                 as *const ::std::cell::RefCell<Unit>))
                 .borrow(),
             (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
-                as *const RefCell<Health>))
+                as *const ::std::cell::RefCell<Health>))
                 .borrow_mut(),
         )
     });

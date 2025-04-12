@@ -680,10 +680,10 @@ mod test {
         insta::assert_snapshot!({
             generate_invar_captures(&mut result, &prefills);
             result
-        }, @r#"
-        let invar_1: ::froql::entity_store::Entity = player.into();
-        let invar_2: ::froql::entity_store::Entity = somebody.into();
-        "#);
+        }, @r"
+        let invar_1: ::froql::entity_store::Entity = (&player).into();
+        let invar_2: ::froql::entity_store::Entity = (&somebody).into();
+        ");
 
         let mut result = String::new();
         let mut prefills = HashMap::new();
