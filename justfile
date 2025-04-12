@@ -2,6 +2,7 @@ default:
   @just --choose
 
 insta:
+    cargo nextest r
     cargo insta test --review --unreferenced delete
 
 test:
