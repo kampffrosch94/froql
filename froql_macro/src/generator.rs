@@ -691,7 +691,7 @@ mod test {
         insta::assert_snapshot!({
             generate_invar_captures(&mut result, &prefills);
             result
-        }, @"let invar_1: ::froql::entity_store::Entity = player.into();");
+        }, @"let invar_1: ::froql::entity_store::Entity = (&player).into();");
 
         // empty
         let mut result = String::new();

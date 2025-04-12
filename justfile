@@ -2,11 +2,11 @@ default:
   @just --choose
 
 insta:
-    cargo nextest r
-    cargo insta test --review --unreferenced delete
+    cargo insta review
 
 test:
     cargo nextest r
+    @just insta
 
 miri:
     cargo miri nextest r -j12
