@@ -3,4 +3,4 @@ authors = ["kampffrosch94"]
 language = "en"
 multilingual = false
 src = "src"
-title = "Froql"
+title = "Introduction to Froql"
