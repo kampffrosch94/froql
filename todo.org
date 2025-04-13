@@ -85,12 +85,14 @@ or if it exists it the RelVec does not contain the entity_id bound to the other 
 - [X] init
 - [X] check constraint on relation join
 - [X] test
-** TODO queries involving ZSTs
+** DONE queries involving ZSTs
+CLOSED: [2025-04-13 Sun 16:28]
 - ZST are not stored in archetype
   - need to search for them when creating archetype sets
   - don't need them in output array, can just create from NonNull::dangling()
   - maybe I should insert checks that outputs are not ZSTs
 - I think I'll just handle ZSTs like any type other so I don't end in type hell
+- ended up doing just that
 ** TODO create Entities for components
 - should those exist for relationships as well?
 ** TODO singletons
@@ -109,8 +111,10 @@ But at some point I need to actually try them out in the field and gain insights
 ** TODO dynamic tags
 - tag relationship to component entity?
 * World API
-** TODO EntityViewMut
-** TODO EntityViewDeferred
+** DONE EntityViewMut
+CLOSED: [2025-04-13 Sun 16:29]
+** DONE EntityViewDeferred
+CLOSED: [2025-04-13 Sun 16:29]
 ** TODO sync syntax
 - <> sync before and after
 - < sync before
@@ -131,6 +135,7 @@ Adding a query! macro should not require the user to add extra imports.
 check that everything is nicely formatted or fail the build
 ** Insta
 set ~export CI=true~ in CI
+that is true by default for github actions afaik
 
 * Publication
 ** Naming conventions
