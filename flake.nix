@@ -54,6 +54,7 @@
             cargo-expand
             cargo-criterion
             cargo-insta
+            mdbook
 
             ### begin macroquad
             # necessary to build
