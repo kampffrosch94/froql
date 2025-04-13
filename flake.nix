@@ -39,7 +39,7 @@
                 rust-src
                 rustc
                 rustfmt
-                #miri
+                #miri # needs complete/nightly
               ]
             )
             rust-analyzer-nightly # optional
