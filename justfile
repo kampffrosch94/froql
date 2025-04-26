@@ -28,3 +28,7 @@ book-serve:
     mdbook serve &
     xdg-open http://localhost:3000
     wait
+
+# I run this in my pre-commit hook
+pre-commit: format-check
+    cargo check
