@@ -7,3 +7,6 @@ title = "Introduction to Froql"
 
 [rust]
 edition = "2024"
+
+[output.html.playground]
+runnable = false
