@@ -33,6 +33,25 @@ book-serve:
 # I run this in my pre-commit hook
 pre-commit: format-check
 
+# I run this in my pre-push hook
 pre-push:
     cargo test
     @just book-test
+
+
+pre-commit := trim('
+#!/usr/bin/env -S bash
+just pre-commit
+')
+pre-push := trim('
+#!/usr/bin/env -S bash
+just pre-push
+')
+
+# sets up git hooks
+setup-hooks:
+    echo "{{pre-commit}}" > .git/hooks/pre-commit
+    echo "{{pre-push}}"> .git/hooks/pre-push
+    chmod +x .git/hooks/pre-commit
+    chmod +x .git/hooks/pre-push
+
