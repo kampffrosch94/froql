@@ -1,11 +1,8 @@
-# Chapter 1
-
-Hello world.
-
+# Entities and Components
 
 ```rust
 # use froql::world::World;
 let mut w = World::new();
-println!("Hello world");
+let e = w.create();
 ```
 
