@@ -11,7 +11,7 @@ use crate::generator::*;
 use macro_error::MacroError;
 use parser::RelationVarKind as RVK;
 use parser::VarKind as VK;
-use parser::{parse_term, Term};
+use parser::{Term, parse_term};
 use proc_macro::{TokenStream, TokenTree};
 
 pub(crate) const ANYVAR: isize = isize::MAX;

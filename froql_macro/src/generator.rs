@@ -4,21 +4,21 @@ use std::fmt::Debug;
 use std::fmt::Write;
 use std::{collections::HashMap, ops::Range};
 
-use join_order::compute_join_order;
 use join_order::InitInvars;
 use join_order::InitVar;
 use join_order::JoinKind;
 use join_order::NewJoin;
+use join_order::compute_join_order;
 
+use crate::ANYVAR;
+use crate::Unrelation;
+use crate::generator_nodes::GeneratorNode;
 use crate::generator_nodes::archetype_start::ArchetypeStart;
 use crate::generator_nodes::invar_start::InvarInfo;
 use crate::generator_nodes::invar_start::InvarStart;
 use crate::generator_nodes::relation_helper::RelationHelperInfo;
 use crate::generator_nodes::relation_helper::UnrelationHelperInfo;
 use crate::generator_nodes::relation_join::RelationJoin;
-use crate::generator_nodes::GeneratorNode;
-use crate::Unrelation;
-use crate::ANYVAR;
 use crate::{Accessor, Component, Relation};
 mod join_order;
 pub use join_order::Checks;

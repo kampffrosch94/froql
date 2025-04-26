@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use crate::{
+    ANYVAR, Relation, Unrelation,
     generator_nodes::{
         relation_helper::{RelationHelperInfo, UnrelationHelperInfo},
         types::{RelationConstraint, UnrelationConstraint},
     },
-    Relation, Unrelation, ANYVAR,
 };
 
 use super::VarInfo;

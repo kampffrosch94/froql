@@ -219,13 +219,13 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                             return Ok(Term::MutComponentVar(
                                 ty.to_string(),
                                 VK::Var(var.to_string()),
-                            ))
+                            ));
                         }
                         "_" => {
                             return Ok(Term::NoOutComponentVar(
                                 ty.to_string(),
                                 VK::Var(var.to_string()),
-                            ))
+                            ));
                         }
                         _ => {
                             error_single!(&tokens[0], "Expected mut or _");
@@ -240,7 +240,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                                 return Ok(Term::MutComponentVar(
                                     ty.to_string(),
                                     VK::InVar(var.to_string()),
-                                ))
+                                ));
                             }
                             "_" => {
                                 return Ok(Term::NoOutComponentVar(

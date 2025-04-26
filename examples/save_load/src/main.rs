@@ -1,5 +1,5 @@
 use std::{
-    any::{type_name, TypeId},
+    any::{TypeId, type_name},
     cell::RefCell,
     collections::HashMap,
 };
@@ -300,7 +300,6 @@ async fn main() {
             world.process();
         }
 
-        
         for (r,) in query!(world, MyRect) {
             draw_rectangle_lines(r.x, r.y, r.w, r.h, 5., GREEN);
         }

@@ -1,11 +1,11 @@
 use super::{
+    GeneratorNode,
     relation_helper::{
-        relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
-        UnrelationHelperInfo,
+        RelationHelperInfo, UnrelationHelperInfo, relation_helpers_init_and_set_col,
+        relation_helpers_set_rows,
     },
     relation_join::{insert_checks, insert_optional_comps},
     types::{RelationConstraint, UnrelationConstraint},
-    GeneratorNode,
 };
 use std::{fmt::Write, ops::Range};
 

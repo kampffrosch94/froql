@@ -1,9 +1,9 @@
+use super::GeneratorNode;
 use super::relation_helper::{
-    relation_helpers_init_and_set_col, relation_helpers_set_rows, RelationHelperInfo,
-    UnrelationHelperInfo,
+    RelationHelperInfo, UnrelationHelperInfo, relation_helpers_init_and_set_col,
+    relation_helpers_set_rows,
 };
 use super::types::{RelationConstraint, UnrelationConstraint};
-use super::GeneratorNode;
 use std::fmt::Write;
 use std::ops::Range;
 
