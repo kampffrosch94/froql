@@ -14,9 +14,17 @@ miri:
     cargo miri nextest r -j12
 
 # checks that everything is well formatted
-check-format:
+format-check:
     cargo fmt --check
 
-check-book:
-    cargo build
-    mdbook test docs/book -L target/debug/deps/
+# runs code blocks in the book as tests
+[working-directory: 'docs/book_test']
+book-test:
+    cargo test
+
+[working-directory: 'docs/book/']
+book-serve:
+    #!/usr/bin/env -S bash
+    mdbook serve &
+    xdg-open http://localhost:3000
+    wait

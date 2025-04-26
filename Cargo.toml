@@ -3,7 +3,7 @@ resolver = "3"
 members = [ 
     "froql", 
     "froql_macro",
-    "examples/*",
+    "examples/*", "docs/book_test",
 ]
 
 [workspace.package]

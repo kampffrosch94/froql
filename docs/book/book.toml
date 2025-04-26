@@ -4,3 +4,6 @@ language = "en"
 multilingual = false
 src = "src"
 title = "Introduction to Froql"
+
+[rust]
+edition = "2024"

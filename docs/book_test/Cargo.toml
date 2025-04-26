@@ -1,0 +1,11 @@
+[package]
+name = "book_test"
+version = "0.1.0"
+license.workspace = true
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[dependencies]
+froql = { path = "../../froql" }
+doc-comment = "0.3.3"
