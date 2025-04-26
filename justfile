@@ -21,6 +21,7 @@ format-check:
 [working-directory: 'docs/book_test']
 book-test:
     cargo test
+    mdbook build ../book/
 
 [working-directory: 'docs/book/']
 book-serve:
@@ -31,4 +32,7 @@ book-serve:
 
 # I run this in my pre-commit hook
 pre-commit: format-check
-    cargo check
+
+pre-push:
+    cargo test
+    @just book-test
