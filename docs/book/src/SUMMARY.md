@@ -1,7 +1,10 @@
 # Summary
 
-- [Introduction](index.md)
+[Introduction](index.md)
+---
 - [Entities and Components](./entities.md)
 - [Queries](./queries.md)
 - [Relationships](./relations.md)
 - [Singletons](./singletons.md)
+---
+[Glossary](./glossary.md)
