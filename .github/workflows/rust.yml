@@ -22,5 +22,6 @@ jobs:
 
       - run: rustup toolchain install stable --profile minimal --no-self-update
 
-      - run: |
-          cargo test
+      - run: cargo fmt --check
+
+      - run: cargo test
