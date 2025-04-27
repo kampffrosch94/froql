@@ -5,6 +5,7 @@ on: [push, pull_request]
 jobs:
   test:
     name: cargo miri
+    runs-on: ubuntu-latest
 
     env:
       CARGO_TERM_COLOR: always
