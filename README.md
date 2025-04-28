@@ -20,7 +20,7 @@ Kampf**fro**sch's **q**uery **l**anguage
 ## Inspirations
 
 Froql was inspired by many other projects. 
-Click on the arrow to see what idea was taken from them.
+Click on the arrows to see what idea was taken from each.
 
 <details>
   <summary> <a href="https://github.com/SanderMertens/flecs">flecs</a> </summary>
@@ -35,22 +35,25 @@ Click on the arrow to see what idea was taken from them.
   if you are curious.
 </details>
 <details>
-  <summary>flecs-rust</summary>
+  <summary><a href="https://github.com/Indra-db/Flecs-Rust">flecs-rust</a></summary>
   The idea for EntityViews came from here.
 </details>
 <details>
-  <summary>ascent</summary>
+  <summary><a href="https://github.com/s-arash/ascent">ascent</a></summary>
   Transpiling a query language to Rust.
+  
+  How ascent can interact with Rust by calling regular Rust functions is really cool.
+  I want to explore that idea more for advanced queries.
 </details>
 <details>
-  <summary>nanoserde</summary>
+  <summary><a href="https://github.com/not-fl3/nanoserde">nanoserde</a></summary>
   This is the fastest compiling proc macro crate for serialization I know.
   So copying from that I wrote froqls proc macro without any external dependencies.
 </details>
 <details>
-  <summary>bevy</summary>
+  <summary><a href="https://github.com/bevyengine/bevy">bevy</a></summary>
   Bevy has lots of interesting ideas and I ignored most of them.
-  Froql has pretty different approach after all.
+  Froql has a pretty different approach after all.
   
   But how bevy reserves entity IDs safely in deferred contexts is something I copied.
 </details>
