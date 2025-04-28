@@ -5,6 +5,12 @@ default:
 insta:
     cargo insta review
 
+
+# run benchmarks with criterion
+[working-directory: 'froql/']
+bench:
+    cargo bench
+
 # run tests with nextest
 test:
     cargo nextest r
