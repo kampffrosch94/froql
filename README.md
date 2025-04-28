@@ -15,3 +15,17 @@ Kampf**fro**sch's **q**uery **l**anguage
 - a scheduler
 - multithreading support
 - a codebase free of unsafe
+
+
+## Inspirations
+<details>
+  <summary>flecs</summary>
+  The backing archetypical ECS and inspiration come from here.
+</details>
+
+- flecs
+- flecs-rust
+- ascent
+- nanoserde
+- hecs
+- bevy
