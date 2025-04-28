@@ -23,7 +23,7 @@ Froql was inspired by many other projects.
 Click on the arrow to see what idea was taken from them.
 
 <details>
-  <summary>[flecs](https://github.com/SanderMertens/flecs)</summary>
+  <summary> <a href="https://github.com/SanderMertens/flecs">flecs</a> </summary>
   The backing archetypical ECS of froql and it's query language were inspired by flecs.
   It's creator wrote about ECS design and also gave me direct advice ❤️
   
