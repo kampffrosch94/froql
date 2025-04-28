@@ -18,9 +18,25 @@ Kampf**fro**sch's **q**uery **l**anguage
 
 
 ## Inspirations
+
+Froql was inspired by many other projects. 
+Click on the arrow to see what idea was taken from them.
+
 <details>
-  <summary>flecs</summary>
-  The backing archetypical ECS and inspiration come from here.
+  <summary>[flecs](https://github.com/SanderMertens/flecs)</summary>
+  The backing archetypical ECS of froql and it's query language were inspired by flecs.
+  It's creator wrote about ECS design and also gave me direct advice ❤️
+  
+  I recommend reading https://medium.com/@ajmmertens/building-an-ecs-storage-in-pictures-642b8bfd6e04
+  if you are curious.
+</details>
+<details>
+  <summary>flecs-rust</summary>
+  The idea for EntityViews.
+</details>
+<details>
+  <summary>ascent</summary>
+  Transpiling a query language to Rust.
 </details>
 
 - flecs
