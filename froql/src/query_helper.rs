@@ -1,4 +1,4 @@
-use std::{any::TypeId, collections::HashSet};
+use std::{any::TypeId, cell::RefCell, collections::HashSet};
 
 use crate::{
     archetype::Archetype, bookkeeping::Bookkeeping, component::ComponentId, entity_store::EntityId,
@@ -139,4 +139,13 @@ pub fn trivial_query_one_component(world: &World, ty: TypeId) -> Vec<EntityId> {
         .flat_map(|aid| bk.archetypes[aid.as_index()].entities.iter())
         .copied()
         .collect()
+}
+
+/// This function is used inside the proc macro to cast outputs
+/// We need an extra function to coerce them to the correct lifetime
+pub unsafe fn coerce_cast<'input: 'output, 'output, T>(
+    _world: &'input World, // just used to grab a lifetime
+    ptr: *mut u8,
+) -> &'output RefCell<T> {
+    unsafe { &*(ptr as *const RefCell<T>) }
 }

@@ -463,9 +463,10 @@ pub fn generate_resumable_query_closure(
                 write!(
                     &mut append,
                     "
-            (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
-                as *const ::std::cell::RefCell<{ty}>))
-                .borrow(),"
+            ::froql::query_helper::coerce_cast::<{ty}>(
+                world,
+                a_refs[{var}].columns[col_indexes[{col}]].get(a_rows[{var}].0)
+            ).borrow(),"
                 )
                 .unwrap();
             }
@@ -474,9 +475,10 @@ pub fn generate_resumable_query_closure(
                 write!(
                     &mut append,
                     "
-            (&*((&a_refs[{var}].columns[col_indexes[{col}]]).get(a_rows[{var}].0)
-                as *const ::std::cell::RefCell<{ty}>))
-                .borrow_mut(),"
+            ::froql::query_helper::coerce_cast::<{ty}>(
+                world,
+                a_refs[{var}].columns[col_indexes[{col}]].get(a_rows[{var}].0)
+            ).borrow_mut(),"
                 )
                 .unwrap();
             }
@@ -494,7 +496,10 @@ pub fn generate_resumable_query_closure(
                     &mut append,
                     "
             (opt_col_{opt_id}.map(|col| {{
-                (&*(col.get(a_rows[{var}].0) as *const ::std::cell::RefCell<{ty}>)).borrow()
+                ::froql::query_helper::coerce_cast::<{ty}>(
+                    world,
+                    col.get(a_rows[{var}].0)
+                ).borrow()
             }})),"
                 )
                 .unwrap();

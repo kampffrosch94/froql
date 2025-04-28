@@ -2,6 +2,7 @@ use std::cell::RefCell;
 
 use froql::archetype::ArchetypeId;
 use froql::archetype::ArchetypeRow;
+use froql::query_helper::coerce_cast;
 use froql::world::World;
 use std::ops::Range;
 
@@ -28,22 +29,70 @@ fn iterator_query() {
     for (comp_a, comp_b) in {
         let world: &World = &world;
         let bk = &world.bookkeeping;
-        let components = [
+        let components_0 = [
             world.get_component_id::<CompA>(),
             world.get_component_id::<CompB>(),
         ];
-        let archetype_ids = bk.matching_archetypes(&components, &[]);
-        assert_eq!(archetype_ids.len(), 2);
-        archetype_ids.into_iter().flat_map(move |aid| {
-            let arch = &bk.archetypes[aid.0 as usize];
-            let mut col_ids = [usize::MAX; 2];
-            arch.find_multiple_columns(&components, &mut col_ids);
-            (0..(&arch.columns[col_ids[0]]).len()).map(move |row| unsafe {
-                (
-                    (&*((&arch.columns[col_ids[0]]).get(row) as *const RefCell<CompA>)).borrow(),
-                    (&*((&arch.columns[col_ids[1]]).get(row) as *const RefCell<CompB>)).borrow(),
-                )
-            })
+        let archetype_id_sets = [bk.matching_archetypes(&components_0, &[])];
+        const VAR_COUNT: usize = 1;
+        let mut a_refs = [&bk.archetypes[0]; VAR_COUNT];
+        let mut a_rows = [::froql::archetype::ArchetypeRow(u32::MAX); VAR_COUNT];
+        let mut current_step = 0;
+        let mut a_max_rows = [0; VAR_COUNT];
+        let mut a_next_indexes = [usize::MAX; VAR_COUNT];
+        let mut col_indexes = [usize::MAX; 2];
+        ::std::iter::from_fn(move || {
+            loop {
+                match current_step {
+                    0 => {
+                        const CURRENT_VAR: usize = 0;
+                        const CURRENT_VAR_COMPONENTS: ::std::ops::Range<usize> = 0..2;
+                        let next_index = &mut a_next_indexes[CURRENT_VAR];
+                        let archetype_ids = &archetype_id_sets[CURRENT_VAR];
+                        *next_index = next_index.wrapping_add(1);
+                        if *next_index >= archetype_ids.len() {
+                            return None;
+                        }
+                        let next_id = archetype_ids[*next_index];
+                        a_rows[CURRENT_VAR] = ::froql::archetype::ArchetypeRow(u32::MAX);
+                        let a_ref = &mut a_refs[CURRENT_VAR];
+                        *a_ref = &bk.archetypes[next_id.as_index()];
+                        a_ref.find_multiple_columns(
+                            &components_0,
+                            &mut col_indexes[CURRENT_VAR_COMPONENTS],
+                        );
+                        a_max_rows[CURRENT_VAR] = a_ref.entities.len() as u32;
+                        current_step += 1;
+                    }
+                    1 => {
+                        const CURRENT_VAR: usize = 0;
+                        let row_counter = &mut a_rows[CURRENT_VAR].0;
+                        let max_row = a_max_rows[CURRENT_VAR];
+                        *row_counter = row_counter.wrapping_add(1);
+                        if *row_counter >= max_row {
+                            current_step -= 1;
+                        } else {
+                            current_step += 1;
+                        }
+                    }
+                    2 => {
+                        current_step -= 1;
+                        return Some(unsafe {
+                            (
+                                coerce_cast::<CompA>(
+                                    world,
+                                    a_refs[0].columns[col_indexes[0]].get(a_rows[0].0),
+                                )
+                                .borrow(),
+                                (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
+                                    as *const ::std::cell::RefCell<CompB>))
+                                    .borrow(),
+                            )
+                        });
+                    }
+                    _ => unreachable!(),
+                }
+            }
         })
     } {
         println!("{comp_a:?}");

@@ -113,15 +113,18 @@ let mut rel_helper_0 = ::froql::query_helper::RelationHelper::new
         (
             ::froql::entity_view_deferred::EntityViewDeferred::from_id_unchecked(world,
                                 a_refs[0].entities[a_rows[0].0 as usize]),
-            (&*((&a_refs[0].columns[col_indexes[0]]).get(a_rows[0].0)
-                as *const ::std::cell::RefCell<Unit>))
-                .borrow(),
-            (&*((&a_refs[1].columns[col_indexes[3]]).get(a_rows[1].0)
-                as *const ::std::cell::RefCell<Unit>))
-                .borrow(),
-            (&*((&a_refs[0].columns[col_indexes[1]]).get(a_rows[0].0)
-                as *const ::std::cell::RefCell<Health>))
-                .borrow_mut(),
+            ::froql::query_helper::coerce_cast::<Unit>(
+                world,
+                a_refs[0].columns[col_indexes[0]].get(a_rows[0].0)
+            ).borrow(),
+            ::froql::query_helper::coerce_cast::<Unit>(
+                world,
+                a_refs[1].columns[col_indexes[3]].get(a_rows[1].0)
+            ).borrow(),
+            ::froql::query_helper::coerce_cast::<Health>(
+                world,
+                a_refs[0].columns[col_indexes[1]].get(a_rows[0].0)
+            ).borrow_mut(),
         )
     });
 }
