@@ -75,6 +75,9 @@ world.remove_component::<MyStruct>(e);
 assert!(!world.has_component::<MyStruct>(e));
 ```
 
+Components in froql use interior mutability via `RefCell`.
+This allows for finegrained access, but may panic at runtime on misuse (violating the aliasing xor mutation rule).
+
 ### Registering components
 
 Froql needs to know about what types of components it manages
@@ -112,3 +115,7 @@ let e: Entity = world.create_mut()
     .add(Age(25))
     .id;
 ```
+
+## Cleanup of Components
+
+TODO
