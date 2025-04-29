@@ -2,16 +2,16 @@
 
 Froql is a DSL for dealing with graph-like state in Rust.
 
-## Target usecase
-Froql was designed with gamejams in mind.
-In a gamejam requirements aren't clear and time is limited. 
-Lots of experimentation needs to happen but global refactorin is too costly.
+## Target use case
+Froql was designed with game jams in mind.
+In a game jam requirements aren't clear and time is limited. 
+Lots of experimentation needs to happen but global refactoring is too costly.
 State is often graph-like (hard to express in Rust) and not tree-like (easy to express in Rust).
 
 Therefore froql allows a user to input data, define relations between data objects and then
 query the data back out in whatever shape is needed at the usage side.
 
-This dynamic behavior relaxes both the requirements and the guarantees of Rusts typesystem.
+This dynamic behavior relaxes both the requirements and the guarantees of Rust's typesystem.
 
 ## froql has
 - fast compile times
@@ -41,7 +41,7 @@ Click on the arrows to see what idea was taken from each.
 <details>
   <summary> <a href="https://github.com/SanderMertens/flecs">flecs</a> </summary>
   As far as I know this is the most advanced ECS out there at the moment.
-  If you need something poliglot (it's written in C with bindings for lots of language),
+  If you need something polyglot (it's written in C with bindings for lots of language),
   fancy features or 
   
   The backing archetypical ECS of froql and it's query language were inspired by flecs.
@@ -64,7 +64,7 @@ Click on the arrows to see what idea was taken from each.
 <details>
   <summary><a href="https://github.com/not-fl3/nanoserde">nanoserde</a></summary>
   This is the fastest compiling proc macro crate for serialization I know.
-  So copying from that I wrote froqls proc macro without any external dependencies.
+  So copying from that I wrote froql's proc macro without any external dependencies.
 </details>
 <details>
   <summary><a href="https://github.com/bevyengine/bevy">bevy_ecs</a></summary>
