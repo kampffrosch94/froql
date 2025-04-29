@@ -21,11 +21,11 @@ You can copy it or store it in other data structures.
 ```rust
 # use froql::world::World;
 # let mut world = World::new();
-let my_entity = world.create(); // create entity
+let my_entity = world.create_entity();
 assert!(world.is_alive(my_entity));
 world.destroy(my_entity); // destroy entity
 assert!(!world.is_alive(my_entity));
-let my_entity = world.create(); // create entity
+let my_entity = world.create_entity();
 ```
 
 Use after free and the ABA problem are solved via generation checks.
@@ -33,10 +33,10 @@ Use after free and the ABA problem are solved via generation checks.
 ```rust
 # use froql::world::World;
 # let mut world = World::new();
-# let my_entity = world.create(); // create entity
+# let my_entity = world.create_entity(); // create entity
 # assert!(world.is_alive(my_entity));
 # world.destroy(my_entity); // destroy entity
-let new_entity = world.create();
+let new_entity = world.create_entity();
 // old id is reused
 assert_eq!(new_entity.id, my_entity.id);
 // but the old entity is still dead - because of the generation
@@ -55,7 +55,7 @@ A component can be any `T: 'static`, there are no traits that must be implemente
 # use froql::world::World;
 # let mut world = World::new();
 struct MyStruct(u32);
-let e = world.create();
+let e = world.create_entity();
 world.add_component(e, MyStruct(42)); // add data
 
 // mutation

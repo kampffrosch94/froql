@@ -9,8 +9,8 @@ fn manual_query_optional_component() {
     #[derive(Debug)]
     struct CompB(isize);
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_component(a, CompA(4));
     world.add_component(a, CompB(2));
     world.add_component(b, CompA(0));

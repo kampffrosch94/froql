@@ -57,11 +57,11 @@ fn deferred_creation_simple() {
 fn deferred_creation_using_freelist() {
     let mut world = World::new();
     for _ in 0..5 {
-        world.create();
+        world.create_entity();
     }
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.destroy(a);
     world.destroy(b);
     world.destroy(c);
@@ -93,7 +93,7 @@ fn deferred_creation_realised_by_undeferred() {
     let mut world = World::new();
     let e = world.create_deferred().entity;
     assert!(!world.is_alive(e));
-    let a = world.create();
+    let a = world.create_entity();
     assert!(world.is_alive(e));
 
     let e = world.create_deferred().entity;

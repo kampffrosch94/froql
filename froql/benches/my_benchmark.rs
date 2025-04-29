@@ -12,7 +12,7 @@ enum Rel {}
 fn create_entities_simple(count: usize) -> World {
     let mut world = World::new();
     for _ in 0..=count {
-        let e = world.create();
+        let e = world.create_entity();
         world.add_component(e, Pos(30, 20));
         world.add_component(e, Speed(10, 5));
     }
@@ -29,8 +29,8 @@ fn simple_query(world: &mut World) {
 fn create_entities_relation(pairs: usize) -> World {
     let mut world = World::new();
     for _ in 0..=pairs {
-        let a = world.create();
-        let b = world.create();
+        let a = world.create_entity();
+        let b = world.create_entity();
         world.add_component(a, Pos(30, 20));
         world.add_component(b, Speed(10, 5));
         world.add_relation::<Rel>(a, b);

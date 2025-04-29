@@ -14,21 +14,21 @@ fn proc_query_relation() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let origins_a: Vec<Entity> = world.relation_origins::<Attack>(goblin_a).collect();
@@ -58,12 +58,12 @@ fn proc_query_trivial() {
     struct CompC {}
 
     let mut world = World::new();
-    let a = world.create();
+    let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
-    let b = world.create();
+    let b = world.create_entity();
     world.add_component(b, CompA(21));
-    let c = world.create();
+    let c = world.create_entity();
     world.add_component(c, CompA(42));
     world.add_component(c, CompB("Hello".to_string()));
     world.add_component(c, CompC {});
@@ -88,14 +88,14 @@ fn proc_query_uncomponent() {
     struct CompC {}
 
     let mut world = World::new();
-    let a = world.create();
+    let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
-    let b = world.create();
+    let b = world.create_entity();
     world.add_component(b, CompA(42));
     world.add_component(b, CompB("Hello".to_string()));
     world.add_component(b, CompC {});
-    let c = world.create();
+    let c = world.create_entity();
     world.add_component(c, CompA(42));
     world.add_component(c, CompB("Hello".to_string()));
 
@@ -119,12 +119,12 @@ fn proc_query_outvar() {
     struct CompC {}
 
     let mut world = World::new();
-    let a = world.create();
+    let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
-    let b = world.create();
+    let b = world.create_entity();
     world.add_component(b, CompA(21));
-    let c = world.create();
+    let c = world.create_entity();
     world.add_component(c, CompA(42));
     world.add_component(c, CompB("Hello".to_string()));
     world.add_component(c, CompC {});
@@ -158,17 +158,17 @@ fn proc_query_relation_invar() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let player2 = world.create();
+    let player2 = world.create_entity();
     world.add_component(player2, Unit("Player2".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
     world.add_relation::<Attack>(player2, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
@@ -176,7 +176,7 @@ fn proc_query_relation_invar() {
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let origins_a: Vec<Entity> = world.relation_origins::<Attack>(goblin_a).collect();
@@ -206,18 +206,18 @@ fn proc_query_relation_anyvar() {
     struct Unit(String);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
 
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let mut counter = 0;
@@ -238,8 +238,8 @@ fn proc_query_unequality_invars() {
     enum Rel {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
 
     let mut counter = 0;
@@ -257,10 +257,10 @@ fn proc_query_constraint() {
     enum Rel2 {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
-    let d = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
+    let d = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel2>(a, b);
     world.add_relation::<Rel>(a, c);
@@ -284,8 +284,8 @@ fn proc_query_optional_component() {
     struct CompB(isize);
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_component(a, CompA(4));
     world.add_component(a, CompB(2));
     world.add_component(b, CompA(0));
@@ -309,9 +309,9 @@ fn proc_query_optional_component_relation() {
     enum Rel {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.add_component(a, CompA(4));
     world.add_component(c, CompA(2));
     world.add_relation::<Rel>(a, b);
@@ -336,9 +336,9 @@ fn proc_query_optional_component_invar() {
     enum Rel {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.add_component(a, CompA(4));
     world.add_component(c, CompA(2));
     world.add_relation::<Rel>(a, b);
@@ -359,8 +359,8 @@ fn proc_query_optional_component_invar() {
 fn proc_query_relation_simple() {
     enum Rel {}
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
 
     let mut counter = 0;
@@ -375,8 +375,8 @@ fn proc_query_relation_constraint_simple() {
     enum Rel {}
     enum Rel2 {}
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel2>(a, b);
 
@@ -392,8 +392,8 @@ fn proc_query_relation_constraint_invar() {
     enum Rel {}
     enum Rel2 {}
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel2>(a, b);
 
@@ -409,10 +409,10 @@ fn proc_query_relation_transitive() {
     enum Rel {}
     let mut world = World::new();
     world.register_relation_flags::<Rel>(TRANSITIVE);
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
-    let d = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
+    let d = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(b, c);
     world.add_relation::<Rel>(c, d);
@@ -432,10 +432,10 @@ fn proc_query_relation_transitive_backwards() {
     enum Rel {}
     let mut world = World::new();
     world.register_relation_flags::<Rel>(TRANSITIVE);
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
-    let d = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
+    let d = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(b, c);
     world.add_relation::<Rel>(c, d);
@@ -456,9 +456,9 @@ fn proc_query_unrelation_anyvars() {
     #[allow(unused)]
     struct Comp(usize);
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.add_relation::<Rel>(a, c);
     world.add_component(a, Comp(0));
     world.add_component(b, Comp(1));
@@ -485,9 +485,9 @@ fn proc_query_unrelation() {
     enum Rel2 {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(a, c);
     world.add_relation::<Rel2>(a, c);
@@ -506,9 +506,9 @@ fn proc_query_unrelation_invar() {
     enum Rel2 {}
 
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(a, c);
     world.add_relation::<Rel2>(a, c);
@@ -526,8 +526,8 @@ fn proc_query_relation_multihop() {
     enum Inside {}
 
     let mut world = World::new();
-    let container1 = world.create();
-    let container2 = world.create();
+    let container1 = world.create_entity();
+    let container2 = world.create_entity();
     let a = world.create_mut().relate_to::<Inside>(container1).entity;
     let b = world.create_mut().relate_to::<Inside>(container1).entity;
     let _c = world.create_mut().relate_to::<Inside>(container2).entity;
@@ -551,8 +551,8 @@ fn proc_query_invar_wrong_components() {
     let mut world = World::new();
     world.register_relation::<Rel>();
     world.register_component::<Comp>();
-    let a = world.create();
-    let _b = world.create();
+    let a = world.create_entity();
+    let _b = world.create_entity();
 
     let mut counter = 0;
     for _x in query!(world, &x, Comp(a), Rel(x, *a)) {

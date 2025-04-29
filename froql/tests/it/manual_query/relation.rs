@@ -20,21 +20,21 @@ fn relation_flatmap() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let origins_a: Vec<_> = world.relation_origins::<Attack>(goblin_a).collect();
@@ -129,21 +129,21 @@ fn query_fsm_relation_outvar() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let mut counter = 0;
@@ -317,22 +317,22 @@ fn query_fsm_relation_invar() {
     let mut world = World::new();
 
     // this shall be our invar
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
 
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let mut counter = 0;
@@ -476,21 +476,21 @@ fn query_fsm_relation_unequal() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let mut counter = 0;
@@ -670,23 +670,23 @@ fn query_fsm_relation_constraint() {
     struct Health(isize);
 
     let mut world = World::new();
-    let player = world.create();
+    let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
-    let goblin_a = world.create();
+    let goblin_a = world.create_entity();
     world.add_component(goblin_a, Health(10));
     world.add_component(goblin_a, Unit("Goblin A".to_string()));
     world.add_relation::<Attack>(player, goblin_a);
     // TODO make symmetric relation
     world.add_relation::<Enemy>(player, goblin_a);
 
-    let goblin_b = world.create();
+    let goblin_b = world.create_entity();
     world.add_component(goblin_b, Health(10));
     world.add_component(goblin_b, Unit("Goblin B".to_string()));
     world.add_relation::<Attack>(player, goblin_b);
 
     // this should not be matched by the query below
     // bad example I know, but I need something
-    let trap = world.create();
+    let trap = world.create_entity();
     world.add_relation::<Attack>(trap, goblin_b);
 
     let mut counter = 0;
@@ -874,8 +874,8 @@ fn query_fsm_relation_constraint() {
 fn manual_query_relation_simple() {
     enum Rel {}
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     let mut counter = 0;
     {
@@ -980,8 +980,8 @@ fn manual_query_relation_simple() {
 fn manual_query_relation_simple2() {
     enum Rel {}
     let mut world = World::new();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     let mut counter = 0;
     for (_a,) in {

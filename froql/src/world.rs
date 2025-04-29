@@ -123,7 +123,7 @@ impl World {
             .unwrap_or_else(|| panic!("ComponentType is not registered."))
     }
 
-    pub fn create(&mut self) -> Entity {
+    pub fn create_entity(&mut self) -> Entity {
         self.bookkeeping.create()
     }
 
@@ -324,10 +324,10 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
-        let e = world.create();
+        let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
-        let other = world.create();
+        let other = world.create_entity();
         world.add_component(other, Pos(5, 4));
         world.add_component(other, Name("Other".to_string()));
 
@@ -349,12 +349,12 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
-        let e = world.create();
+        let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
         assert!(world.has_component::<Pos>(e));
         assert!(world.has_component::<Name>(e));
-        let other = world.create();
+        let other = world.create_entity();
         world.add_component(other, Pos(5, 4));
         world.add_component(other, Name("Other".to_string()));
 
@@ -376,10 +376,10 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
-        let e = world.create();
+        let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
-        let other = world.create();
+        let other = world.create_entity();
         world.add_component(other, Pos(5, 4));
         world.add_component(other, Name("Other".to_string()));
 
@@ -397,7 +397,7 @@ mod test {
         struct Pos(i32, i32);
 
         let mut world = World::new();
-        let e = world.create();
+        let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         let pos = world.get_component::<Pos>(e);
         assert_eq!(pos.0, 4);
@@ -420,7 +420,7 @@ mod test {
 
         let mut world = World::new();
         world.register_component::<Comp>();
-        let a = world.create();
+        let a = world.create_entity();
         assert!(!world.has_component::<Comp>(a));
         world.add_component(a, Comp {});
         assert!(world.has_component::<Comp>(a));

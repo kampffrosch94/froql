@@ -15,12 +15,12 @@ fn iterator_query() {
     struct CompC {}
 
     let mut world = World::new();
-    let a = world.create();
+    let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
-    let b = world.create();
+    let b = world.create_entity();
     world.add_component(b, CompA(21));
-    let c = world.create();
+    let c = world.create_entity();
     world.add_component(c, CompA(42));
     world.add_component(c, CompB("Hello".to_string()));
     world.add_component(c, CompC {});
@@ -114,12 +114,12 @@ fn query_fsm_trivial() {
     struct CompC {}
 
     let mut world = World::new();
-    let a = world.create();
+    let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
-    let b = world.create();
+    let b = world.create_entity();
     world.add_component(b, CompA(21));
-    let c = world.create();
+    let c = world.create_entity();
     world.add_component(c, CompA(42));
     world.add_component(c, CompB("World".to_string()));
     world.add_component(c, CompC {});

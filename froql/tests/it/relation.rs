@@ -10,8 +10,8 @@ fn relation_simple() {
 
     let mut world = World::new();
     world.register_relation::<Rel>();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     assert!(!world.has_relation::<Rel>(a, b));
     world.add_relation::<Rel>(a, b);
     assert!(world.has_relation::<Rel>(a, b));
@@ -31,8 +31,8 @@ fn relation_check_one_side() {
 
     let mut world = World::new();
     world.register_relation::<Rel>();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     let targets: Vec<Entity> = world.relation_targets::<Rel>(a).collect();
     assert_eq!(&[b][..], &targets[..]);
@@ -46,8 +46,8 @@ fn relation_entity_destroy() {
 
     let mut world = World::new();
     world.register_relation::<Rel>();
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     assert!(!world.has_relation::<Rel>(a, b));
     world.add_relation::<Rel>(a, b);
     assert!(world.has_relation::<Rel>(a, b));
@@ -63,9 +63,9 @@ fn relation_exlusive() {
 
     let mut world = World::new();
     world.register_relation_flags::<Rel>(EXCLUSIVE);
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
     assert!(!world.has_relation::<Rel>(a, b));
     assert!(!world.has_relation::<Rel>(a, c));
     world.add_relation::<Rel>(a, b);
@@ -81,8 +81,8 @@ fn relation_asymmetric() {
     enum Rel {}
     let mut world = World::new();
     world.register_relation_flags::<Rel>(0);
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
     assert!(world.has_relation::<Rel>(a, b));
     assert!(!world.has_relation::<Rel>(b, a));
@@ -94,8 +94,8 @@ fn relation_symmetric() {
 
     let mut world = World::new();
     world.register_relation_flags::<Rel>(SYMMETRIC);
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     assert!(!world.has_relation::<Rel>(a, b));
     assert!(!world.has_relation::<Rel>(b, a));
     world.add_relation::<Rel>(a, b);
@@ -109,8 +109,8 @@ fn relation_cascading() {
 
     let mut world = World::new();
     world.register_relation_flags::<Rel>(CASCADING_DESTRUCT);
-    let a = world.create();
-    let b = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
 
     assert!(world.has_relation::<Rel>(a, b));
@@ -128,10 +128,10 @@ fn relation_transitive() {
 
     let mut world = World::new();
     world.register_relation_flags::<Rel>(TRANSITIVE);
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
-    let d = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
+    let d = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(b, c);
     world.add_relation::<Rel>(c, d);
@@ -146,10 +146,10 @@ fn relation_transitive_circle() {
 
     let mut world = World::new();
     world.register_relation_flags::<Rel>(TRANSITIVE);
-    let a = world.create();
-    let b = world.create();
-    let c = world.create();
-    let d = world.create();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    let c = world.create_entity();
+    let d = world.create_entity();
     world.add_relation::<Rel>(a, b);
     world.add_relation::<Rel>(b, c);
     world.add_relation::<Rel>(c, d);
