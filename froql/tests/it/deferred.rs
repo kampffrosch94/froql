@@ -24,7 +24,7 @@ fn scenario_marriage() {
         if let Some((second,)) =
             query!(world, &this, _ Person, !Spouse(this, _), this != *first).next()
         {
-            second.relate_to::<Spouse>(first.id);
+            second.relate_to::<Spouse>(first.entity);
         } else {
             break;
         }
@@ -46,7 +46,7 @@ fn scenario_marriage() {
 #[test]
 fn deferred_creation_simple() {
     let mut world = World::new();
-    let e = world.create_deferred().id;
+    let e = world.create_deferred().entity;
     dbg!(&e);
     assert!(!world.is_alive(e));
     world.process();
@@ -66,8 +66,8 @@ fn deferred_creation_using_freelist() {
     world.destroy(b);
     world.destroy(c);
 
-    let c_new = world.create_deferred().id;
-    let b_new = world.create_deferred().id;
+    let c_new = world.create_deferred().entity;
+    let b_new = world.create_deferred().entity;
     world.create_deferred();
     world.create_deferred();
 
@@ -91,12 +91,12 @@ fn deferred_creation_using_freelist() {
 #[test]
 fn deferred_creation_realised_by_undeferred() {
     let mut world = World::new();
-    let e = world.create_deferred().id;
+    let e = world.create_deferred().entity;
     assert!(!world.is_alive(e));
     let a = world.create();
     assert!(world.is_alive(e));
 
-    let e = world.create_deferred().id;
+    let e = world.create_deferred().entity;
     assert!(!world.is_alive(e));
     world.destroy(a);
     assert!(world.is_alive(e));

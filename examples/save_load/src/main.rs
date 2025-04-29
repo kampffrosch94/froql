@@ -255,7 +255,7 @@ async fn main() {
                             h: 50.,
                         };
                         let center = r.center();
-                        world.create_mut().add(r).add(center).id
+                        world.create_mut().add(r).add(center).entity
                     }
                     CurrentShape::Circle => {
                         let c = MyCircle {
@@ -264,7 +264,7 @@ async fn main() {
                             r: 50.,
                         };
                         let center = c.center();
-                        world.create_mut().add(c).add(center).id
+                        world.create_mut().add(c).add(center).entity
                     }
                 }
             };
@@ -281,13 +281,13 @@ async fn main() {
             for (e, r) in query!(world, &this, MyRect) {
                 if Rect::new(r.x, r.y, r.w, r.h).contains(vec2(mouse.0, mouse.1)) {
                     e.destroy();
-                    destroyed.push(e.id);
+                    destroyed.push(e.entity);
                 }
             }
             for (e, c) in query!(world, &this, MyCircle) {
                 if Circle::new(c.x, c.y, c.r).contains(&vec2(mouse.0, mouse.1)) {
                     e.destroy();
-                    destroyed.push(e.id);
+                    destroyed.push(e.entity);
                 }
             }
 

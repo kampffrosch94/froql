@@ -72,7 +72,7 @@ impl World {
 
     pub fn singleton(&self) -> EntityViewDeferred {
         EntityViewDeferred {
-            id: self.singleton,
+            entity: self.singleton,
             world: self,
         }
     }
@@ -133,18 +133,21 @@ impl World {
 
     pub fn create_mut(&mut self) -> EntityViewMut {
         EntityViewMut {
-            id: self.bookkeeping.create(),
+            entity: self.bookkeeping.create(),
             world: self,
         }
     }
 
     pub fn view_mut(&mut self, e: Entity) -> EntityViewMut {
-        EntityViewMut { id: e, world: self }
+        EntityViewMut {
+            entity: e,
+            world: self,
+        }
     }
 
     pub fn create_deferred(&self) -> EntityViewDeferred {
         EntityViewDeferred {
-            id: self.bookkeeping.create_deferred(),
+            entity: self.bookkeeping.create_deferred(),
             world: self,
         }
     }

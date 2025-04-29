@@ -113,7 +113,7 @@ let e: Entity = world.create_mut()
     .add(MyStruct(42))
     .add(Name("Bob"))
     .add(Age(25))
-    .id;
+    .entity;
 ```
 
 ## Cleanup of Components

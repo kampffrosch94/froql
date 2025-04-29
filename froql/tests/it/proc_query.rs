@@ -245,7 +245,7 @@ fn proc_query_unequality_invars() {
     let mut counter = 0;
 
     for (me,) in query!(world, &a, Rel(a, b), *a != *b) {
-        assert_eq!(me.id, a);
+        assert_eq!(me.entity, a);
         counter += 1;
     }
     assert_eq!(1, counter);
@@ -269,7 +269,7 @@ fn proc_query_constraint() {
     let mut counter = 0;
 
     for (me,) in query!(world, &x, Rel(x, y), Rel2(x, y)) {
-        assert_eq!(me.id, a);
+        assert_eq!(me.entity, a);
         counter += 1;
     }
     assert_eq!(1, counter);
@@ -528,9 +528,9 @@ fn proc_query_relation_multihop() {
     let mut world = World::new();
     let container1 = world.create();
     let container2 = world.create();
-    let a = world.create_mut().relate_to::<Inside>(container1).id;
-    let b = world.create_mut().relate_to::<Inside>(container1).id;
-    let _c = world.create_mut().relate_to::<Inside>(container2).id;
+    let a = world.create_mut().relate_to::<Inside>(container1).entity;
+    let b = world.create_mut().relate_to::<Inside>(container1).entity;
+    let _c = world.create_mut().relate_to::<Inside>(container2).entity;
 
     let mut counter = 0;
     // find all entites that are inside the same container as a

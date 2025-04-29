@@ -13,7 +13,7 @@ use crate::{
 };
 
 pub struct EntityViewDeferred<'a> {
-    pub id: Entity,
+    pub entity: Entity,
     pub world: &'a World,
 }
 
@@ -34,15 +34,15 @@ impl<'a> Deref for EntityViewDeferred<'a> {
     type Target = Entity;
 
     fn deref(&self) -> &Self::Target {
-        &self.id
+        &self.entity
     }
 }
 
 impl<'a> Debug for EntityViewDeferred<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EntityViewDeferred")
-            .field("generation", &self.id.generation)
-            .field("id", &self.id.id)
+            .field("generation", &self.entity.generation)
+            .field("id", &self.entity.id)
             .finish()
     }
 }
@@ -50,19 +50,19 @@ impl<'a> Debug for EntityViewDeferred<'a> {
 impl<'me> EntityViewDeferred<'me> {
     pub fn from_id_unchecked(world: &'me World, id: EntityId) -> Self {
         let entity = world.bookkeeping.entities.get_from_id(id);
-        Self { id: entity, world }
+        Self { entity, world }
     }
 
     pub fn get<'a, T: 'static>(&'a self) -> Ref<'me, T> {
-        self.world.get_component::<T>(self.id)
+        self.world.get_component::<T>(self.entity)
     }
 
     pub fn get_mut<'a, T: 'static>(&'a self) -> RefMut<'me, T> {
-        self.world.get_component_mut::<T>(self.id)
+        self.world.get_component_mut::<T>(self.entity)
     }
 
     pub fn add<T: 'static>(&self, val: T) -> &Self {
-        let e = self.id;
+        let e = self.entity;
         self.world
             .deferred_queue
             .borrow_mut()
@@ -81,7 +81,7 @@ impl<'me> EntityViewDeferred<'me> {
             .deferred_queue
             .borrow_mut()
             .operations
-            .push(D::AddRelation(tid, self.id, to));
+            .push(D::AddRelation(tid, self.entity, to));
         self
     }
 
@@ -91,20 +91,20 @@ impl<'me> EntityViewDeferred<'me> {
             .deferred_queue
             .borrow_mut()
             .operations
-            .push(D::AddRelation(tid, from, self.id));
+            .push(D::AddRelation(tid, from, self.entity));
         self
     }
 
     pub fn is_related_to<T: 'static>(&self, to: Entity) -> bool {
-        self.world.has_relation::<T>(self.id, to)
+        self.world.has_relation::<T>(self.entity, to)
     }
 
     pub fn is_related_from<T: 'static>(&self, from: Entity) -> bool {
-        self.world.has_relation::<T>(from, self.id)
+        self.world.has_relation::<T>(from, self.entity)
     }
 
     pub fn has<T: 'static>(&self) -> bool {
-        self.world.has_component::<T>(self.id)
+        self.world.has_component::<T>(self.entity)
     }
 
     // TODO optional
@@ -124,7 +124,7 @@ impl<'me> EntityViewDeferred<'me> {
             .deferred_queue
             .borrow_mut()
             .operations
-            .push(D::RemoveComponent(tid, self.id));
+            .push(D::RemoveComponent(tid, self.entity));
         self
     }
 
@@ -133,24 +133,24 @@ impl<'me> EntityViewDeferred<'me> {
             .deferred_queue
             .borrow_mut()
             .operations
-            .push(D::DestroyEntity(self.id));
+            .push(D::DestroyEntity(self.entity));
     }
 }
 
 impl<'a> Into<Entity> for EntityViewDeferred<'a> {
     fn into(self) -> Entity {
-        self.id
+        self.entity
     }
 }
 
 impl<'a> Into<Entity> for &EntityViewDeferred<'a> {
     fn into(self) -> Entity {
-        self.id
+        self.entity
     }
 }
 
 impl<'a> PartialEq for EntityViewDeferred<'a> {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id && std::ptr::eq(self.world, other.world)
+        self.entity == other.entity && std::ptr::eq(self.world, other.world)
     }
 }
