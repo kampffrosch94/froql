@@ -1,18 +1,27 @@
 # froql
 
-Kampf**fro**sch's **q**uery **l**anguage
+Froql is a DSL for dealing with graph-like state in Rust.
+
+## Target usecase
+Froql was designed with gamejams in mind.
+In a gamejam requirements aren't clear and time is limited. 
+Lots of experimentation needs to happen but global refactorin is too costly.
+State is often graph-like (hard to express in Rust) and not tree-like (easy to express in Rust).
+
+Therefore froql allows a user to input data, define relations between data objects and then
+query the data back out in whatever shape is needed at the usage side.
+
+This dynamic behavior relaxes both the requirements and the guarantees of Rusts typesystem.
 
 ## froql has
 - fast compile times
 - first class relation support
 - an ergonomic DSL for creating queries
 - queries that double as normal rust iterators
-- components that don't need to implement a trait
+- components that don't need to implement a trait (thus letting you use library types as is)
 
 ## froql doesn't have
-- systems
-- observers
-- a scheduler
+- systems, observers or a scheduler
 - multithreading support
 - a codebase free of unsafe
 
@@ -51,7 +60,7 @@ Click on the arrows to see what idea was taken from each.
   So copying from that I wrote froqls proc macro without any external dependencies.
 </details>
 <details>
-  <summary><a href="https://github.com/bevyengine/bevy">bevy</a></summary>
+  <summary><a href="https://github.com/bevyengine/bevy">bevy_ecs</a></summary>
   Bevy has lots of interesting ideas and I ignored most of them.
   Froql has a pretty different approach after all.
   
