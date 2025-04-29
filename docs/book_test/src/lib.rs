@@ -7,3 +7,35 @@ doc_comment!(include_str!("../../book/src/index.md"));
 doc_comment!(include_str!("../../book/src/queries.md"));
 doc_comment!(include_str!("../../book/src/relations.md"));
 doc_comment!(include_str!("../../book/src/singletons.md"));
+
+#[test]
+fn readme_test() {
+    use froql::component::TRANSITIVE;
+    use froql::query;
+    use froql::world::World;
+
+    struct Name(&'static str);
+    enum IsA {}
+
+    let mut world = World::new();
+    // registering the IsA relationship as being transitive
+    world.register_relation_flags::<IsA>(TRANSITIVE);
+
+    // creating entities and relating them
+    let food = world.create_mut().add(Name("Food")).id;
+    let fruit = world
+        .create_mut()
+        .add(Name("Fruit"))
+        .relate_to::<IsA>(food)
+        .id;
+    world
+        .create_mut()
+        .add(Name("Tomato"))
+        .relate_to::<IsA>(fruit);
+    world.create_mut().add(Name("Bread")).relate_to::<IsA>(food);
+
+    // querying
+    for (a, b) in query!(world, Name(a), Name(b), IsA(a, b)) {
+        println!("{} is a {}", a.0, b.0);
+    }
+}

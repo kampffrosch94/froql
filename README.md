@@ -28,6 +28,8 @@ This dynamic behavior relaxes both the requirements and the guarantees of Rust's
 ## Example
 
 TODO
+A tomato is a fruit. A fruit is a food.
+ 
 
 ## Documentation
 
