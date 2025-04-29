@@ -255,7 +255,7 @@ async fn main() {
                             h: 50.,
                         };
                         let center = r.center();
-                        world.create_mut().add(r).add(center).entity
+                        world.create().add(r).add(center).entity
                     }
                     CurrentShape::Circle => {
                         let c = MyCircle {
@@ -264,7 +264,7 @@ async fn main() {
                             r: 50.,
                         };
                         let center = c.center();
-                        world.create_mut().add(c).add(center).entity
+                        world.create().add(c).add(center).entity
                     }
                 }
             };

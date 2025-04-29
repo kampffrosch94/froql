@@ -19,11 +19,11 @@ struct Name(&'static str);
 struct Age(u32);
 
 let world = &mut World::new();
-world.create_mut()
+world.create()
     .add(Name("Bob"))
     .add(Age(25));
     
-world.create_mut()
+world.create()
     .add(Name("Anna"))
     .add(Age(32));
 
@@ -54,12 +54,12 @@ Example:
 # struct Age(u32);
 struct Player{}
 # let world = &mut World::new();
-world.create_mut()
+world.create()
     .add(Name("Bob"))
     .add(Age(25))
     .add(Player{});
     
-world.create_mut()
+world.create()
     .add(Name("Anna"))
     .add(Age(32));
 
@@ -84,12 +84,12 @@ So the query in the previous example is equivalent to:
 # struct Age(u32);
 # struct Player{}
 # let world = &mut World::new();
-# world.create_mut()
+# world.create()
 #     .add(Name("Bob"))
 #     .add(Age(25))
 #     .add(Player{});
 #     
-# world.create_mut()
+# world.create()
 #     .add(Name("Anna"))
 #     .add(Age(32));
 # 

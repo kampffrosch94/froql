@@ -109,7 +109,7 @@ It can be used similarly to a builder.
 # struct Name(&'static str);
 # struct Age(u32);
 # let mut world = World::new();
-let e: Entity = world.create_mut()
+let e: Entity = world.create()
     .add(MyStruct(42))
     .add(Name("Bob"))
     .add(Age(25))

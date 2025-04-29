@@ -19,7 +19,7 @@ async fn main() {
     rand::srand(12345);
 
     for _ in 0..100 {
-        let circle = world.create_mut();
+        let circle = world.create();
         circle.add(Circle::new(
             rand::gen_range(0., 1.),
             rand::gen_range(0., 1.),
@@ -28,7 +28,7 @@ async fn main() {
     }
     for x in [0., 0.55] {
         for y in [0., 0.55] {
-            let rect = world.create_mut();
+            let rect = world.create();
             rect.add(Rect {
                 x,
                 y,

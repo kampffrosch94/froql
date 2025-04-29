@@ -14,7 +14,7 @@ fn scenario_marriage() {
     let mut world = World::new();
     world.register_relation_flags::<Spouse>(SYMMETRIC | EXCLUSIVE);
     for i in 0..5 {
-        world.create_mut().add(Person(i));
+        world.create().add(Person(i));
     }
 
     while let Some((first,)) = {

@@ -528,9 +528,9 @@ fn proc_query_relation_multihop() {
     let mut world = World::new();
     let container1 = world.create_entity();
     let container2 = world.create_entity();
-    let a = world.create_mut().relate_to::<Inside>(container1).entity;
-    let b = world.create_mut().relate_to::<Inside>(container1).entity;
-    let _c = world.create_mut().relate_to::<Inside>(container2).entity;
+    let a = world.create().relate_to::<Inside>(container1).entity;
+    let b = world.create().relate_to::<Inside>(container1).entity;
+    let _c = world.create().relate_to::<Inside>(container2).entity;
 
     let mut counter = 0;
     // find all entites that are inside the same container as a

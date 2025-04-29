@@ -131,7 +131,7 @@ impl World {
         self.bookkeeping.ensure_alive(id)
     }
 
-    pub fn create_mut(&mut self) -> EntityViewMut {
+    pub fn create(&mut self) -> EntityViewMut {
         EntityViewMut {
             entity: self.bookkeeping.create(),
             world: self,

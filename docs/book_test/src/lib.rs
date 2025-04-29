@@ -22,17 +22,14 @@ fn readme_test() {
     world.register_relation_flags::<IsA>(TRANSITIVE);
 
     // creating entities and relating them
-    let food = world.create_mut().add(Name("Food")).entity;
+    let food = world.create().add(Name("Food")).entity;
     let fruit = world
-        .create_mut()
+        .create()
         .add(Name("Fruit"))
         .relate_to::<IsA>(food)
         .entity;
-    world
-        .create_mut()
-        .add(Name("Tomato"))
-        .relate_to::<IsA>(fruit);
-    world.create_mut().add(Name("Bread")).relate_to::<IsA>(food);
+    world.create().add(Name("Tomato")).relate_to::<IsA>(fruit);
+    world.create().add(Name("Bread")).relate_to::<IsA>(food);
 
     // querying
     for (a, b) in query!(world, Name(a), Name(b), IsA(a, b)) {
