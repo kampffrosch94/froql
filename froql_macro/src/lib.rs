@@ -1,6 +1,5 @@
 #![allow(clippy::write_with_newline)]
 #![allow(clippy::needless_return)]
-#![allow(clippy::needless_borrow)] // TODO this is temporary
 #![allow(clippy::too_many_arguments)] // TODO this is temporary
 
 extern crate proc_macro;

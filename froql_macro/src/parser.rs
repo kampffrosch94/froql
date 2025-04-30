@@ -195,7 +195,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 _ => error_single!(&tokens[0], "Expected & or !"),
             },
             // Example: CompA?
-            (TT::Ident(ty), ref t_question @ TT::Punct(question)) => {
+            (TT::Ident(ty), t_question @ TT::Punct(question)) => {
                 if question.as_char() != '?' {
                     error_single!(t_question, "Expected '?'");
                 }
@@ -374,7 +374,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 TT::Ident(id_a),
                 TT::Punct(bang),
                 TT::Punct(equal),
-                ref t_star @ TT::Punct(star),
+                t_star @ TT::Punct(star),
                 TT::Ident(id_b),
             ) => {
                 let var_a = id_a.to_string();
@@ -389,7 +389,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 return Ok(Term::ConstraintUnequal(VK::Var(var_a), VK::InVar(var_b)));
             }
             (
-                ref t_star @ TT::Punct(star),
+                t_star @ TT::Punct(star),
                 TT::Ident(id_a),
                 TT::Punct(bang),
                 TT::Punct(equal),
@@ -414,11 +414,11 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             &tokens[0], &tokens[1], &tokens[2], &tokens[3], &tokens[4], &tokens[5],
         ) {
             (
-                ref t_star @ TT::Punct(star),
+                t_star @ TT::Punct(star),
                 TT::Ident(id_a),
                 TT::Punct(bang),
                 TT::Punct(equal),
-                ref t_star2 @ TT::Punct(star2),
+                t_star2 @ TT::Punct(star2),
                 TT::Ident(id_b),
             ) => {
                 let var_a = id_a.to_string();
