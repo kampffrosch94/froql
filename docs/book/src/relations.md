@@ -1,25 +1,62 @@
 # Relations
 
-A Relations is always between two entities.
+A Relation is always between two entities.
 
 You can think of Entities being nodes on directed graph and with relationships being the edges.
 
-Relations are distinguished with a rust type via it's TypeId.
-To prevent accidently adding a Relation as a Component it is recommend to use an inhibited types for them. 
+Relations are distinguished with a rust type via its `TypeId`.
+To prevent accidentally adding a Relation as a Component it is recommended to use uninhabited types for them. 
 For example an enum with no variants.
+
+A Relation always has an origin and a target.
 
 ## Registration
 
+Like for components, it is recommended to register relations before use.
 
+```rust
+# use froql::world::World;
+enum MyRelation {}
+fn create_world() -> World {
+    let mut world = World::new();
+    world.register_relation::<MyRelation>();
+    world
+}
+```
 
+## Adding and removing relations between entities
 
-## Creation and Deletion
+```rust
+# use froql::world::World;
+# enum MyRelation {}
+# let mut world = World::new();
+# world.register_relation::<MyRelation>();
+let a = world.create_entity();
+let b = world.create_entity();
 
-Relations a
+world.add_relation::<MyRelation>(a,b);
+assert!(world.has_relation::<MyRelation>(a,b));
 
-TODO World API
+world.remove_relation::<MyRelation>(a,b);
+assert!(!world.has_relation::<MyRelation>(a,b));
+```
 
-TODO builder api
+In the EntityView the vocubalary is `relate` and `unrelate`.
+
+```rust
+# use froql::world::World;
+# enum MyRelation {}
+# let mut world = World::new();
+# world.register_relation::<MyRelation>();
+let b = world.create_entity();
+let a = world.create().relate_to::<MyRelation>(b).entity;
+
+assert!(world.has_relation::<MyRelation>(a,b));
+
+world.view_mut(a).unrelate_to::<MyRelation>(b);
+assert!(!world.has_relation::<MyRelation>(a,b));
+```
+
 
 ## Relation Flags
 

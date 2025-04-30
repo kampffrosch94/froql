@@ -50,6 +50,16 @@ impl<'me> EntityViewMut<'me> {
         self.world.has_relation::<T>(from, self.entity)
     }
 
+    pub fn unrelate_to<T: 'static>(self, to: Entity) -> Self {
+        self.world.remove_relation::<T>(self.entity, to);
+        self
+    }
+
+    pub fn unrelate_from<T: 'static>(self, from: Entity) -> Self {
+        self.world.remove_relation::<T>(from, self.entity);
+        self
+    }
+
     pub fn has<T: 'static>(&self) -> bool {
         self.world.has_component::<T>(self.entity)
     }
