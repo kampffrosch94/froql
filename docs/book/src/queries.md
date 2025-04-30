@@ -4,7 +4,7 @@ Queries in froql are proc-macros.
 
 A `query!` always needs a reference to a `World` as first argument.
 
-After the `World` a comma seperated list of terms follows, which define the output of the query.
+After the `World` a comma separated list of terms follows, which define the output of the query.
 
 ## Query for Components
 
@@ -43,7 +43,8 @@ Anna is 32 years old.
 
 
 ### Ignoring components in the result
-If you only care that a component exists but don't care about it's value you can ignore by prefixing the term with `_ `. Note that the space is not optional, since structs in Rust can start with an underscore.
+If you only care that a component exists but don't care about its value you can ignore by prefixing the term with `_ `. 
+Note that the space is not optional, since structs in Rust can start with an underscore.
 
 Example:
 ```rust
