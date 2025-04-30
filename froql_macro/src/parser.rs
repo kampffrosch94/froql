@@ -113,7 +113,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         None,
                         None,
                     ) => {
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(second.as_ref().unwrap(), "Expected ','");
                         }
                         Ok(Term::Relation(
@@ -129,10 +129,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Ident(rel_b)),
                         None,
                     ) => {
-                        if !(star.as_char() == '*') {
+                        if star.as_char() != '*' {
                             error_single!(&first, "Expected '*'");
                         }
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(third.as_ref().unwrap(), "Expected ','");
                         }
                         Ok(Term::Relation(
@@ -148,10 +148,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Ident(rel_b)),
                         None,
                     ) => {
-                        if !(star.as_char() == '*') {
+                        if star.as_char() != '*' {
                             error_single!(third.as_ref().unwrap(), "Expected '*'");
                         }
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(second.as_ref().unwrap(), "Expected ','");
                         }
                         Ok(Term::Relation(
@@ -168,13 +168,13 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Punct(star2)),
                         Some(TT::Ident(rel_b)),
                     ) => {
-                        if !(star.as_char() == '*') {
+                        if star.as_char() != '*' {
                             error_single!(&first, "Expected '*'");
                         }
-                        if !(star2.as_char() == '*') {
+                        if star2.as_char() != '*' {
                             error_single!(fourth.as_ref().unwrap(), "Expected '*'");
                         }
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(third.as_ref().unwrap(), "Expected ','");
                         }
                         Ok(Term::Relation(
@@ -196,7 +196,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             },
             // Example: CompA?
             (TT::Ident(ty), ref t_question @ TT::Punct(question)) => {
-                if !(question.as_char() == '?') {
+                if question.as_char() != '?' {
                     error_single!(t_question, "Expected '?'");
                 }
                 return Ok(Term::OptionalComponent(ty.to_string(), "this".to_string()));
@@ -277,7 +277,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(TT::Ident(var_b)),
                         None,
                     ) => {
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(t_comma, "Expected ','");
                         }
                         return Ok(Term::Unrelation(
@@ -292,10 +292,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(ref t_comma @ TT::Punct(ref comma)),
                         Some(TT::Ident(var_b)),
                     ) => {
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(t_comma, "Expected ','");
                         }
-                        if !(star.as_char() == '*') {
+                        if star.as_char() != '*' {
                             error_single!(t_star, "Expected '*'");
                         }
                         return Ok(Term::Unrelation(
@@ -310,10 +310,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                         Some(ref t_star @ TT::Punct(ref star)),
                         Some(TT::Ident(var_b)),
                     ) => {
-                        if !(comma.as_char() == ',') {
+                        if comma.as_char() != ',' {
                             error_single!(t_comma, "Expected ','");
                         }
-                        if !(star.as_char() == '*') {
+                        if star.as_char() != '*' {
                             error_single!(t_star, "Expected '*'");
                         }
                         return Ok(Term::Unrelation(
@@ -383,7 +383,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     ('!', '=') => (),
                     _ => error!(&tokens[3..4], "Expected var_a != var_b"),
                 }
-                if !(star.as_char() == '*') {
+                if star.as_char() != '*' {
                     error_single!(t_star, "Expected '*'");
                 }
                 return Ok(Term::ConstraintUnequal(VK::Var(var_a), VK::InVar(var_b)));
@@ -401,7 +401,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     ('!', '=') => (),
                     _ => error!(&tokens[3..4], "Expected var_a != var_b"),
                 }
-                if !(star.as_char() == '*') {
+                if star.as_char() != '*' {
                     error_single!(t_star, "Expected '*'");
                 }
                 return Ok(Term::ConstraintUnequal(VK::InVar(var_a), VK::Var(var_b)));
@@ -427,10 +427,10 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     ('!', '=') => (),
                     _ => error!(&tokens[3..4], "Expected var_a != var_b"),
                 }
-                if !(star.as_char() == '*') {
+                if star.as_char() != '*' {
                     error_single!(t_star, "Expected '*'");
                 }
-                if !(star2.as_char() == '*') {
+                if star2.as_char() != '*' {
                     error_single!(t_star2, "Expected '*'");
                 }
                 return Ok(Term::ConstraintUnequal(VK::InVar(var_a), VK::InVar(var_b)));

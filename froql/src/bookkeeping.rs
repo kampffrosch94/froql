@@ -321,7 +321,7 @@ impl Bookkeeping {
                 if cid.is_relation() {
                     let ptr = unsafe { a.columns[index].get(a_row.0) } as *const RelationVec;
                     let vec = unsafe { &*ptr };
-                    debug_assert!(vec.len() > 0);
+                    debug_assert!(!vec.is_empty());
                     let flipped = cid.flip_target();
                     for other_id in vec.iter() {
                         to_delete.push((flipped, EntityId(*other_id)));
@@ -352,7 +352,7 @@ impl Bookkeeping {
                 let ptr = unsafe { a.columns[col].get(a_row.0) } as *mut RelationVec;
                 let rel_vec = unsafe { &mut *ptr };
                 rel_vec.remove(e.id.0);
-                if rel_vec.len() == 0 {
+                if rel_vec.is_empty() {
                     let other = self.entities.get_from_id(other_id);
                     // this moves the other entity
                     self.remove_component(other, cid);
@@ -408,7 +408,7 @@ impl Bookkeeping {
                 let ptr = this.get_component(e, cid) as *mut RelationVec;
                 let rel_vec = unsafe { &mut *ptr };
                 rel_vec.remove(other.id.0);
-                if rel_vec.len() == 0 {
+                if rel_vec.is_empty() {
                     this.remove_component(e, cid);
                 }
             }

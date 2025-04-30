@@ -1,4 +1,4 @@
-use std::{cell::Cell, u32};
+use std::cell::Cell;
 
 use crate::archetype::{ArchetypeId, ArchetypeRow};
 

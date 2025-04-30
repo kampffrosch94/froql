@@ -75,15 +75,15 @@ impl<'a> JoinOrderComputer<'a> {
     ) -> Self {
         let work_left: Vec<Relation> = relations
             .iter()
-            .cloned()
             // anyvars only matter as components for constraining archetype sets
             .filter(|(_, from, to)| *from != ANYVAR && *to != ANYVAR)
+            .cloned()
             .collect();
         let unrelations_left: Vec<Unrelation> = unrelations
             .iter()
-            .cloned()
             // anyvars only matter as components for constraining archetype sets
             .filter(|(_, from, to, _)| *from != ANYVAR && *to != ANYVAR)
+            .cloned()
             .collect();
         Self {
             relations_left: work_left,
@@ -102,7 +102,7 @@ impl<'a> JoinOrderComputer<'a> {
         // figure out what to start with
         if !self.prefills.is_empty() {
             // if we have prefills we just start with those
-            for (var, _) in self.prefills {
+            for var in self.prefills.keys() {
                 self.available.push(*var);
             }
             self.available.sort();
@@ -297,7 +297,7 @@ pub fn compute_join_order(
 }
 
 fn newly_available_constraints(
-    available: &Vec<isize>,
+    available: &[isize],
     relations_left: &mut Vec<Relation>,
     infos: &mut [VarInfo],
     relation_helper_nr: &mut usize,
@@ -339,7 +339,7 @@ fn newly_available_constraints(
 }
 
 fn newly_available_unrelations(
-    available: &Vec<isize>,
+    available: &[isize],
     unrelations_left: &mut Vec<Unrelation>,
     infos: &mut [VarInfo],
 ) -> Vec<UnrelationConstraint> {

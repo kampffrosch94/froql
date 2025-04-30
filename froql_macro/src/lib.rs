@@ -1,5 +1,8 @@
+#![allow(clippy::write_with_newline)]
 #![allow(clippy::needless_return)]
 #![allow(clippy::needless_borrow)] // TODO this is temporary
+#![allow(clippy::too_many_arguments)] // TODO this is temporary
+
 extern crate proc_macro;
 
 mod generator;
@@ -107,7 +110,7 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
             Some(TokenTree::Punct(ref comma)) if comma.as_char() == ',' => true,
             _ => false,
         };
-        if is_separator && buffer.len() > 0 {
+        if is_separator && !buffer.is_empty() {
             match parse_term(&buffer).map(transform_anyvars)? {
                 Term::ComponentVar(ty, ref varkind @ VK::Var(ref var_name))
                 | Term::ComponentVar(ty, ref varkind @ VK::InVar(ref var_name)) => {

@@ -21,7 +21,7 @@ impl RelationVecInline {
     }
 }
 
-#[repr(packed(4))]
+#[repr(Rust, packed(4))]
 struct RelationVecOutline {
     ptr: NonNull<u32>,
     cap: u32,
@@ -93,6 +93,10 @@ impl RelationVec {
 
     pub fn len(&self) -> u32 {
         self.len
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len == 0
     }
 
     pub fn push(&mut self, new_val: u32) {

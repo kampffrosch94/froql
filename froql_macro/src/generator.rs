@@ -130,7 +130,7 @@ impl Debug for VarInfo {
 
 impl PartialOrd for VarInfo {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        return self.index.partial_cmp(&other.index);
+        return Some(self.cmp(other));
     }
 }
 
@@ -523,7 +523,7 @@ _ => unreachable!(),
 }}})
 ",
     );
-    prepend.push_str("\n");
+    prepend.push('\n');
     prepend.push_str(&append);
 }
 

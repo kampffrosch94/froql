@@ -37,7 +37,9 @@ book-serve:
     wait
 
 # I run this in my pre-commit hook
-pre-commit: format-check
+pre-commit:
+    @just format-check
+    cargo test
 
 # I run this in my pre-push hook
 pre-push:

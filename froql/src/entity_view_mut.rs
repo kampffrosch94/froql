@@ -27,6 +27,7 @@ impl EntityViewMut<'_> {
         self.world.get_component_mut::<T>(self.entity)
     }
 
+    #[allow(clippy::should_implement_trait)]
     pub fn add<T: 'static>(self, val: T) -> Self {
         self.world.add_component(self.entity, val);
         self

@@ -31,7 +31,7 @@ impl LayoutVec {
     }
 
     /// Useful for hotreloading
-    pub fn change_drop_function(&mut self, drop_fn: Box<fn(*mut u8)>) {
+    pub unsafe fn change_drop_function(&mut self, drop_fn: Box<fn(*mut u8)>) {
         self.drop_fn = drop_fn;
     }
 
@@ -51,7 +51,7 @@ impl LayoutVec {
             unsafe { alloc::alloc(new_layout) }
         } else {
             let old_layout = self.compute_layout();
-            let old_ptr = self.ptr.as_ptr() as *mut u8;
+            let old_ptr = self.ptr.as_ptr();
             self.capacity *= 2;
             let new_layout = self.compute_layout();
             unsafe { alloc::realloc(old_ptr, old_layout, new_layout.size()) }
@@ -172,7 +172,7 @@ impl Drop for LayoutVec {
             }
             let layout = self.compute_layout();
             unsafe {
-                alloc::dealloc(self.ptr.as_ptr() as *mut u8, layout);
+                alloc::dealloc(self.ptr.as_ptr(), layout);
             }
         }
     }

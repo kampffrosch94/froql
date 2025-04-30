@@ -167,7 +167,9 @@ impl Component {
     /// used for hotreloading
     /// if we don't update the dropper we likely crash
     /// when we delete components after we hotreloaded
-    pub fn update_type<T>(&mut self) -> Result<(), ()> {
+    ///
+    /// SAFETY: The drop function must be valid for the components type.
+    pub unsafe fn update_type<T>(&mut self) -> Result<(), ()> {
         let (layout, drop_fn) = layout_vec_args::<T>();
         if layout == self.layout {
             self.drop_fn = drop_fn;

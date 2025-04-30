@@ -59,13 +59,17 @@ impl World {
     }
 
     /// Counterpart of register_component_inner for hotreloading purposes
-    fn reload_component_inner<T: 'static>(&mut self, cid: ComponentId) -> Result<(), ()> {
+    unsafe fn reload_component_inner<T: 'static>(&mut self, cid: ComponentId) -> Result<(), ()> {
         let component = &mut self.bookkeeping.components[cid.as_index()];
-        component.update_type::<T>()?;
+        unsafe {
+            component.update_type::<T>()?;
+        }
         for aid in component.get_archetypes() {
             let arch = &mut self.bookkeeping.archetypes[aid.as_index()];
             let col = arch.find_column_mut(cid);
-            col.change_drop_function(component.drop_fn.clone());
+            unsafe {
+                col.change_drop_function(component.drop_fn.clone());
+            }
         }
         Ok(())
     }
@@ -94,7 +98,7 @@ impl World {
         self.bookkeeping
             .component_name_map
             .insert(name.to_string(), tid);
-        self.reload_component_inner::<RefCell<T>>(cid)
+        unsafe { self.reload_component_inner::<RefCell<T>>(cid) }
     }
 
     pub unsafe fn re_register_relation<T: 'static>(&mut self) -> Result<(), ()> {
@@ -110,7 +114,7 @@ impl World {
         self.bookkeeping
             .component_name_map
             .insert(name.to_string(), tid);
-        self.reload_component_inner::<Relation<T>>(cid)
+        unsafe { self.reload_component_inner::<Relation<T>>(cid) }
     }
 
     // mostly there for use in query
@@ -312,7 +316,9 @@ impl World {
     }
 }
 
-impl DeferredQueue {}
+pub enum RegisterError {
+    DifferingLayout,
+}
 
 #[cfg(test)]
 mod test {
