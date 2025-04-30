@@ -61,3 +61,6 @@ setup-hooks:
     chmod +x .git/hooks/pre-commit
     chmod +x .git/hooks/pre-push
 
+
+clippy:
+    CARGO_TERM_COLOR=always cargo clippy 2>&1 | bat
