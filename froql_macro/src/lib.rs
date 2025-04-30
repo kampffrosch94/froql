@@ -1,3 +1,5 @@
+#![allow(clippy::needless_return)]
+#![allow(clippy::needless_borrow)] // TODO this is temporary
 extern crate proc_macro;
 
 mod generator;
