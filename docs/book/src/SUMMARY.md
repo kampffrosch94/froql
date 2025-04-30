@@ -1,6 +1,7 @@
 # Summary
 
 [Introduction](index.md)
+[Install and setup](./setup.md)
 
 ---
 - [Entities and Components](./entities.md)
