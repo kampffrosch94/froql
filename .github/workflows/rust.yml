@@ -22,8 +22,14 @@ jobs:
 
       - run: rustup toolchain install stable --profile minimal --no-self-update
 
+      - name: Check format
+        run: cargo fmt --check
+        
+      - name: Check lockfile
+        run: cargo build --locked
+        
       - name: Run tests
-        run: | 
-          cargo fmt --check
-          cargo build --locked
-          cargo test
+        run: cargo test --offline 
+        
+      - name: Run clippy
+        run: cargo clippy --offline
