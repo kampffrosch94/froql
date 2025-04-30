@@ -236,29 +236,27 @@ impl EntityStore {
                     generation: slot.generation,
                     id,
                 });
+            } else if self.next_free == index {
+                self.next_free = slot.next_free();
+                slot.fill();
+                return ForceAliveResult::MadeAlive(Entity {
+                    generation: slot.generation,
+                    id,
+                });
             } else {
-                if self.next_free == index {
-                    self.next_free = slot.next_free();
-                    slot.fill();
-                    return ForceAliveResult::MadeAlive(Entity {
-                        generation: slot.generation,
-                        id,
-                    });
-                } else {
-                    // update free list, because we may not force the head to be alive
-                    // but an entity somewhere in the middle of the free list or the end
-                    let mut prev = self.next_free;
-                    while self.slots[prev].next_free() != index {
-                        prev = self.slots[prev].next_free();
-                    }
-                    self.slots[prev].row.0 = self.slots[index].row.0;
-                    let slot = &mut self.slots[index];
-                    slot.fill();
-                    return ForceAliveResult::MadeAlive(Entity {
-                        generation: slot.generation,
-                        id,
-                    });
+                // update free list, because we may not force the head to be alive
+                // but an entity somewhere in the middle of the free list or the end
+                let mut prev = self.next_free;
+                while self.slots[prev].next_free() != index {
+                    prev = self.slots[prev].next_free();
                 }
+                self.slots[prev].row.0 = self.slots[index].row.0;
+                let slot = &mut self.slots[index];
+                slot.fill();
+                return ForceAliveResult::MadeAlive(Entity {
+                    generation: slot.generation,
+                    id,
+                });
             }
         } else {
             while index >= self.slots.len() {

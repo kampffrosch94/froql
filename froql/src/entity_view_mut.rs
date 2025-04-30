@@ -10,7 +10,7 @@ pub struct EntityViewMut<'a> {
     pub world: &'a mut World,
 }
 
-impl<'a> Deref for EntityViewMut<'a> {
+impl Deref for EntityViewMut<'_> {
     type Target = Entity;
 
     fn deref(&self) -> &Self::Target {
@@ -18,12 +18,12 @@ impl<'a> Deref for EntityViewMut<'a> {
     }
 }
 
-impl<'me> EntityViewMut<'me> {
-    pub fn get<'a, T: 'static>(&'a self) -> Ref<'a, T> {
+impl EntityViewMut<'_> {
+    pub fn get<T: 'static>(&self) -> Ref<'_, T> {
         self.world.get_component::<T>(self.entity)
     }
 
-    pub fn get_mut<'a, T: 'static>(&'a self) -> RefMut<'a, T> {
+    pub fn get_mut<T: 'static>(&self) -> RefMut<'_, T> {
         self.world.get_component_mut::<T>(self.entity)
     }
 

@@ -44,9 +44,9 @@ impl<'a> RelationHelper<'a> {
             let rel_vec = unsafe { &*(self.column.unwrap().get(self.row) as *const RelationVec) };
             let mut work = Vec::new();
             let visited = &mut self.transitive_set;
-            work.extend_from_slice(&rel_vec);
+            work.extend_from_slice(rel_vec);
             visited.extend(work.iter().copied());
-            self.transitive_vec.extend_from_slice(&rel_vec);
+            self.transitive_vec.extend_from_slice(rel_vec);
 
             while !work.is_empty() {
                 let current = EntityId(work.pop().unwrap());

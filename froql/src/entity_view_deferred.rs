@@ -30,7 +30,7 @@ pub enum DeferredOperation {
 }
 use DeferredOperation as D;
 
-impl<'a> Deref for EntityViewDeferred<'a> {
+impl Deref for EntityViewDeferred<'_> {
     type Target = Entity;
 
     fn deref(&self) -> &Self::Target {
@@ -38,7 +38,7 @@ impl<'a> Deref for EntityViewDeferred<'a> {
     }
 }
 
-impl<'a> Debug for EntityViewDeferred<'a> {
+impl Debug for EntityViewDeferred<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("EntityViewDeferred")
             .field("generation", &self.entity.generation)
@@ -137,19 +137,19 @@ impl<'me> EntityViewDeferred<'me> {
     }
 }
 
-impl<'a> Into<Entity> for EntityViewDeferred<'a> {
-    fn into(self) -> Entity {
-        self.entity
+impl From<EntityViewDeferred<'_>> for Entity {
+    fn from(val: EntityViewDeferred<'_>) -> Self {
+        val.entity
     }
 }
 
-impl<'a> Into<Entity> for &EntityViewDeferred<'a> {
-    fn into(self) -> Entity {
-        self.entity
+impl From<&EntityViewDeferred<'_>> for Entity {
+    fn from(val: &EntityViewDeferred<'_>) -> Self {
+        val.entity
     }
 }
 
-impl<'a> PartialEq for EntityViewDeferred<'a> {
+impl PartialEq for EntityViewDeferred<'_> {
     fn eq(&self, other: &Self) -> bool {
         self.entity == other.entity && std::ptr::eq(self.world, other.world)
     }

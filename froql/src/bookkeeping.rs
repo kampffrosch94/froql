@@ -165,8 +165,8 @@ impl Bookkeeping {
         }
 
         // the caller must move the new component into the new archetype
-        let r = unsafe { new.columns[new_column].half_push() };
-        r
+
+        unsafe { new.columns[new_column].half_push() }
     }
 
     fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
@@ -429,7 +429,7 @@ impl Bookkeeping {
                 // now we need to follow the transitive relationship
                 let mut visited = HashSet::new();
                 let mut work = Vec::new();
-                work.extend_from_slice(&rel_vec);
+                work.extend_from_slice(rel_vec);
                 visited.extend(work.iter().copied());
                 while !work.is_empty() {
                     let current = EntityId(work.pop().unwrap());
@@ -454,11 +454,11 @@ impl Bookkeeping {
 
     /// Returns all directly related partners
     /// DOES NOT follow transitive relations
-    pub fn relation_partners<'a>(
-        &'a self,
+    pub fn relation_partners(
+        &self,
         relation_cid: ComponentId,
         e: Entity,
-    ) -> Option<impl Iterator<Item = Entity> + use<'a>> {
+    ) -> Option<impl Iterator<Item = Entity> + use<'_>> {
         if self.has_component(e, relation_cid) {
             let ptr = self.get_component(e, relation_cid) as *mut RelationVec;
             let rel_vec = unsafe { &mut *ptr };

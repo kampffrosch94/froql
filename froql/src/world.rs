@@ -273,24 +273,24 @@ impl World {
 
     /// Returns all directly related targets
     /// DOES NOT follow transitive relations
-    pub fn relation_targets<'a, T: 'static>(
-        &'a self,
+    pub fn relation_targets<T: 'static>(
+        &self,
         from: Entity,
-    ) -> impl Iterator<Item = Entity> + use<'a, T> {
+    ) -> impl Iterator<Item = Entity> + use<'_, T> {
         let o_tid = TypeId::of::<Relation<T>>();
         let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
         self.bookkeeping
             .relation_partners(origin_cid, from)
             .into_iter()
-            .flat_map(|it| it)
+            .flatten()
     }
 
     /// Returns all directly related origins
     /// DOES NOT follow transitive relations
-    pub fn relation_origins<'a, T: 'static>(
-        &'a self,
+    pub fn relation_origins<T: 'static>(
+        &self,
         to: Entity,
-    ) -> impl Iterator<Item = Entity> + use<'a, T> {
+    ) -> impl Iterator<Item = Entity> + use<'_, T> {
         let tid = TypeId::of::<Relation<T>>();
         let target_cid = self
             .bookkeeping
@@ -301,7 +301,7 @@ impl World {
             // same logic as with target, just different parameter
             .relation_partners(target_cid, to)
             .into_iter()
-            .flat_map(|it| it)
+            .flatten()
     }
 
     /// Returns all directly related pairs
