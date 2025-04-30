@@ -458,7 +458,6 @@ pub fn generate_resumable_query_closure(
     )
     .unwrap();
     for accessor in accessors {
-        // TODO access mut
         match accessor {
             Accessor::Component(ty, var) => {
                 let col = infos[*var as usize].components[ty];

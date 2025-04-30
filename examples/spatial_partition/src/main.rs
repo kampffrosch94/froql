@@ -81,23 +81,6 @@ async fn main() {
             mouse_position().1 / screen_height(),
         );
 
-        /*
-        for (e_rect, rect) in query!(world, &this, Rect) {
-            if !rect.contains(mouse) {
-                continue; // so efficient, wow 🐕
-            }
-            let e = *e_rect; // TODO fix this via into
-            let should_highlight =
-                query!(world, Circle, Inside(this, *e)).any(|(c,)| c.contains(&mouse));
-            if should_highlight {
-                for (c,) in query!(world, Circle, Inside(this, *e)) {
-                    let r = c.r * circle_scale;
-                    draw_circle(c.x * screen_width(), c.y * screen_height(), r, RED);
-                }
-            }
-        }
-        */
-
         for (e_circle, _) in query!(world, &this, Circle).filter(|(_, c)| c.contains(&mouse)) {
             for (c,) in query!(world, Circle, Inside(this, rect), !Inside(*e_circle, rect)) {
                 let r = c.r * circle_scale;

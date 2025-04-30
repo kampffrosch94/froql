@@ -116,7 +116,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     match varkind {
                         VK::Var(_) => (),
                         VK::InVar(_) => {
-                            // TODO handle override with different name => error
                             prefills.insert(var, var_name.clone());
                         }
                     }
