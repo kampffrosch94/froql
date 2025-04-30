@@ -1,6 +1,6 @@
 use std::alloc::Layout;
 
-use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args};
+use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args, world::ReregisterError};
 
 type BitSet = hi_sparse_bitset::BitSet<hi_sparse_bitset::config::_128bit>;
 
@@ -168,14 +168,15 @@ impl Component {
     /// if we don't update the dropper we likely crash
     /// when we delete components after we hotreloaded
     ///
-    /// SAFETY: The drop function must be valid for the components type.
-    pub unsafe fn update_type<T>(&mut self) -> Result<(), ()> {
+    /// # SAFETY
+    /// The drop function must be valid for the components type.
+    pub unsafe fn update_type<T>(&mut self) -> Result<(), ReregisterError> {
         let (layout, drop_fn) = layout_vec_args::<T>();
         if layout == self.layout {
             self.drop_fn = drop_fn;
             Ok(())
         } else {
-            Err(())
+            Err(ReregisterError::DifferingLayout)
         }
     }
 

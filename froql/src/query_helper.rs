@@ -141,8 +141,12 @@ pub fn trivial_query_one_component(world: &World, ty: TypeId) -> Vec<EntityId> {
         .collect()
 }
 
-/// This function is used inside the proc macro to cast outputs
-/// We need an extra function to coerce them to the correct lifetime
+/// This function is used inside the proc macro to cast outputs.
+/// We need an extra function to coerce them to the correct lifetime.
+///
+/// # SAFETY
+/// The same rules as casting a raw pointer apply.
+/// The target lifetime must be correct, otherwise there will be soundness issues.
 pub unsafe fn coerce_cast<'input: 'output, 'output, T>(
     _world: &'input World, // just used to grab a lifetime
     ptr: *mut u8,

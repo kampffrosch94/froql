@@ -59,7 +59,10 @@ impl World {
     }
 
     /// Counterpart of register_component_inner for hotreloading purposes
-    unsafe fn reload_component_inner<T: 'static>(&mut self, cid: ComponentId) -> Result<(), ()> {
+    unsafe fn reload_component_inner<T: 'static>(
+        &mut self,
+        cid: ComponentId,
+    ) -> Result<(), ReregisterError> {
         let component = &mut self.bookkeeping.components[cid.as_index()];
         unsafe {
             component.update_type::<T>()?;
@@ -85,7 +88,20 @@ impl World {
         self.register_component_inner::<RefCell<T>>(0)
     }
 
-    pub unsafe fn re_register_component<T: 'static>(&mut self) -> Result<(), ()> {
+    /// This allows reusing the same world in hotreloading scenarios.
+    /// This is not only unsafe, its straight up undefined behavior.
+    /// Very useful for development purposes though.
+    ///
+    /// DO NOT ship code that calls this method in production.
+    /// Use feature flags to accomplish this.
+    ///
+    /// # SAFETY
+    /// This finds the type by using its typename.
+    /// If you have two components/relations with the exact same name you are in trouble.
+    ///
+    /// If a types layout changed you get an error. But not all changes to a struct result
+    /// in a change to its layout.
+    pub unsafe fn re_register_component<T: 'static>(&mut self) -> Result<(), ReregisterError> {
         let tid = TypeId::of::<RefCell<T>>();
         let name = type_name::<RefCell<T>>();
         let old_tid = self
@@ -101,7 +117,20 @@ impl World {
         unsafe { self.reload_component_inner::<RefCell<T>>(cid) }
     }
 
-    pub unsafe fn re_register_relation<T: 'static>(&mut self) -> Result<(), ()> {
+    /// This allows reusing the same world in hotreloading scenarios.
+    /// This is not only unsafe, its straight up undefined behavior.
+    /// Very useful for development purposes though.
+    ///
+    /// DO NOT ship code that calls this method in production.
+    /// Use feature flags to accomplish this.
+    ///
+    /// # SAFETY
+    /// This finds the type by using its typename.
+    /// If you have two components/relations with the exact same name you are in trouble.
+    ///
+    /// If a types layout changed you get an error. But not all changes to a struct result
+    /// in a change to its layout.
+    pub unsafe fn re_register_relation<T: 'static>(&mut self) -> Result<(), ReregisterError> {
         let tid = TypeId::of::<Relation<T>>();
         let name = type_name::<Relation<T>>();
         let old_tid = self
@@ -117,7 +146,7 @@ impl World {
         unsafe { self.reload_component_inner::<Relation<T>>(cid) }
     }
 
-    // mostly there for use in query
+    /// mostly there for use in query
     #[doc(hidden)]
     pub fn get_component_id<T: 'static>(&self) -> ComponentId {
         let tid = TypeId::of::<RefCell<T>>();
@@ -316,7 +345,7 @@ impl World {
     }
 }
 
-pub enum RegisterError {
+pub enum ReregisterError {
     DifferingLayout,
 }
 
