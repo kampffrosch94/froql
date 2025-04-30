@@ -156,7 +156,8 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
 }
 
 // TODO put building the varinfo into a separate function
-pub(crate) fn generate_archetype_sets(
+#[allow(clippy::too_many_arguments)] // TODO this is temporary
+pub fn generate_archetype_sets(
     result: &mut String,
     vars: &[isize],
     prefills: &HashMap<isize, String>,
@@ -356,6 +357,7 @@ let mut col_indexes = [usize::MAX; {col_count}];
     .unwrap();
 }
 
+#[allow(clippy::too_many_arguments)] // TODO this is temporary
 pub fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
