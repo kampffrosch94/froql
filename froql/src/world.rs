@@ -22,8 +22,6 @@ pub struct World {
 /// This is a queue of operations that will be executed during `world.process()`
 pub(crate) struct DeferredQueue {
     pub operations: Vec<DeferredOperation>,
-    /// Entitis which are not yet created.
-    deferred_creations: Vec<Option<Entity>>,
 }
 
 impl World {
@@ -34,7 +32,6 @@ impl World {
             bookkeeping,
             deferred_queue: RefCell::new(DeferredQueue {
                 operations: Vec::new(),
-                deferred_creations: Vec::new(),
             }),
             singleton,
         }

@@ -1,6 +1,5 @@
 #![allow(clippy::needless_return)]
 #![allow(clippy::new_without_default)]
-#![allow(dead_code)] // TODO remove before publish
 
 pub mod archetype;
 pub mod bookkeeping;
