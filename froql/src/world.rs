@@ -1,3 +1,7 @@
+#![deny(missing_docs)]
+//! contains the `World` type and its methods
+//! This module intended for direct use by the library user.
+
 use std::{
     any::{TypeId, type_name},
     cell::{Ref, RefCell, RefMut},
@@ -12,7 +16,11 @@ use crate::{
     relation::Relation,
 };
 
+/// The `World` is the central datastructure in froql that holds all state.
 pub struct World {
+    /// internal state management
+    /// Bookkeeping is public because some queries need to interact with it.
+    #[doc(hidden)]
     pub bookkeeping: Bookkeeping,
     pub(crate) deferred_queue: RefCell<DeferredQueue>,
     // TODO move into query or something
@@ -25,6 +33,10 @@ pub(crate) struct DeferredQueue {
 }
 
 impl World {
+    /// Creates a new `World`
+    ///
+    /// Don't forget to register your Components and Relationships
+    /// with `register_component::<T>()` and `register_relation::<T>()`.
     pub fn new() -> Self {
         let mut bookkeeping = Bookkeeping::new();
         let singleton = bookkeeping.create();
@@ -74,6 +86,10 @@ impl World {
         Ok(())
     }
 
+    /// Convenience method for getting an EntityViewDeferred of the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    /// Don't delete it. It is not particularly special otherwise.
     pub fn singleton(&self) -> EntityViewDeferred {
         EntityViewDeferred {
             entity: self.singleton,
@@ -81,6 +97,7 @@ impl World {
         }
     }
 
+    /// Registers component type for later use.
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
         self.register_component_inner::<RefCell<T>>(0)
     }
@@ -153,14 +170,25 @@ impl World {
             .unwrap_or_else(|| panic!("ComponentType is not registered."))
     }
 
+    /// Creates an Entity and returns it.
+    ///
+    /// This Entity is not wrapped in a view, so it doesn't carry a lifetime.
     pub fn create_entity(&mut self) -> Entity {
         self.bookkeeping.create()
     }
 
+    /// Turns an `EntityId` into an `Entity`.
+    /// If the `Entity` was not alive before it will be made alive.
+    ///
+    /// This is useful when building deserialization.
     pub fn ensure_alive(&mut self, id: EntityId) -> Entity {
         self.bookkeeping.ensure_alive(id)
     }
 
+    /// Creates an Entity and immediately wraps it in a `EntityViewMut`.
+    /// Useful for convenience.
+    ///
+    /// The wrapped Entity can be accessed as `.entity` member on the view.
     pub fn create(&mut self) -> EntityViewMut {
         EntityViewMut {
             entity: self.bookkeeping.create(),
@@ -168,6 +196,7 @@ impl World {
         }
     }
 
+    /// Wraps an existing Entity in an `EntityViewMut`.
     pub fn view_mut(&mut self, e: Entity) -> EntityViewMut {
         EntityViewMut {
             entity: e,
@@ -175,6 +204,12 @@ impl World {
         }
     }
 
+    /// Creates an Entity and immediately wraps it in a `EntityViewDeferred`.
+    /// Useful when you only have shared reference to `World`.
+    ///
+    /// The wrapped Entity can be accessed as `.entity` member on the view.
+    ///
+    /// Don't
     pub fn create_deferred(&self) -> EntityViewDeferred {
         EntityViewDeferred {
             entity: self.bookkeeping.create_deferred(),
@@ -182,10 +217,14 @@ impl World {
         }
     }
 
+    /// Checks if the `Entity` is alive by using its generation.
     pub fn is_alive(&self, e: Entity) -> bool {
         self.bookkeeping.is_alive(e)
     }
 
+    /// Adds a component to the entity.
+    ///
+    /// Panics if `Entity` is not alive.
     pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
         let cid = self.register_component::<T>();
         let val = RefCell::new(val);
@@ -195,6 +234,10 @@ impl World {
         }
     }
 
+    /// Returns a immutable Ref to the component.
+    ///
+    /// Panics if `Entity` is not alive or does not have the component.
+    /// Panics if component type is not registered.
     pub fn get_component<T: 'static>(&self, e: Entity) -> Ref<T> {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
@@ -203,6 +246,11 @@ impl World {
         cell.borrow()
     }
 
+    /// Returns a immutable Ref to the component of the Entity with the given `EntityId`.
+    ///
+    /// Useful if you don't have a generation for whatever reason.
+    ///
+    /// Panics if `Entity` is not alive or does not have the component.
     pub fn get_component_by_entityid<T: 'static>(&self, id: EntityId) -> Ref<T> {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
@@ -214,6 +262,10 @@ impl World {
         cell.borrow()
     }
 
+    /// Returns a mutable RefMut to the component.
+    ///
+    /// Panics if `Entity` is not alive or does not have the component.
+    /// Panics if component type is not registered.
     pub fn get_component_mut<T: 'static>(&self, e: Entity) -> RefMut<T> {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
@@ -222,22 +274,32 @@ impl World {
         cell.borrow_mut()
     }
 
+    /// Returns true, if the Entity has the component.
+    ///
+    /// Panics if component type is not registered.
     pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.has_component(e, cid)
     }
 
+    /// Removes component type from Entity.
+    /// This operation is idempotent.
+    ///
+    /// Panics if component type is not registered.
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
         let tid = TypeId::of::<RefCell<T>>();
         let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
         self.bookkeeping.remove_component(e, cid);
     }
 
+    /// Makes entity not alive.
+    /// All components of the entity are dropped (and their drop functions executed).
     pub fn destroy(&mut self, e: Entity) {
         self.bookkeeping.destroy(e);
     }
 
+    /// Executes all queued deferred operations.
     pub fn process(&mut self) {
         self.bookkeeping.realize_deferred();
 
@@ -276,26 +338,41 @@ impl World {
 
 // relation stuff in separate impl block
 impl World {
+    /// Registers a relation type.
+    ///
+    /// It's recommended to use an inhibited type (enum without variants)
+    /// so that you don't confuse components and relations on accident.
     pub fn register_relation<T: 'static>(&mut self) {
         self.register_component_inner::<Relation<T>>(RELATION);
     }
 
+    /// Registers a relation type with specific flags.
+    /// Flag options are: `EXCLUSIVE`, `SYMMETRIC`, `CASCADING_DESTRUCT` and `TRANSITIVE`
+    ///
+    /// It's recommended to use an inhibited type (enum without variants)
+    /// so that you don't confuse components and relations on accident.
     pub fn register_relation_flags<T: 'static>(&mut self, flags: u32) {
         // TODO: error if component is already registered
         self.register_component_inner::<Relation<T>>(flags | RELATION);
     }
 
+    /// Adds a relationship between two entities.
+    /// Registers the relationship type if it is not already.
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
         let origin_cid = self.register_component_inner::<Relation<T>>(RELATION);
         self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
+    /// Checks if there is a relation between two entities.
+    /// Order matters for all relations that are not `SYMMETRIC`.
     pub fn has_relation<T: 'static>(&self, from: Entity, to: Entity) -> bool {
         let o_tid = TypeId::of::<Relation<T>>();
         let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
         self.bookkeeping.has_relation(origin_cid, from, to)
     }
 
+    /// Removes relation between two entities.
+    /// This operation is idempotent.
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
         let cid = self.register_component_inner::<Relation<T>>(RELATION);
         self.bookkeeping.remove_relation(cid, from, to);
@@ -342,7 +419,9 @@ impl World {
     }
 }
 
+/// Error Type for `reregister_component`.
 pub enum ReregisterError {
+    /// The new type has a different layout than the old type.
     DifferingLayout,
 }
 
