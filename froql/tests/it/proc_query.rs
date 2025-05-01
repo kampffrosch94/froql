@@ -604,7 +604,6 @@ fn proc_query_invar_wrong_components() {
 }
 
 #[test]
-#[allow(dead_code)] // used only for debug output
 fn proc_query_singleton() {
     struct Value(usize);
     struct Accum(usize);
