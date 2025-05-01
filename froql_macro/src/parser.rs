@@ -56,6 +56,10 @@ pub enum Term {
     OptionalComponent(String, String),
     /// Type, VariableName
     OptionalMutComponent(String, String),
+    /// Type
+    Singleton(String),
+    /// Type
+    SingletonMut(String),
 }
 
 pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
@@ -194,7 +198,8 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             (TT::Punct(punct), TT::Ident(ident)) => match punct.as_char() {
                 '&' => return Ok(Term::OutVar(ident.to_string())),
                 '!' => return Ok(Term::Uncomponent(ident.to_string(), "this".to_string())),
-                _ => error_single!(&tokens[0], "Expected & or !"),
+                '$' => return Ok(Term::Singleton(ident.to_string())),
+                _ => error_single!(&tokens[0], "Expected & or ! or $"),
             },
             // Example: CompA?
             (TT::Ident(ty), t_question @ TT::Punct(question)) => {
@@ -206,7 +211,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             x => {
                 error!(
                     tokens,
-                    "expected mut Component or Component(var) or Relation(a,b) or &var or Component?, got {x:?}"
+                    "expected mut Component or Component(var) or Relation(a,b) or &var or Component? or $ Component, got {x:?}"
                 );
             }
         };
@@ -357,10 +362,19 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     group => error!(tokens, "expected Component(var)? got {group:?} {}", line!()),
                 }
             }
+            (t_mut @ TT::Ident(mut_), dollar_tt @ TT::Punct(dollar), TT::Ident(ty)) => {
+                if mut_.to_string().as_str() != "mut" {
+                    error_single!(t_mut, "Expected mut");
+                }
+                if dollar.as_char() != '$' {
+                    error_single!(dollar_tt, "Expected '$'");
+                }
+                return Ok(Term::SingletonMut(ty.to_string()));
+            }
             _ => {
                 error!(
                     tokens,
-                    "expected <mut|_|!> Component<(var)|?>, got {tokens:?} {}",
+                    "expected <mut|_|!|mut $> Component<(var)|?|>, got {tokens:?} {}",
                     line!()
                 )
             }

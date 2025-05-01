@@ -602,3 +602,30 @@ fn proc_query_invar_wrong_components() {
     }
     assert_eq!(counter, 0);
 }
+
+#[test]
+#[allow(dead_code)] // used only for debug output
+fn proc_query_singleton() {
+    struct Value(usize);
+    struct Accum(usize);
+
+    let mut world = World::new();
+    world.singleton_add(Accum(0));
+    world.create().add(Value(1));
+    world.create().add(Value(2));
+    world.create().add(Value(3));
+
+    let mut counter = 0;
+    for (_acc, _val) in query!(world, $Accum, Value) {
+        counter += 1;
+    }
+    assert_eq!(counter, 3);
+
+    let mut counter = 0;
+    for (mut acc, val) in query!(world, mut $ Accum, Value) {
+        acc.0 += val.0;
+        counter += 1;
+    }
+    assert_eq!(6, world.singleton::<Accum>().0);
+    assert_eq!(counter, 3);
+}

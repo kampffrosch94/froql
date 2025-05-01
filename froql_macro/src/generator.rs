@@ -518,6 +518,22 @@ pub fn generate_resumable_query_closure(
                 )
                 .unwrap();
             }
+            Accessor::Singleton(ty) => {
+                write!(
+                    &mut append,
+                    "
+            world.singleton::<{ty}>(),"
+                )
+                .unwrap();
+            }
+            Accessor::SingletonMut(ty) => {
+                write!(
+                    &mut append,
+                    "
+            world.singleton_mut::<{ty}>(),"
+                )
+                .unwrap();
+            }
         }
     }
     write!(

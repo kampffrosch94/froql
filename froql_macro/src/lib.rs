@@ -48,6 +48,10 @@ pub(crate) enum Accessor {
     OptMutComponent(String, isize, usize),
     /// ComponentType, var, opt_col_index
     OptComponent(String, isize, usize),
+    /// ComponentType
+    Singleton(String),
+    /// ComponentType
+    SingletonMut(String),
 }
 
 struct VariableStore {
@@ -208,7 +212,6 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     prefills.insert(a, var_a);
                     prefills.insert(b, var_b);
                 }
-
                 Term::Relation(ty, RVK::Var(var_a), RVK::InVar(var_b)) => {
                     let a = variables.var_number(var_a);
                     let b = variables.var_number(&var_b);
@@ -311,6 +314,12 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let var = variables.var_number(var);
                     opt_components.push((ty.clone(), var, index));
                     accessors.push(Accessor::OptMutComponent(ty, var, index));
+                }
+                Term::Singleton(ty) => {
+                    accessors.push(Accessor::Singleton(ty));
+                }
+                Term::SingletonMut(ty) => {
+                    accessors.push(Accessor::SingletonMut(ty));
                 }
             };
             buffer.clear();

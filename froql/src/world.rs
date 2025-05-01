@@ -86,15 +86,32 @@ impl World {
         Ok(())
     }
 
-    /// Convenience method for getting an EntityViewDeferred of the singleton entity.
+    /// Convenience method for getting a Component of the singleton entity.
     ///
     /// The singleton entity is meant to be used for things that only exist once.
-    /// Don't delete it. It is not particularly special otherwise.
-    pub fn singleton(&self) -> EntityViewDeferred {
-        EntityViewDeferred {
-            entity: self.singleton,
-            world: self,
-        }
+    pub fn singleton<T: 'static>(&self) -> Ref<T> {
+        self.get_component::<T>(self.singleton)
+    }
+
+    /// Convenience method for getting a mutable ref to a Component of the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_mut<T: 'static>(&self) -> RefMut<T> {
+        self.get_component_mut::<T>(self.singleton)
+    }
+
+    /// Convenience method for setting a Component of the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_add<T: 'static>(&mut self, val: T) {
+        self.add_component(self.singleton, val)
+    }
+
+    /// Convenience method for removing a Component of the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_remove<T: 'static>(&mut self) {
+        self.remove_component::<T>(self.singleton)
     }
 
     /// Registers component type for later use.
