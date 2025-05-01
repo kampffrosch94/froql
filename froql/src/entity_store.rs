@@ -215,6 +215,8 @@ impl EntityStore {
         (slot.archetype, slot.row)
     }
 
+    /// Returns Entity for EntityId
+    /// Panics if that Entity is not alive.
     pub fn get_from_id(&self, id: EntityId) -> Entity {
         let index = id.0 as usize;
         let slot = &self.slots[index];

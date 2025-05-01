@@ -283,7 +283,7 @@ impl World {
         self.bookkeeping.has_component(e, cid)
     }
 
-    /// Removes component type from Entity.
+    /// Removes component of type `T` from Entity.
     /// This operation is idempotent.
     ///
     /// Panics if component type is not registered.

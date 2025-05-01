@@ -8,7 +8,7 @@ use std::{
 
 use crate::{entity_store::Entity, world::World};
 
-/// This is convenience wrapper for mutating the components and relationships of an `Entity`.
+/// This is a convenience wrapper for mutating the components and relationships of an `Entity`.
 pub struct EntityViewMut<'a> {
     /// The wrapped entity
     pub entity: Entity,
@@ -112,11 +112,22 @@ impl EntityViewMut<'_> {
     pub fn get_mut_opt<'a, T: 'static>(&'a self) -> Option<RefMut<'a, T>> {
         self.world.get_component_mut_opt::<T>(self.id)
     }
-
-    pub fn remove<T: 'static>(&mut self) -> Option<T> {
-        self.world.remove_component(self.id)
-    }
     */
+
+    /// Removes component of type `T` from Entity.
+    /// This operation is idempotent.
+    ///
+    /// Panics if component type is not registered.
+    pub fn remove<T: 'static>(&mut self) {
+        // TODO option?
+        self.world.remove_component::<T>(self.entity)
+    }
+
+    /// Makes entity not alive.
+    /// All components of the entity are dropped (and their drop functions executed).
+    pub fn destroy(&mut self) {
+        self.world.destroy(self.entity);
+    }
 }
 
 #[cfg(test)]
