@@ -115,7 +115,3 @@ let e: Entity = world.create()
     .add(Age(25))
     .entity;
 ```
-
-## Cleanup of Components
-
-TODO
