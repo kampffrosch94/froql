@@ -45,6 +45,8 @@ pub(crate) enum Accessor {
     /// var index in result
     OutVar(isize),
     /// ComponentType, var, opt_col_index
+    OptMutComponent(String, isize, usize),
+    /// ComponentType, var, opt_col_index
     OptComponent(String, isize, usize),
 }
 
@@ -303,6 +305,12 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     let var = variables.var_number(var);
                     opt_components.push((ty.clone(), var, index));
                     accessors.push(Accessor::OptComponent(ty, var, index));
+                }
+                Term::OptionalMutComponent(ty, var) => {
+                    let index = opt_components.len();
+                    let var = variables.var_number(var);
+                    opt_components.push((ty.clone(), var, index));
+                    accessors.push(Accessor::OptMutComponent(ty, var, index));
                 }
             };
             buffer.clear();

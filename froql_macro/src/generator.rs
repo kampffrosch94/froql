@@ -505,6 +505,19 @@ pub fn generate_resumable_query_closure(
                 )
                 .unwrap();
             }
+            Accessor::OptMutComponent(ty, var, opt_id) => {
+                write!(
+                    &mut append,
+                    "
+            (opt_col_{opt_id}.map(|col| {{
+                ::froql::query_helper::coerce_cast::<{ty}>(
+                    world,
+                    col.get(a_rows[{var}].0)
+                ).borrow_mut()
+            }})),"
+                )
+                .unwrap();
+            }
         }
     }
     write!(

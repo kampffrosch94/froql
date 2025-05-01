@@ -277,6 +277,48 @@ fn proc_query_constraint() {
 
 #[test]
 #[allow(dead_code)] // used only for debug output
+fn proc_query_optional_component_mut() {
+    #[derive(Debug)]
+    struct CompA(usize);
+    #[derive(Debug)]
+    struct CompB(isize);
+
+    let mut world = World::new();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    world.add_component(a, CompA(4));
+    world.add_component(a, CompB(2));
+    world.add_component(b, CompA(0));
+
+    let mut counter = 0;
+
+    for (ca, mut cb) in query!(world, CompA, mut CompB?) {
+        if let Some(ref mut cb) = cb {
+            cb.0 += 5;
+            counter += 1;
+        }
+        println!("{ca:?}");
+        println!("{cb:?}");
+    }
+
+    assert_eq!(1, counter);
+
+    // same thing, but with explicit var name
+    let mut counter = 0;
+    for (ca, mut cb) in query!(world, CompA, mut CompB(this)?) {
+        if let Some(ref mut cb) = cb {
+            cb.0 += 5;
+            counter += 1;
+        }
+        println!("{ca:?}");
+        println!("{cb:?}");
+    }
+
+    assert_eq!(1, counter);
+}
+
+#[test]
+#[allow(dead_code)] // used only for debug output
 fn proc_query_optional_component() {
     #[derive(Debug)]
     struct CompA(usize);

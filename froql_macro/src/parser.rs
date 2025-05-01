@@ -54,6 +54,8 @@ pub enum Term {
     Unrelation(String, RelationVarKind, RelationVarKind),
     /// Type, VariableName
     OptionalComponent(String, String),
+    /// Type, VariableName
+    OptionalMutComponent(String, String),
 }
 
 pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
@@ -260,6 +262,19 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     ),
                 }
             }
+            // mut Comp?
+            (t_mut @ TT::Ident(mut_), TT::Ident(ty), t_question @ TT::Punct(question)) => {
+                if mut_.to_string().as_str() != "mut" {
+                    error_single!(t_mut, "Expected mut");
+                }
+                if question.as_char() != '?' {
+                    error_single!(t_question, "Expected '?'");
+                }
+                return Ok(Term::OptionalMutComponent(
+                    ty.to_string(),
+                    "this".to_string(),
+                ));
+            }
             (ref bang_t @ TT::Punct(bang), TT::Ident(ty), TT::Group(group)) => {
                 match bang.as_char() {
                     '!' => (),
@@ -345,7 +360,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
             _ => {
                 error!(
                     tokens,
-                    "expected <mut|_|!> Component(var), got {tokens:?} {}",
+                    "expected <mut|_|!> Component<(var)|?>, got {tokens:?} {}",
                     line!()
                 )
             }
@@ -354,6 +369,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
 
     if tokens.len() == 4 {
         match (&tokens[0], &tokens[1], &tokens[2], &tokens[3]) {
+            // var_a != var_b
             (TT::Ident(id_a), TT::Punct(bang), TT::Punct(equal), TT::Ident(id_b)) => {
                 let var_a = id_a.to_string();
                 let var_b = id_b.to_string();
@@ -362,6 +378,30 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                     _ => error!(&tokens[3..4], "Expected var_a != var_b"),
                 }
                 return Ok(Term::ConstraintUnequal(VK::Var(var_a), VK::Var(var_b)));
+            }
+            // mut Comp(var)?
+            (
+                t_mut @ TT::Ident(mut_),
+                TT::Ident(ty),
+                t_group @ TT::Group(group),
+                t_question @ TT::Punct(question),
+            ) => {
+                if mut_.to_string().as_str() != "mut" {
+                    error_single!(t_mut, "Expected mut");
+                }
+                if question.as_char() != '?' {
+                    error_single!(t_question, "Expected '?'");
+                }
+
+                let mut iter = group.stream().into_iter();
+                match (iter.next(), iter.next()) {
+                    (Some(TT::Ident(var)), None) => {
+                        return Ok(Term::OptionalMutComponent(ty.to_string(), var.to_string()));
+                    }
+                    _ => {
+                        error_single!(t_group, "Expected var got: {t_group:?}");
+                    }
+                }
             }
             _ => {
                 error!(tokens, "Expected var_a != var_b, got: {tokens:?}");
