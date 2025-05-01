@@ -234,7 +234,7 @@ impl World {
         }
     }
 
-    /// Returns a immutable Ref to the component.
+    /// Returns an immutable Ref to the component.
     ///
     /// Panics if `Entity` is not alive or does not have the component.
     /// Panics if component type is not registered.
