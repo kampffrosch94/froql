@@ -8,7 +8,7 @@ use std::{
 };
 
 use crate::{
-    bookkeeping::Bookkeeping,
+    bookkeeping::{Bookkeeping, EnsureComponentResult},
     component::{Component, ComponentId, RELATION},
     entity_store::{Entity, EntityId},
     entity_view_deferred::{DeferredOperation, EntityViewDeferred},
@@ -251,16 +251,19 @@ impl World {
     /// Panics if `Entity` is not alive.
     pub fn add_component<T: 'static>(&mut self, e: Entity, mut val: T) {
         let cid = self.register_component::<T>();
-        // gotta overwrite component if entity already has a component of that type
-        if let Some(ptr) = self.bookkeeping.get_component_opt(e, cid) {
-            let ptr = ptr as *const RefCell<T>;
-            let mut old = unsafe { &*ptr }.borrow_mut();
-            std::mem::swap::<T>(&mut val, &mut old);
-        } else {
-            let val = RefCell::new(val);
-            let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
-            unsafe {
-                std::ptr::write(dst, val);
+        match self.bookkeeping.ensure_component(e, cid) {
+            EnsureComponentResult::NewComponent(ptr) => {
+                let val = RefCell::new(val);
+                let dst = ptr as *mut RefCell<T>;
+                unsafe {
+                    std::ptr::write(dst, val);
+                }
+            }
+            EnsureComponentResult::OldComponent(ptr) => {
+                let ptr = ptr as *const RefCell<T>;
+                let mut old = unsafe { &*ptr }.borrow_mut();
+                // this drops the old component too, how neat
+                std::mem::swap::<T>(&mut val, &mut old);
             }
         }
     }

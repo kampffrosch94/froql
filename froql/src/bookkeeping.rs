@@ -147,16 +147,26 @@ impl Bookkeeping {
     }
 
     #[must_use]
-    pub fn add_component(&mut self, e: Entity, cid: ComponentId) -> *mut u8 {
+    pub(crate) fn ensure_component(
+        &mut self,
+        e: Entity,
+        cid: ComponentId,
+    ) -> EnsureComponentResult {
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
             e.id,
-            self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
+            self.archetypes[old_a_id.as_index()].entities[old_a_row.as_index()]
         );
 
+        if let Some(colum) = self.archetypes[old_a_id.as_index()].find_column_opt(cid) {
+            return EnsureComponentResult::OldComponent(unsafe { colum.get(old_a_row.0) });
+        }
+
+        // components of entity after adding the new one
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
         components.push(cid);
         components.sort();
+
         let new_column = components.iter().position(|it| *it == cid).unwrap();
         let new_a_id = self.find_archetype_or_create(components);
 
@@ -177,8 +187,7 @@ impl Bookkeeping {
         }
 
         // the caller must move the new component into the new archetype
-
-        unsafe { new.columns[new_column].half_push() }
+        EnsureComponentResult::NewComponent(unsafe { new.columns[new_column].half_push() })
     }
 
     fn find_archetype_or_create(&mut self, c_ids: Vec<ComponentId>) -> ArchetypeId {
@@ -387,21 +396,24 @@ impl Bookkeeping {
         // inner function because removing the relationship component
         // from Origin and Target works the same, just gotta swap arguments
         fn inner(this: &mut Bookkeeping, cid: ComponentId, e: Entity, other: Entity) {
-            // all relationtypes are repr(transparent) to RelationVec,
-            // so we can just treat pointers to them as RelationVec
-            if this.has_component(e, cid) {
-                let ptr = this.get_component(e, cid) as *mut RelationVec;
-                let rel_vec = unsafe { &mut *ptr };
-                if cid.is_exclusive() {
-                    rel_vec[0] = other.id.0;
-                } else {
+            match this.ensure_component(e, cid) {
+                EnsureComponentResult::NewComponent(ptr) => {
+                    let mut rel_vec = RelationVec::new();
                     rel_vec.push(other.id.0);
+                    let ptr = ptr as *mut RelationVec;
+                    unsafe { std::ptr::write(ptr, rel_vec) };
                 }
-            } else {
-                let mut rel_vec = RelationVec::new();
-                rel_vec.push(other.id.0);
-                let ptr = this.add_component(e, cid) as *mut RelationVec;
-                unsafe { std::ptr::write(ptr, rel_vec) };
+                EnsureComponentResult::OldComponent(ptr) => {
+                    // all relationtypes are repr(transparent) to RelationVec,
+                    // so we can just treat pointers to them as RelationVec
+                    let ptr = ptr as *mut RelationVec;
+                    let rel_vec = unsafe { &mut *ptr };
+                    if cid.is_exclusive() {
+                        rel_vec[0] = other.id.0;
+                    } else {
+                        rel_vec.push(other.id.0);
+                    }
+                }
             }
         }
     }
@@ -501,4 +513,11 @@ impl Bookkeeping {
             })
             .collect()
     }
+}
+
+pub(crate) enum EnsureComponentResult {
+    /// The component was freshly created.
+    NewComponent(*mut u8),
+    /// There was already an old component in place that needs to be dropped
+    OldComponent(*mut u8),
 }
