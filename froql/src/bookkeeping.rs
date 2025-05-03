@@ -411,7 +411,7 @@ impl Bookkeeping {
                     if cid.is_exclusive() {
                         rel_vec[0] = other.id.0;
                     } else {
-                        rel_vec.push(other.id.0);
+                        rel_vec.add_idempotent(other.id.0);
                     }
                 }
             }

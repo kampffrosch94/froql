@@ -99,6 +99,13 @@ impl RelationVec {
         self.len == 0
     }
 
+    /// only adds new_val if it is not already contained
+    pub fn add_idempotent(&mut self, new_val: u32) {
+        if !self.contains(&new_val) {
+            self.push(new_val);
+        }
+    }
+
     pub fn push(&mut self, new_val: u32) {
         // maybe sort? for binary search
         if self.len < INLINE_COUNT as u32 {

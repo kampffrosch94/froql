@@ -25,6 +25,23 @@ fn relation_simple() {
     assert!(!world.has_relation::<Rel>(a, b));
 }
 
+// what happens if we add the same relation between the same two entities multiple times?
+#[test]
+fn relation_add_twice() {
+    enum Rel {}
+
+    let mut world = World::new();
+    world.register_relation::<Rel>();
+    let a = world.create_entity();
+    let b = world.create_entity();
+    assert!(!world.has_relation::<Rel>(a, b));
+    world.add_relation::<Rel>(a, b);
+    world.add_relation::<Rel>(a, b);
+    assert!(world.has_relation::<Rel>(a, b));
+    world.remove_relation::<Rel>(a, b);
+    assert!(!world.has_relation::<Rel>(a, b));
+}
+
 #[test]
 fn relation_check_one_side() {
     enum Rel {}
