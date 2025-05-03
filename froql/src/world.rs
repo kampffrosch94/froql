@@ -107,6 +107,13 @@ impl World {
         self.add_component(self.singleton, val)
     }
 
+    /// Returns if singleton has the component of type T.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_has<T: 'static>(&self) -> bool {
+        self.has_component::<T>(self.singleton)
+    }
+
     /// Convenience method for removing a Component of the singleton entity.
     ///
     /// The singleton entity is meant to be used for things that only exist once.
@@ -242,12 +249,19 @@ impl World {
     /// Adds a component to the entity.
     ///
     /// Panics if `Entity` is not alive.
-    pub fn add_component<T: 'static>(&mut self, e: Entity, val: T) {
+    pub fn add_component<T: 'static>(&mut self, e: Entity, mut val: T) {
         let cid = self.register_component::<T>();
-        let val = RefCell::new(val);
-        let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
-        unsafe {
-            std::ptr::write(dst, val);
+        // gotta overwrite component if entity already has a component of that type
+        if let Some(ptr) = self.bookkeeping.get_component_opt(e, cid) {
+            let ptr = ptr as *const RefCell<T>;
+            let mut old = unsafe { &*ptr }.borrow_mut();
+            std::mem::swap::<T>(&mut val, &mut old);
+        } else {
+            let val = RefCell::new(val);
+            let dst = self.bookkeeping.add_component(e, cid) as *mut RefCell<T>;
+            unsafe {
+                std::ptr::write(dst, val);
+            }
         }
     }
 
@@ -560,4 +574,29 @@ mod test {
         world.remove_component::<Comp>(a);
         assert!(!world.has_component::<Comp>(a));
     }
+
+    #[test]
+    fn add_component_twice() {
+        #[allow(dead_code)]
+        struct Comp(i32);
+        use std::sync::atomic::{AtomicBool, Ordering as O};
+        static WAS_DROPPED: AtomicBool = AtomicBool::new(false);
+        impl Drop for Comp {
+            fn drop(&mut self) {
+                println!("Dropping.");
+                let _ = WAS_DROPPED.compare_exchange(false, true, O::Relaxed, O::Relaxed);
+            }
+        }
+
+        let mut world = World::new();
+        let e = world.create_entity();
+        world.add_component(e, Comp(42));
+        world.add_component(e, Comp(50));
+
+        let comp = world.get_component::<Comp>(e);
+        assert_eq!(comp.0, 50);
+        assert!(WAS_DROPPED.load(O::Relaxed));
+    }
+
+    // TODO add same relation twice
 }

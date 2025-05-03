@@ -109,6 +109,7 @@ impl Bookkeeping {
             .expect("TypeId is not registered as Component.")
     }
 
+    // TODO make unsafe + doc
     pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
         assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
@@ -117,6 +118,17 @@ impl Bookkeeping {
         unsafe { col.get(row.0) }
     }
 
+    // TODO make unsafe + doc
+    pub fn get_component_opt(&self, e: Entity, cid: ComponentId) -> Option<*mut u8> {
+        assert!(self.entities.is_alive(e));
+        let (aid, row) = self.entities.get_archetype(e);
+        let a = &self.archetypes[aid.0 as usize];
+        let col = a.find_column_opt(cid);
+        col.map(|col| unsafe { col.get(row.0) })
+    }
+
+    // TODO make unsafe + doc
+    /// Does not check if the Entity for the EntityID is alive.
     pub fn get_component_opt_unchecked(&self, e: EntityId, cid: ComponentId) -> Option<*mut u8> {
         let (aid, row) = self.entities.get_archetype_unchecked(e);
         let a = &self.archetypes[aid.0 as usize];
