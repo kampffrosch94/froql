@@ -1,7 +1,7 @@
 # World, Entities and Components
 
 ## The World
-> ゴゴゴゴゴゴゴ -- famous mangaka
+<blockquote><sub> <pre>ゴゴゴゴゴゴゴ -- famous mangaka</pre></sub></blockquote>
 
 All data in froql is stored in a `World`.
 Froql does not use globals behind the scenes. 
