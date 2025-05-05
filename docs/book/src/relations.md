@@ -148,7 +148,29 @@ assert!(!world.is_alive(resource));
 
 ### Multiple Flags
 
-TODO
+You can pass multiple flags when registering a relation by xoring them together.
+
+```rust
+# use froql::world::World;
+# use froql::component::SYMMETRIC;
+# use froql::component::EXCLUSIVE;
+# enum BestFriends {}
+# let mut world = World::new();
+world.register_relation_flags::<BestFriends>(SYMMETRIC | EXCLUSIVE);
+
+let mustadir = world.create_entity();
+let asif = world.create_entity();
+world.add_relation::<BestFriends>(asif, mustadir);
+
+let salman = world.create_entity();
+
+// friendship ended with mustadir, now salman is my best friend
+world.add_relation::<BestFriends>(asif, salman);
+
+assert!(!world.has_relation::<BestFriends>(asif, mustadir));
+assert!(world.has_relation::<BestFriends>(salman, asif));
+```
+
 
 ## Naming Relations
 
