@@ -285,8 +285,7 @@ impl World {
     ///
     /// Panics if `Entity` is not alive or does not have the component.
     pub fn get_component_by_entityid<T: 'static>(&self, id: EntityId) -> Ref<T> {
-        let tid = TypeId::of::<RefCell<T>>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let cid = self.get_component_id::<T>();
         let ptr = self
             .bookkeeping
             .get_component_opt_unchecked(id, cid)
@@ -300,8 +299,7 @@ impl World {
     /// Panics if `Entity` is not alive or does not have the component.
     /// Panics if component type is not registered.
     pub fn get_component_mut<T: 'static>(&self, e: Entity) -> RefMut<T> {
-        let tid = TypeId::of::<RefCell<T>>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let cid = self.get_component_id::<T>();
         let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
         let cell = unsafe { &*ptr };
         cell.borrow_mut()
@@ -320,8 +318,7 @@ impl World {
     ///
     /// Panics if component type is not registered.
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
-        let tid = TypeId::of::<RefCell<T>>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let cid = self.get_component_id::<T>();
         self.bookkeeping.remove_component(e, cid);
     }
 
@@ -370,6 +367,14 @@ impl World {
 
 // relation stuff in separate impl block
 impl World {
+    /// shorthand
+    fn get_relation_id<T: 'static>(&self) -> ComponentId {
+        let tid = TypeId::of::<Relation<T>>();
+        self.bookkeeping
+            .get_component_id(tid)
+            .unwrap_or_else(|| panic!("RelationType '{}' is not registered.", type_name::<T>()))
+    }
+
     /// Registers a relation type.
     ///
     /// It's recommended to use an inhibited type (enum without variants)
@@ -391,22 +396,21 @@ impl World {
     /// Adds a relationship between two entities.
     /// Registers the relationship type if it is not already.
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.register_component_inner::<Relation<T>>(RELATION);
+        let origin_cid = self.get_relation_id::<T>();
         self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
     /// Checks if there is a relation between two entities.
     /// Order matters for all relations that are not `SYMMETRIC`.
     pub fn has_relation<T: 'static>(&self, from: Entity, to: Entity) -> bool {
-        let o_tid = TypeId::of::<Relation<T>>();
-        let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
+        let origin_cid = self.get_relation_id::<T>();
         self.bookkeeping.has_relation(origin_cid, from, to)
     }
 
     /// Removes relation between two entities.
     /// This operation is idempotent.
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let cid = self.register_component_inner::<Relation<T>>(RELATION);
+        let cid = self.get_relation_id::<T>();
         self.bookkeeping.remove_relation(cid, from, to);
     }
 
@@ -416,8 +420,7 @@ impl World {
         &self,
         from: Entity,
     ) -> impl Iterator<Item = Entity> + use<'_, T> {
-        let o_tid = TypeId::of::<Relation<T>>();
-        let origin_cid = self.bookkeeping.get_component_id(o_tid).unwrap(); // TODO error msg
+        let origin_cid = self.get_relation_id::<T>();
         self.bookkeeping
             .relation_partners(origin_cid, from)
             .into_iter()
@@ -430,12 +433,7 @@ impl World {
         &self,
         to: Entity,
     ) -> impl Iterator<Item = Entity> + use<'_, T> {
-        let tid = TypeId::of::<Relation<T>>();
-        let target_cid = self
-            .bookkeeping
-            .get_component_id(tid)
-            .unwrap() // TODO error msg
-            .flip_target();
+        let target_cid = self.get_relation_id::<T>().flip_target();
         self.bookkeeping
             // same logic as with target, just different parameter
             .relation_partners(target_cid, to)

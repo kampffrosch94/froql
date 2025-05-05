@@ -12,6 +12,7 @@ fn debug_entity_view_mut() {
     let mut world = World::new();
     world.register_component::<Unit>();
     world.register_component::<Health>();
+    world.register_relation::<Rel>();
 
     let a = world.create_entity();
     let e = world

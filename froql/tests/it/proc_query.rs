@@ -14,7 +14,7 @@ fn proc_query_relation() {
     struct Health(isize);
 
     let mut world = World::new();
-    world.register_component::<Attack>();
+    world.register_relation::<Attack>();
     world.register_component::<Unit>();
     world.register_component::<Health>();
 
@@ -261,6 +261,8 @@ fn proc_query_unequality_invars() {
     enum Rel {}
 
     let mut world = World::new();
+    world.register_relation::<Rel>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
@@ -280,6 +282,9 @@ fn proc_query_constraint() {
     enum Rel2 {}
 
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_relation::<Rel2>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
