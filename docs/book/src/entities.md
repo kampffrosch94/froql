@@ -55,6 +55,8 @@ A component can be any `T: 'static`, there are no traits that must be implemente
 # use froql::world::World;
 # let mut world = World::new();
 struct MyStruct(u32);
+world.register_component::<MyStruct>();
+
 let e = world.create_entity();
 world.add_component(e, MyStruct(42)); // add data
 
@@ -80,11 +82,8 @@ This allows for finegrained access, but may panic at runtime on misuse (violatin
 
 ### Registering components
 
-Froql needs to know about what types of components it manages
-Components are registered to the world on first use -- if possible.
-It isn't possible when the world is accessed immutably, for example in queries.
-
-It therefore is a good idea to register component types to the world explicitly when not prototyping.
+Froql needs to know about what types of components it manages.
+Before a component can be used, it therefore must be registered.
 
 ```rust
 # use froql::world::World;
@@ -109,6 +108,10 @@ It can be used similarly to a builder.
 # struct Name(&'static str);
 # struct Age(u32);
 # let mut world = World::new();
+# world.register_component::<MyStruct>();
+# world.register_component::<Name>();
+# world.register_component::<Age>();
+
 let e: Entity = world.create()
     .add(MyStruct(42))
     .add(Name("Bob"))

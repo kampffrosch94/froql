@@ -12,7 +12,9 @@ fn scenario_marriage() {
     enum Spouse {}
 
     let mut world = World::new();
+    world.register_component::<Person>();
     world.register_relation_flags::<Spouse>(SYMMETRIC | EXCLUSIVE);
+
     for i in 0..5 {
         world.create().add(Person(i));
     }

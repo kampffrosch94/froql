@@ -10,6 +10,9 @@ fn debug_entity_view_mut() {
     enum Rel {}
 
     let mut world = World::new();
+    world.register_component::<Unit>();
+    world.register_component::<Health>();
+
     let a = world.create_entity();
     let e = world
         .create()

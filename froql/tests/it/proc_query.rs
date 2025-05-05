@@ -14,6 +14,10 @@ fn proc_query_relation() {
     struct Health(isize);
 
     let mut world = World::new();
+    world.register_component::<Attack>();
+    world.register_component::<Unit>();
+    world.register_component::<Health>();
+
     let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
     let goblin_a = world.create_entity();
@@ -58,6 +62,10 @@ fn proc_query_trivial() {
     struct CompC {}
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_component::<CompB>();
+    world.register_component::<CompC>();
+
     let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
@@ -88,6 +96,10 @@ fn proc_query_uncomponent() {
     struct CompC {}
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_component::<CompB>();
+    world.register_component::<CompC>();
+
     let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
@@ -119,6 +131,10 @@ fn proc_query_outvar() {
     struct CompC {}
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_component::<CompB>();
+    world.register_component::<CompC>();
+
     let a = world.create_entity();
     world.add_component(a, CompA(42));
     world.add_component(a, CompB("Hello".to_string()));
@@ -158,6 +174,10 @@ fn proc_query_relation_invar() {
     struct Health(isize);
 
     let mut world = World::new();
+    world.register_component::<Unit>();
+    world.register_component::<Health>();
+    world.register_relation::<Attack>();
+
     let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
     let player2 = world.create_entity();
@@ -206,6 +226,9 @@ fn proc_query_relation_anyvar() {
     struct Unit(String);
 
     let mut world = World::new();
+    world.register_relation::<Attack>();
+    world.register_component::<Unit>();
+
     let player = world.create_entity();
     world.add_component(player, Unit("Player".to_string()));
 
@@ -284,6 +307,9 @@ fn proc_query_optional_component_mut() {
     struct CompB(isize);
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_component::<CompB>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_component(a, CompA(4));
@@ -326,6 +352,9 @@ fn proc_query_optional_component() {
     struct CompB(isize);
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_component::<CompB>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_component(a, CompA(4));
@@ -351,6 +380,9 @@ fn proc_query_optional_component_relation() {
     enum Rel {}
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_relation::<Rel>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
@@ -378,6 +410,9 @@ fn proc_query_optional_component_invar() {
     enum Rel {}
 
     let mut world = World::new();
+    world.register_component::<CompA>();
+    world.register_relation::<Rel>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
@@ -401,6 +436,7 @@ fn proc_query_optional_component_invar() {
 fn proc_query_relation_simple() {
     enum Rel {}
     let mut world = World::new();
+    world.register_relation::<Rel>();
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
@@ -417,6 +453,8 @@ fn proc_query_relation_constraint_simple() {
     enum Rel {}
     enum Rel2 {}
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_relation::<Rel2>();
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
@@ -434,6 +472,8 @@ fn proc_query_relation_constraint_invar() {
     enum Rel {}
     enum Rel2 {}
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_relation::<Rel2>();
     let a = world.create_entity();
     let b = world.create_entity();
     world.add_relation::<Rel>(a, b);
@@ -498,6 +538,9 @@ fn proc_query_unrelation_anyvars() {
     #[allow(unused)]
     struct Comp(usize);
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_component::<Comp>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
@@ -527,6 +570,9 @@ fn proc_query_unrelation() {
     enum Rel2 {}
 
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_relation::<Rel2>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
@@ -548,6 +594,9 @@ fn proc_query_unrelation_invar() {
     enum Rel2 {}
 
     let mut world = World::new();
+    world.register_relation::<Rel>();
+    world.register_relation::<Rel2>();
+
     let a = world.create_entity();
     let b = world.create_entity();
     let c = world.create_entity();
@@ -568,6 +617,8 @@ fn proc_query_relation_multihop() {
     enum Inside {}
 
     let mut world = World::new();
+    world.register_relation::<Inside>();
+
     let container1 = world.create_entity();
     let container2 = world.create_entity();
     let a = world.create().relate_to::<Inside>(container1).entity;
@@ -609,6 +660,9 @@ fn proc_query_singleton() {
     struct Accum(usize);
 
     let mut world = World::new();
+    world.register_component::<Accum>();
+    world.register_component::<Value>();
+
     world.singleton_add(Accum(0));
     world.create().add(Value(1));
     world.create().add(Value(2));

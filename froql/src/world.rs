@@ -190,8 +190,7 @@ impl World {
         let tid = TypeId::of::<RefCell<T>>();
         self.bookkeeping
             .get_component_id(tid)
-            // TODO general error msg handler for T
-            .unwrap_or_else(|| panic!("ComponentType is not registered."))
+            .unwrap_or_else(|| panic!("ComponentType '{}' is not registered.", type_name::<T>()))
     }
 
     /// Creates an Entity and returns it.
@@ -249,8 +248,9 @@ impl World {
     /// Adds a component to the entity.
     ///
     /// Panics if `Entity` is not alive.
+    /// Panics if Component type is not registered.
     pub fn add_component<T: 'static>(&mut self, e: Entity, mut val: T) {
-        let cid = self.register_component::<T>();
+        let cid = self.get_component_id::<T>();
         match self.bookkeeping.ensure_component(e, cid) {
             EnsureComponentResult::NewComponent(ptr) => {
                 let val = RefCell::new(val);
@@ -273,8 +273,7 @@ impl World {
     /// Panics if `Entity` is not alive or does not have the component.
     /// Panics if component type is not registered.
     pub fn get_component<T: 'static>(&self, e: Entity) -> Ref<T> {
-        let tid = TypeId::of::<RefCell<T>>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let cid = self.get_component_id::<T>();
         let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
         let cell = unsafe { &*ptr };
         cell.borrow()
@@ -312,8 +311,7 @@ impl World {
     ///
     /// Panics if component type is not registered.
     pub fn has_component<T: 'static>(&self, e: Entity) -> bool {
-        let tid = TypeId::of::<RefCell<T>>();
-        let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
+        let cid = self.get_component_id::<T>();
         self.bookkeeping.has_component(e, cid)
     }
 
@@ -469,6 +467,9 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
+        world.register_component::<Pos>();
+        world.register_component::<Name>();
+
         let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
@@ -494,6 +495,9 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
+        world.register_component::<Pos>();
+        world.register_component::<Name>();
+
         let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
@@ -521,6 +525,9 @@ mod test {
         struct Name(String);
 
         let mut world = World::new();
+        world.register_component::<Pos>();
+        world.register_component::<Name>();
+
         let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         world.add_component(e, Name("Player".to_string()));
@@ -542,6 +549,8 @@ mod test {
         struct Pos(i32, i32);
 
         let mut world = World::new();
+        world.register_component::<Pos>();
+
         let e = world.create_entity();
         world.add_component(e, Pos(4, 2));
         let pos = world.get_component::<Pos>(e);
@@ -592,6 +601,7 @@ mod test {
         }
 
         let mut world = World::new();
+        world.register_component::<Comp>();
         let e = world.create_entity();
         world.add_component(e, Comp(42));
         world.add_component(e, Comp(50));

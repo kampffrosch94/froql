@@ -19,6 +19,9 @@ struct Name(&'static str);
 struct Age(u32);
 
 let world = &mut World::new();
+world.register_component::<Name>();
+world.register_component::<Age>();
+
 world.create()
     .add(Name("Bob"))
     .add(Age(25));
@@ -55,6 +58,10 @@ Example:
 # struct Age(u32);
 struct Player{}
 # let world = &mut World::new();
+# world.register_component::<Name>();
+# world.register_component::<Age>();
+# world.register_component::<Player>();
+// ...
 world.create()
     .add(Name("Bob"))
     .add(Age(25))
@@ -85,11 +92,14 @@ So the query in the previous example is equivalent to:
 # struct Age(u32);
 # struct Player{}
 # let world = &mut World::new();
+# world.register_component::<Name>();
+# world.register_component::<Age>();
+# world.register_component::<Player>();
 # world.create()
 #     .add(Name("Bob"))
 #     .add(Age(25))
 #     .add(Player{});
-#     
+#
 # world.create()
 #     .add(Name("Anna"))
 #     .add(Age(32));

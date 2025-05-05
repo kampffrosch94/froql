@@ -18,6 +18,7 @@ fn readme_test() {
     enum IsA {}
 
     let mut world = World::new();
+    world.register_component::<Name>();
     // registering the IsA relationship as being transitive
     world.register_relation_flags::<IsA>(TRANSITIVE);
 
