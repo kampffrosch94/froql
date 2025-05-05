@@ -291,6 +291,7 @@ dependencies = [
  "criterion",
  "froql_macro",
  "hi_sparse_bitset",
+ "insta",
 ]
 
 [[package]]

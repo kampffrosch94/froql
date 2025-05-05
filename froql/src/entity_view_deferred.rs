@@ -49,10 +49,12 @@ impl Deref for EntityViewDeferred<'_> {
 
 impl Debug for EntityViewDeferred<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("EntityViewDeferred")
+        let mut builder = f.debug_struct("EntityViewDeferred");
+        builder
             .field("generation", &self.entity.generation)
-            .field("id", &self.entity.id)
-            .finish()
+            .field("id", &self.entity.id);
+
+        builder.finish()
     }
 }
 

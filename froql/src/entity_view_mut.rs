@@ -1,10 +1,9 @@
 #![deny(missing_docs)]
 //! contains the `EntityViewMut` type and its methods
 //! This module intended for direct use by the library user.
-use std::{
-    cell::{Ref, RefMut},
-    ops::Deref,
-};
+use std::cell::{Ref, RefMut};
+use std::fmt::Debug;
+use std::ops::Deref;
 
 use crate::{entity_store::Entity, world::World};
 
@@ -16,6 +15,23 @@ pub struct EntityViewMut<'a> {
     /// Because mutable access is unique, the `EntityViewMut` needs to be shortlived,
     /// so it does not block other operations.
     pub world: &'a mut World,
+}
+
+impl Debug for EntityViewMut<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let bk = &self.world.bookkeeping;
+        let (aid, _row) = bk.entities.get_archetype(self.entity);
+        let a = &bk.archetypes[aid.0 as usize];
+        let mut comps = Vec::new();
+        for comp_id in &a.components {
+            comps.push(bk.components[comp_id.as_index()].name.clone())
+        }
+        f.debug_struct("EntityViewMut")
+            .field("id", &self.entity.id)
+            .field("generation", &self.entity.generation)
+            .field("components", &comps)
+            .finish()
+    }
 }
 
 impl Deref for EntityViewMut<'_> {

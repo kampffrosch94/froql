@@ -1,0 +1,35 @@
+use froql::world::World;
+
+#[test]
+#[allow(dead_code)]
+fn debug_entity_view_mut() {
+    #[derive(Debug)]
+    struct Unit(String);
+    #[derive(Debug)]
+    struct Health(isize);
+    enum Rel {}
+
+    let mut world = World::new();
+    let a = world.create_entity();
+    let e = world
+        .create()
+        .add(Unit("Goblin".into()))
+        .add(Health(10))
+        .relate_to::<Rel>(a);
+
+    insta::assert_debug_snapshot!(e, @r#"
+    EntityViewMut {
+        id: EntityId(
+            2,
+        ),
+        generation: EntityGeneration(
+            1,
+        ),
+        components: [
+            "core::cell::RefCell<it::entity_view::debug_entity_view_mut::Unit>",
+            "core::cell::RefCell<it::entity_view::debug_entity_view_mut::Health>",
+            "froql::relation::Relation<it::entity_view::debug_entity_view_mut::Rel>",
+        ],
+    }
+    "#);
+}

@@ -1,4 +1,4 @@
-use std::alloc::Layout;
+use std::{alloc::Layout, any::type_name};
 
 use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args, world::ReregisterError};
 
@@ -145,8 +145,10 @@ impl ComponentId {
 pub struct Component {
     pub id: ComponentId,
     pub layout: Layout,
-    pub drop_fn: Box<fn(*mut u8)>,
+    pub drop_fn: Box<fn(*mut u8)>, // TODO, does this need to be boxed?
+    pub name: String,
     /// keeps track of what archetypes have this component
+    /// boxed because its big
     archetypes: Box<BitSet>,
     /// if this component is a relationship target we need to track archetypes separately
     target_archetypes: Box<BitSet>,
@@ -159,6 +161,7 @@ impl Component {
             layout,
             drop_fn,
             id,
+            name: type_name::<T>().to_string(),
             archetypes: Box::new(BitSet::new()),
             target_archetypes: Box::new(BitSet::new()),
         }
