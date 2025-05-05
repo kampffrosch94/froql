@@ -2,6 +2,7 @@ use froql::world::World;
 
 #[test]
 #[allow(dead_code)]
+#[cfg(not(miri))] // can't mix miri and insta
 fn debug_entity_view_mut() {
     #[derive(Debug)]
     struct Unit(String);
