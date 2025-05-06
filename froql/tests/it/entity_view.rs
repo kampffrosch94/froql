@@ -2,7 +2,6 @@ use froql::world::World;
 
 #[test]
 #[allow(dead_code)]
-#[cfg(not(miri))] // can't mix miri and insta
 fn debug_entity_view_mut() {
     #[derive(Debug)]
     struct Unit(String);
@@ -25,7 +24,8 @@ fn debug_entity_view_mut() {
         .add(Health(10))
         .relate_to::<Rel>(a);
 
-    insta::assert_debug_snapshot!(e, @r#"
+    if !cfg!(miri) {
+        insta::assert_debug_snapshot!(e, @r#"
     EntityViewMut {
         id: EntityId(
             2,
@@ -42,4 +42,7 @@ fn debug_entity_view_mut() {
         component: "froql::relation::Relation<it::entity_view::debug_entity_view_mut::Rel>",
     }
     "#);
+    } else {
+        dbg!(e);
+    }
 }
