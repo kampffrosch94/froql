@@ -14,8 +14,11 @@ fn debug_entity_view_mut() {
     world.register_component::<Unit>();
     world.register_component::<Health>();
     world.register_relation::<Rel>();
+    world.register_debug::<Unit>();
+    world.register_debug::<Health>();
 
     let a = world.create_entity();
+
     let e = world
         .create()
         .add(Unit("Goblin".into()))
@@ -30,11 +33,13 @@ fn debug_entity_view_mut() {
         generation: EntityGeneration(
             1,
         ),
-        components: [
-            "core::cell::RefCell<it::entity_view::debug_entity_view_mut::Unit>",
-            "core::cell::RefCell<it::entity_view::debug_entity_view_mut::Health>",
-            "froql::relation::Relation<it::entity_view::debug_entity_view_mut::Rel>",
-        ],
+        component: Unit(
+            "Goblin",
+        ),
+        component: Health(
+            10,
+        ),
+        component: "froql::relation::Relation<it::entity_view::debug_entity_view_mut::Rel>",
     }
     "#);
 }

@@ -2,7 +2,7 @@
 //! contains the `EntityViewMut` type and its methods
 //! This module intended for direct use by the library user.
 use std::cell::{Ref, RefMut};
-use std::fmt::Debug;
+use std::fmt::{self, Debug};
 use std::ops::Deref;
 
 use crate::{entity_store::Entity, world::World};
@@ -17,20 +17,38 @@ pub struct EntityViewMut<'a> {
     pub world: &'a mut World,
 }
 
+struct DebugHelper {
+    ptr: *const u8,
+    debug_fn: fn(*const u8, &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>,
+}
+
+impl Debug for DebugHelper {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        (self.debug_fn)(self.ptr, f)
+    }
+}
+
 impl Debug for EntityViewMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let bk = &self.world.bookkeeping;
         let (aid, _row) = bk.entities.get_archetype(self.entity);
         let a = &bk.archetypes[aid.0 as usize];
-        let mut comps = Vec::new();
-        for comp_id in &a.components {
-            comps.push(bk.components[comp_id.as_index()].name.clone())
-        }
-        f.debug_struct("EntityViewMut")
+
+        let mut builder = f.debug_struct("EntityViewMut");
+        builder
             .field("id", &self.entity.id)
-            .field("generation", &self.entity.generation)
-            .field("components", &comps)
-            .finish()
+            .field("generation", &self.entity.generation);
+        for comp_id in &a.components {
+            let comp = &bk.components[comp_id.as_index()];
+            if let Some(debug_fn) = comp.debug_fn {
+                let ptr = bk.get_component(self.entity, *comp_id);
+                let helper = DebugHelper { ptr, debug_fn };
+                builder.field("component", &helper);
+            } else {
+                builder.field("component", &comp.name);
+            }
+        }
+        builder.finish()
     }
 }
 

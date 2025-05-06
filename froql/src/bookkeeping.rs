@@ -110,7 +110,7 @@ impl Bookkeeping {
     }
 
     // TODO make unsafe + doc
-    pub fn get_component(&self, e: Entity, cid: ComponentId) -> *mut u8 {
+    pub fn get_component(&self, e: Entity, cid: ComponentId) -> *const u8 {
         assert!(self.entities.is_alive(e));
         let (aid, row) = self.entities.get_archetype(e);
         let a = &self.archetypes[aid.0 as usize];

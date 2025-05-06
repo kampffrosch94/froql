@@ -1,4 +1,4 @@
-use std::{alloc::Layout, any::type_name};
+use std::{alloc::Layout, any::type_name, fmt};
 
 use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args, world::ReregisterError};
 
@@ -152,6 +152,8 @@ pub struct Component {
     archetypes: Box<BitSet>,
     /// if this component is a relationship target we need to track archetypes separately
     target_archetypes: Box<BitSet>,
+    /// formats debug output for this component type
+    pub debug_fn: Option<fn(*const u8, &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>>,
 }
 
 impl Component {
@@ -164,6 +166,7 @@ impl Component {
             name: type_name::<T>().to_string(),
             archetypes: Box::new(BitSet::new()),
             target_archetypes: Box::new(BitSet::new()),
+            debug_fn: None,
         }
     }
 

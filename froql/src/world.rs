@@ -5,6 +5,7 @@
 use std::{
     any::{TypeId, type_name},
     cell::{Ref, RefCell, RefMut},
+    fmt::{self, Debug},
 };
 
 use crate::{
@@ -84,6 +85,23 @@ impl World {
             }
         }
         Ok(())
+    }
+
+    /// Registers a debug formatter for ComponentTypes that implement the Debug trait
+    pub fn register_debug<T: 'static + Debug>(&mut self) {
+        let cid = self.get_component_id::<T>();
+        assert!(
+            !cid.is_relation(),
+            "Relations don't contain values and therefore can't be formatted with the Debug trait."
+        );
+        let debug_fn_wrapped = |ptr: *const u8, formatter: &mut fmt::Formatter<'_>| {
+            let debug_fn = <T as Debug>::fmt;
+            let ptr = ptr as *const RefCell<T>;
+            // SAFETY: we know its a component (not a relation) of the right type here
+            let val: &RefCell<T> = unsafe { &*ptr };
+            debug_fn(&val.borrow(), formatter)
+        };
+        self.bookkeeping.components[cid.as_index()].debug_fn = Some(debug_fn_wrapped);
     }
 
     /// Convenience method for getting a Component of the singleton entity.
