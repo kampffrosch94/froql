@@ -2,16 +2,16 @@
 
 # froql
 
-Froql is a DSL for dealing with graph-like state in Rust.
+Froql is a proc_macro based DSL for dealing with graph-like state in Rust.
 
 ## Target use case
 Froql was designed with game jams in mind.
 In a game jam requirements aren't clear and time is limited. 
-Lots of experimentation needs to happen but global refactoring is too costly.
+Lots of experimentation needs to happen but large scale refactoring is too costly.
 State is often graph-like (hard to express in Rust) and not tree-like (easy to express in Rust).
 
-Therefore froql allows a user to input data, define relations between data objects and then
-query the data back out in whatever shape is needed at the usage side.
+Froql allows an user to input data, define relations between data objects and then
+query the data back out in whatever shape is needed at the usage site.
 
 This dynamic behavior relaxes both the requirements and the guarantees of Rust's typesystem.
 
@@ -29,13 +29,43 @@ This dynamic behavior relaxes both the requirements and the guarantees of Rust's
 
 ## Example
 
-TODO
-A tomato is a fruit. A fruit is a food.
- 
+Let's name some facts that can be expressed as relations:
 
-## Documentation
+A tomato is a fruit. A fruit is food. Bread is food.
 
-TODO
+These truths can be expressed and evaluated in froql like this:
+```rust
+struct Name(&'static str);
+enum IsA {}
+
+let mut world = World::new();
+// registering the IsA relationship as being transitive
+world.register_relation_flags::<IsA>(TRANSITIVE);
+
+// creating entities and relating them
+let food = world.create().add(Name("Food")).entity;
+let fruit = world.create().add(Name("Fruit")).relate_to::<IsA>(food).entity;
+world.create().add(Name("Tomato")).relate_to::<IsA>(fruit);
+world.create().add(Name("Bread")).relate_to::<IsA>(food);
+
+// querying
+for (a, b) in query!(world, Name(a), Name(b), IsA(a, b)) {
+    println!("{} is a {}", a.0, b.0);
+}
+```
+
+Output:
+
+```txt
+Fruit is a Food
+Bread is a Food
+Tomato is a Food
+Tomato is a Fruit
+```
+
+To learn how this works check out the book or froql's documentation on docs.rs.
+
+You can also find more elaborate examples in the examples folder.
 
 ## Inspirations
 
