@@ -1,4 +1,4 @@
-use std::{alloc::Layout, any::type_name, fmt};
+use std::{alloc::Layout, fmt};
 
 use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args, world::ReregisterError};
 
@@ -157,13 +157,13 @@ pub struct Component {
 }
 
 impl Component {
-    pub fn new<T: 'static>(id: ComponentId) -> Self {
+    pub fn new<T: 'static>(id: ComponentId, name: &str) -> Self {
         let (layout, drop_fn) = layout_vec_args::<T>();
         Component {
             layout,
             drop_fn,
             id,
-            name: type_name::<T>().to_string(),
+            name: name.to_string(),
             archetypes: Box::new(BitSet::new()),
             target_archetypes: Box::new(BitSet::new()),
             debug_fn: None,

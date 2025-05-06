@@ -59,6 +59,11 @@ impl Debug for EntityViewDeferred<'_> {
 }
 
 impl<'me> EntityViewDeferred<'me> {
+    /// Creates an Entityview from an Entity
+    pub fn new(world: &'me World, entity: Entity) -> Self {
+        Self { entity, world }
+    }
+
     /// Creates an Entityview from an EntityId
     /// Panics if the Entity with that id is not alive.
     pub fn from_id_unchecked(world: &'me World, id: EntityId) -> Self {

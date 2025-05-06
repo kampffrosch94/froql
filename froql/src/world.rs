@@ -15,6 +15,7 @@ use crate::{
     entity_view_deferred::{DeferredOperation, EntityViewDeferred},
     entity_view_mut::EntityViewMut,
     relation::Relation,
+    util::short_type_name,
 };
 
 /// The `World` is the central datastructure in froql that holds all state.
@@ -53,14 +54,20 @@ impl World {
     /// Used internally to register both components and relations
     /// because Relations are a special kind of component
     /// and Components are meant to be wrapped in `RefCell`
-    fn register_component_inner<T: 'static>(&mut self, flags: u32) -> ComponentId {
+    fn register_component_inner<T: 'static>(
+        &mut self,
+        flags: u32,
+        short_name: &str,
+    ) -> ComponentId {
         let tid = TypeId::of::<T>();
         if let Some(cid) = self.bookkeeping.get_component_id(tid) {
             return cid;
         }
         let mut cid = ComponentId::from_usize(self.bookkeeping.components.len());
         cid = cid.set_flags(flags);
-        self.bookkeeping.components.push(Component::new::<T>(cid));
+        self.bookkeeping
+            .components
+            .push(Component::new::<T>(cid, short_name));
         self.bookkeeping.component_map.insert(tid, cid);
         let tname = type_name::<T>().to_string();
         let old = self.bookkeeping.component_name_map.insert(tname, tid);
@@ -141,7 +148,7 @@ impl World {
 
     /// Registers component type for later use.
     pub fn register_component<T: 'static>(&mut self) -> ComponentId {
-        self.register_component_inner::<RefCell<T>>(0)
+        self.register_component_inner::<RefCell<T>>(0, short_type_name::<T>())
     }
 
     /// This allows reusing the same world in hotreloading scenarios.
@@ -407,7 +414,7 @@ impl World {
     /// It's recommended to use an inhibited type (enum without variants)
     /// so that you don't confuse components and relations on accident.
     pub fn register_relation<T: 'static>(&mut self) -> ComponentId {
-        self.register_component_inner::<Relation<T>>(RELATION)
+        self.register_component_inner::<Relation<T>>(RELATION, short_type_name::<T>())
     }
 
     /// Registers a relation type with specific flags.
@@ -417,7 +424,7 @@ impl World {
     /// so that you don't confuse components and relations on accident.
     pub fn register_relation_flags<T: 'static>(&mut self, flags: u32) {
         // TODO: error if component is already registered
-        self.register_component_inner::<Relation<T>>(flags | RELATION);
+        self.register_component_inner::<Relation<T>>(flags | RELATION, short_type_name::<T>());
     }
 
     /// Adds a relationship between two entities.
