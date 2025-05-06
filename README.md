@@ -1,3 +1,5 @@
+![image](https://raw.githubusercontent.com/gist/kampffrosch94/96566ce42758964cc6862971c60a8f7f/raw/230a84cd5b04ec6d77ca0edf39f835ed80a63d97/diagram.svg)
+
 # froql
 
 Froql is a DSL for dealing with graph-like state in Rust.
