@@ -89,7 +89,7 @@ impl World {
 
     /// Registers a debug formatter for ComponentTypes that implement the Debug trait
     pub fn register_debug<T: 'static + Debug>(&mut self) {
-        let cid = self.get_component_id::<T>();
+        let cid = self.register_component::<T>();
         assert!(
             !cid.is_relation(),
             "Relations don't contain values and therefore can't be formatted with the Debug trait."
@@ -268,7 +268,12 @@ impl World {
     /// Panics if `Entity` is not alive.
     /// Panics if Component type is not registered.
     pub fn add_component<T: 'static>(&mut self, e: Entity, mut val: T) {
-        let cid = self.get_component_id::<T>();
+        let cid = if cfg!(feature = "manual_registration") {
+            self.get_component_id::<T>()
+        } else {
+            self.register_component::<T>()
+        };
+
         match self.bookkeeping.ensure_component(e, cid) {
             EnsureComponentResult::NewComponent(ptr) => {
                 let val = RefCell::new(val);
@@ -336,7 +341,11 @@ impl World {
     ///
     /// Panics if component type is not registered.
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
-        let cid = self.get_component_id::<T>();
+        let cid = if cfg!(feature = "manual_registration") {
+            self.get_component_id::<T>()
+        } else {
+            self.register_component::<T>()
+        };
         self.bookkeeping.remove_component(e, cid);
     }
 
@@ -397,8 +406,8 @@ impl World {
     ///
     /// It's recommended to use an inhibited type (enum without variants)
     /// so that you don't confuse components and relations on accident.
-    pub fn register_relation<T: 'static>(&mut self) {
-        self.register_component_inner::<Relation<T>>(RELATION);
+    pub fn register_relation<T: 'static>(&mut self) -> ComponentId {
+        self.register_component_inner::<Relation<T>>(RELATION)
     }
 
     /// Registers a relation type with specific flags.
@@ -414,7 +423,12 @@ impl World {
     /// Adds a relationship between two entities.
     /// Registers the relationship type if it is not already.
     pub fn add_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let origin_cid = self.get_relation_id::<T>();
+        let origin_cid = if cfg!(feature = "manual_registration") {
+            self.get_relation_id::<T>()
+        } else {
+            self.register_relation::<T>()
+        };
+
         self.bookkeeping.add_relation(origin_cid, from, to);
     }
 
@@ -428,7 +442,12 @@ impl World {
     /// Removes relation between two entities.
     /// This operation is idempotent.
     pub fn remove_relation<T: 'static>(&mut self, from: Entity, to: Entity) {
-        let cid = self.get_relation_id::<T>();
+        let cid = if cfg!(feature = "manual_registration") {
+            self.get_relation_id::<T>()
+        } else {
+            self.register_relation::<T>()
+        };
+
         self.bookkeeping.remove_relation(cid, from, to);
     }
 
@@ -627,5 +646,32 @@ mod test {
         assert!(WAS_DROPPED.load(O::Relaxed));
     }
 
-    // TODO add same relation twice
+    #[cfg(not(feature = "manual_registration"))]
+    #[test]
+    fn automatic_registration() {
+        struct Comp {}
+        enum Rel {}
+        let mut world = World::new();
+        let e = world.create_entity();
+        world.create().add(Comp {}).relate_to::<Rel>(e);
+    }
+
+    #[cfg(feature = "manual_registration")]
+    #[test]
+    #[should_panic]
+    fn manual_registration() {
+        struct Comp {}
+        let mut world = World::new();
+        world.create().add(Comp {});
+    }
+
+    #[cfg(feature = "manual_registration")]
+    #[test]
+    #[should_panic]
+    fn manual_registration_relation() {
+        enum Rel {}
+        let mut world = World::new();
+        let e = world.create_entity();
+        world.create().relate_to::<Rel>(e);
+    }
 }
