@@ -180,6 +180,10 @@ impl Component {
         let (layout, drop_fn) = layout_vec_args::<T>();
         if layout == self.layout {
             self.drop_fn = drop_fn;
+            // debug_fn ptr is also out of date now and must be reset
+            if !self.id.is_relation() {
+                self.debug_fn = None;
+            }
             Ok(())
         } else {
             Err(ReregisterError::DifferingLayout)
