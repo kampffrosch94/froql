@@ -14,16 +14,16 @@ query the data back out in whatever shape is needed at the usage side.
 This dynamic behavior relaxes both the requirements and the guarantees of Rust's typesystem.
 
 ## froql has
-- fast compile times
-- first class relation support
-- an ergonomic DSL for creating queries
-- queries that double as normal rust iterators
-- components that don't need to implement a trait (thus letting you use library types as is)
+- Fast compile times
+- First class relation support
+- An ergonomic DSL for creating queries
+- Queries that double as normal rust iterators
+- Components that don't need to implement a trait (thus letting you use library types as is)
 
 ## froql doesn't have
-- systems, observers or a scheduler
-- multithreading support
-- a codebase free of unsafe
+- Systems, observers or a scheduler
+- Multithreading support
+- A codebase free of unsafe
 
 ## Example
 
@@ -44,12 +44,12 @@ Click on the arrows to see what idea was taken from each.
   <summary> <a href="https://github.com/SanderMertens/flecs">flecs</a> </summary>
   As far as I know this is the most advanced ECS out there at the moment.
   If you need something polyglot (it's written in C with bindings for lots of language),
-  fancy features or 
+  fancy features or state of the art performance, flecs is what I would recommend.
   
-  The backing archetypical ECS of froql and it's query language were inspired by flecs.
-  It's creator wrote a lot of helpful articles about ECS design and also gave me direct advice ❤️
+  The backing archetypical ECS of froql and its query language were inspired by flecs.
+  Its creator wrote a lot of helpful articles about ECS design and also gave me direct advice ❤️
   
-  I recommend reading https://medium.com/@ajmmertens/building-an-ecs-storage-in-pictures-642b8bfd6e04
+  Start by reading https://medium.com/@ajmmertens/building-an-ecs-storage-in-pictures-642b8bfd6e04
   if you are curious.
 </details>
 <details>
