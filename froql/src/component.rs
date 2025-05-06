@@ -145,7 +145,7 @@ impl ComponentId {
 pub struct Component {
     pub id: ComponentId,
     pub layout: Layout,
-    pub drop_fn: Box<fn(*mut u8)>, // TODO, does this need to be boxed?
+    pub drop_fn: fn(*mut u8),
     pub name: String,
     /// keeps track of what archetypes have this component
     /// boxed because its big

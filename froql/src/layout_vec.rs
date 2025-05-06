@@ -10,7 +10,7 @@ pub struct LayoutVec {
     element_size: u32,
     element_align: u32,
     ptr: NonNull<u8>,
-    drop_fn: Box<fn(*mut u8)>,
+    drop_fn: fn(*mut u8),
 }
 
 impl LayoutVec {
@@ -18,7 +18,7 @@ impl LayoutVec {
     /// drop_fn: Boxed fn of drop_in_place for the contained type with type punning
     ///
     /// the correct arguments for a type can be obtained by calling `layout_vec_args::<T>()`
-    pub fn new(layout: Layout, drop_fn: Box<fn(*mut u8)>) -> Self {
+    pub fn new(layout: Layout, drop_fn: fn(*mut u8)) -> Self {
         debug_assert!(layout.size() > 0, "Layout vec does not handle ZSTs");
         LayoutVec {
             len: 0,
@@ -31,7 +31,7 @@ impl LayoutVec {
     }
 
     /// Useful for hotreloading
-    pub unsafe fn change_drop_function(&mut self, drop_fn: Box<fn(*mut u8)>) {
+    pub unsafe fn change_drop_function(&mut self, drop_fn: fn(*mut u8)) {
         self.drop_fn = drop_fn;
     }
 
@@ -179,14 +179,11 @@ impl Drop for LayoutVec {
 }
 
 #[inline]
-pub fn layout_vec_args<T>() -> (Layout, Box<fn(*mut u8)>) {
-    (
-        Layout::new::<T>(),
-        Box::new(|ptr: *mut u8| unsafe {
-            let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
-            std::ptr::drop_in_place(ptr);
-        }),
-    )
+pub fn layout_vec_args<T>() -> (Layout, fn(*mut u8)) {
+    (Layout::new::<T>(), |ptr: *mut u8| unsafe {
+        let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
+        std::ptr::drop_in_place(ptr);
+    })
 }
 
 #[cfg(test)]
