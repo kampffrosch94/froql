@@ -10,6 +10,7 @@ use std::{
 use std::fmt::Debug;
 
 use crate::{
+    debug::debug_view,
     entity_store::{Entity, EntityId},
     relation::Relation,
     world::World,
@@ -49,12 +50,7 @@ impl Deref for EntityViewDeferred<'_> {
 
 impl Debug for EntityViewDeferred<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let mut builder = f.debug_struct("EntityViewDeferred");
-        builder
-            .field("generation", &self.entity.generation)
-            .field("id", &self.entity.id);
-
-        builder.finish()
+        debug_view(f, &self.world, self.entity, "EntityViewDeferred")
     }
 }
 

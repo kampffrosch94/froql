@@ -2,10 +2,10 @@
 //! contains the `EntityViewMut` type and its methods
 //! This module intended for direct use by the library user.
 use std::cell::{Ref, RefMut};
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 use std::ops::Deref;
 
-use crate::relation_vec::RelationVec;
+use crate::debug::debug_view;
 use crate::{entity_store::Entity, world::World};
 
 /// This is a convenience wrapper for mutating the components and relationships of an `Entity`.
@@ -18,58 +18,9 @@ pub struct EntityViewMut<'a> {
     pub world: &'a mut World,
 }
 
-enum ComponentDebugHelper<'a> {
-    DebugFn {
-        ptr: *const u8,
-        debug_fn: fn(*const u8, &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>,
-    },
-    JustName(&'a str),
-}
-
-impl Debug for ComponentDebugHelper<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::DebugFn { debug_fn, ptr } => (debug_fn)(ptr.clone(), f),
-            Self::JustName(name) => f.debug_struct(name).finish_non_exhaustive(),
-        }
-    }
-}
-
 impl Debug for EntityViewMut<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let bk = &self.world.bookkeeping;
-        let (aid, _row) = bk.entities.get_archetype(self.entity);
-        let a = &bk.archetypes[aid.0 as usize];
-
-        let mut builder = f.debug_struct("EntityViewMut");
-        builder
-            .field("id", &self.entity.id)
-            .field("generation", &self.entity.generation);
-        let mut components = Vec::new();
-        for comp_id in &a.components {
-            let comp = &bk.components[comp_id.as_index()];
-            if let Some(debug_fn) = comp.debug_fn {
-                let ptr = bk.get_component(self.entity, *comp_id);
-                let helper = ComponentDebugHelper::DebugFn { ptr, debug_fn };
-                components.push(helper);
-            } else {
-                if comp_id.is_relation() {
-                    let ptr = bk.get_component(self.entity, *comp_id) as *const RelationVec;
-                    let rel_vec = unsafe { &*ptr };
-                    let name = &comp.name;
-                    if comp_id.is_target() {
-                        builder.field(&format!("{name}<target> of"), &&rel_vec[..]);
-                    } else {
-                        builder.field(&format!("{name}<origin> to"), &&rel_vec[..]);
-                    }
-                } else {
-                    let helper = ComponentDebugHelper::JustName(&comp.name);
-                    components.push(helper);
-                }
-            }
-        }
-        builder.field("components", &components);
-        builder.finish()
+        debug_view(f, &self.world, self.entity, "EntityViewMut")
     }
 }
 

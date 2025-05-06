@@ -82,16 +82,27 @@ fn debug_entity_view() {
     let e = EntityViewDeferred::new(&world, e);
 
     if !cfg!(miri) {
-        insta::assert_debug_snapshot!(e, @r"
+        insta::assert_debug_snapshot!(e, @r#"
         EntityViewDeferred {
-            generation: EntityGeneration(
-                1,
-            ),
             id: EntityId(
                 2,
             ),
+            generation: EntityGeneration(
+                1,
+            ),
+            Rel<origin> to: [
+                1,
+            ],
+            components: [
+                Unit(
+                    "Goblin",
+                ),
+                Health(
+                    10,
+                ),
+            ],
         }
-        ");
+        "#);
     } else {
         dbg!(e);
     }
