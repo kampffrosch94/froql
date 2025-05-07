@@ -85,6 +85,13 @@ This allows for finegrained access, but may panic at runtime on misuse (violatin
 Froql needs to know about what types of components it manages.
 Before a component can be used, it therefore must be registered.
 
+Registration happens automatically when adding a component to an entity.
+But it does not happen with methods that borrow `World` non mutably, they panic instead
+when they encounter an unregistered component.
+
+The autoregistration exists for prototyping purposes and can be disabled by enabling the feature flag `manual_registration`.
+For larger projects it is recommended to register everything upfront.
+
 ```rust
 # use froql::world::World;
 # struct MyStruct(u32);
