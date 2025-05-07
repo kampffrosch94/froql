@@ -144,15 +144,21 @@ impl ComponentId {
     }
 }
 
+/// MetaData about a Component registered in froql
 pub struct Component {
+    /// ComponentID for this component
     pub id: ComponentId,
-    pub layout: Layout,
-    pub drop_fn: fn(*mut u8),
+    /// layout of elements of the component type
+    /// component type is either RefCell<T> or RelationVec
+    pub(crate) layout: Layout,
+    /// drops elements of the component type stored in an archetypes column
+    pub(crate) drop_fn: fn(*mut u8),
     pub name: String,
     /// keeps track of what archetypes have this component
     /// boxed because its big
     archetypes: Box<BitSet>,
-    /// if this component is a relationship target we need to track archetypes separately
+    /// if this component is a relationship target we need to track target archetypes
+    /// separately from origin archetypes
     target_archetypes: Box<BitSet>,
     /// formats debug output for this component type
     pub debug_fn: Option<fn(*const u8, &mut fmt::Formatter<'_>) -> Result<(), fmt::Error>>,
