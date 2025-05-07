@@ -681,4 +681,13 @@ mod test {
         let e = world.create_entity();
         world.create().relate_to::<Rel>(e);
     }
+
+    #[test]
+    fn relate_to_self() {
+        enum Rel {}
+        let mut world = World::new();
+        let e = world.create_entity();
+        world.add_relation::<Rel>(e, e);
+        // dbg!(EntityViewDeferred::new(&world, e));
+    }
 }
