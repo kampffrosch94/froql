@@ -37,6 +37,8 @@ pub const SYMMETRIC: u32 = RELATION >> 3;
 /// then once the faction is destroyed all NPCs belonging to it are also destroyed.
 pub const CASCADING_DESTRUCT: u32 = RELATION >> 4;
 
+/// Marks transitive relationships.
+/// A relation is symmetric if `Rel(a,b)` and `Rel(b,c)` implies `Rel(a,c)`.
 pub const TRANSITIVE: u32 = RELATION >> 5;
 
 impl ComponentId {
