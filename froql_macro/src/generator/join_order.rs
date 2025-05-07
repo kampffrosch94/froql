@@ -219,7 +219,7 @@ impl<'a> JoinOrderComputer<'a> {
     /// returns true when done
     fn compute_inner_joins(&mut self) -> bool {
         while !self.relations_left.is_empty() {
-            // find next viable for joining and remove it from working list
+            // find next variable for joining and remove it from working list
             // always handle constraints first, because it may let us skip work
             // when we are executing the query at runtime
             let next_join = {

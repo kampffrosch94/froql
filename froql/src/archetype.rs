@@ -25,8 +25,6 @@ impl ArchetypeRow {
 pub enum Erased {}
 pub type ErasedPointer = *const RefCell<Erased>;
 
-// TODO Optimization: use SmallVec instead of Vec
-// or maybe boxed slices?
 pub struct Archetype {
     pub components: Vec<ComponentId>,
     pub columns: Vec<LayoutVec>,

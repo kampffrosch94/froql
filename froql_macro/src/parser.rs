@@ -98,7 +98,7 @@ pub fn parse_term(tokens: &[TokenTree]) -> Result<Term, MacroError> {
                 let first = iter
                     .next()
                     .expect("Expected type for Component or Relation");
-                let second = iter.next(); // TODO inline
+                let second = iter.next();
                 let third = iter.next();
                 let fourth = iter.next();
                 let fifth = iter.next();
