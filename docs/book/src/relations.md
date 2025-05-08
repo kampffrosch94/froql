@@ -2,9 +2,9 @@
 
 A Relation is always between two entities.
 
-You can think of Entities being nodes on directed graph and with relationships being the edges.
+You can think of Entities being nodes on a directed graph with Relations being the edges.
 
-Relations are distinguished with a rust type via its `TypeId`.
+Relations are distinguished with a Rust type via its `TypeId`.
 To prevent accidentally adding a Relation as a Component it is recommended to use uninhabited types for them. 
 For example an enum with no variants.
 
@@ -12,7 +12,7 @@ A Relation always has an origin and a target.
 
 ## Registration
 
-Like for components, it is recommended to register relations before use.
+Like for Components, it is recommended to register Relations before use.
 
 ```rust
 # use froql::world::World;
@@ -62,7 +62,6 @@ assert!(!world.has_relation::<MyRelation>(a,b));
 
 Per default relations are directed, many-to-many and non-transitive. 
 But this behavior can be changed when registering the relation using flags.
-
 
 
 ### Exclusive Relations
@@ -170,9 +169,4 @@ world.add_relation::<BestFriends>(asif, salman);
 assert!(!world.has_relation::<BestFriends>(asif, mustadir));
 assert!(world.has_relation::<BestFriends>(salman, asif));
 ```
-
-
-## Naming Relations
-
-TODO
 
