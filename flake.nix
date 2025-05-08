@@ -44,8 +44,6 @@
             )
             rust-analyzer-nightly # optional
 
-            # necessary to build
-            pkg-config # locate C dependencies
             cargo-flamegraph # more profiling :)
             cargo-nextest
             cargo-watch
