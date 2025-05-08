@@ -467,3 +467,11 @@ let Some(oldest) = iterator
 
 assert_eq!(oldest, "Paul");
 ```
+
+## Multihop queries
+
+The other examples haven't shown this, but its possible to have far more than two variables in a query.
+
+So a query like 
+`query!(world, Comp(a), Comp(e), Rel1(a,b), Rel2(b,c), Rel3(c,d), Rel(d,e))` 
+is possible.
