@@ -41,7 +41,7 @@ world.remove_relation::<MyRelation>(a,b);
 assert!(!world.has_relation::<MyRelation>(a,b));
 ```
 
-In the EntityView the vocubalary is `relate` and `unrelate`.
+In the EntityView the vocubulary is `relate` and `unrelate`.
 
 ```rust
 # use froql::world::World;
@@ -60,7 +60,7 @@ assert!(!world.has_relation::<MyRelation>(a,b));
 
 ## Relation Flags
 
-Per default relations are directed, many-to-many and non-transitive. 
+By default relations are directed, many-to-many and non-transitive. 
 But this behavior can be changed when registering the relation using flags.
 
 
