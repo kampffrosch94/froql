@@ -63,9 +63,21 @@ Tomato is a Food
 Tomato is a Fruit
 ```
 
-To learn how this works check out the book or froql's documentation on docs.rs.
+To learn how this works check out the [book](https://kampffrosch94.github.io/froql/).
 
-You can also find more elaborate examples in the examples folder.
+You can also find more elaborate examples in the `examples/` folder.
+
+## Plans for 1.0
+
+I am happy with the current feature set and APIs. 
+Next up is smoothing out rough edges and improving the developer experience a bit.
+
+Then improving performance (both runtime and compile time) which first up needs some proper
+benchmarks and more elaborate (fuzzy) testing.
+
+Once I am happy with that I'll release 1.0 and then consider adding fancier queries, like
+branches, components as entities, aggregate functions and straight up injecting user
+supplied code.
 
 ## Inspirations
 
