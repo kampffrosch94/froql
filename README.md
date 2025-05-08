@@ -67,6 +67,15 @@ To learn how this works check out the [book](https://kampffrosch94.github.io/fro
 
 You can also find more elaborate examples in the `examples/` folder.
 
+
+## Installation
+
+`cargo add froql` for the latest version on crates.io
+
+or 
+
+`cargo add cargo add --git https://github.com/kampffrosch94/froql froql` for latest master.
+
 ## Plans for 1.0
 
 I am happy with the current feature set and APIs. 
