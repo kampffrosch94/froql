@@ -10,19 +10,21 @@ use join_order::JoinKind;
 use join_order::NewJoin;
 use join_order::compute_join_order;
 
+mod join_order;
+mod nodes;
+
 use crate::ANYVAR;
 use crate::Unrelation;
-use crate::generator_nodes::GeneratorNode;
-use crate::generator_nodes::archetype_start::ArchetypeStart;
-use crate::generator_nodes::invar_start::InvarInfo;
-use crate::generator_nodes::invar_start::InvarStart;
-use crate::generator_nodes::relation_helper::RelationHelperInfo;
-use crate::generator_nodes::relation_helper::UnrelationHelperInfo;
-use crate::generator_nodes::relation_join::RelationJoin;
-use crate::generator_nodes::yield_result::YieldResult;
 use crate::{Accessor, Component, Relation};
-mod join_order;
 pub use join_order::Checks;
+use nodes::GeneratorNode;
+use nodes::archetype_start::ArchetypeStart;
+use nodes::invar_start::InvarInfo;
+use nodes::invar_start::InvarStart;
+use nodes::relation_helper::RelationHelperInfo;
+use nodes::relation_helper::UnrelationHelperInfo;
+use nodes::relation_join::RelationJoin;
+use nodes::yield_result::YieldResult;
 
 #[derive(Default, Debug)]
 pub struct Generator {

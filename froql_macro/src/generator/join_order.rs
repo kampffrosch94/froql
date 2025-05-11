@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     ANYVAR, Relation, Unrelation,
-    generator_nodes::{
+    generator::nodes::{
         relation_helper::{RelationHelperInfo, UnrelationHelperInfo},
         types::{RelationConstraint, UnrelationConstraint},
     },
