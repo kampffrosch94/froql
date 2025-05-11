@@ -34,8 +34,8 @@ pub(crate) type Component = (String, isize);
 /// RelationType, from_var, to_var, index
 pub(crate) type Unrelation = (String, isize, isize, usize);
 
-// we need to preserve the order of the query in the result
-// this is why we put result entities and components in the same vec via enum
+/// we need to preserve the order of the query in the result
+/// this is why we put result entities and components in the same vec via enum
 #[derive(Debug)]
 pub(crate) enum Accessor {
     /// ComponentType, var
@@ -93,7 +93,9 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
         panic!("Expected , after world");
     };
 
+    // stores incomplete terms
     let mut buffer: Vec<TokenTree> = Vec::with_capacity(10);
+
     let mut variables = VariableStore::new();
 
     let mut components: Vec<Component> = Vec::new();
@@ -106,6 +108,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
     let mut opt_components = Vec::new();
     let mut prefills = HashMap::new();
 
+    // loop over all input tokens
+    // when encountering a seperator, parse a term and sort it into the collections above
     loop {
         let next = iter.next();
 
@@ -300,8 +304,8 @@ fn inner(input: TokenStream) -> Result<TokenStream, MacroError> {
                     prefills.insert(b, var_b);
                     unrelations.push((ty, a, b, unrelations.len()));
                 }
-                Term::Unrelation(_ty, RVK::AnyVar, RVK::AnyVar) => {
-                    panic!("!Rel(_,_) does not make sense.")
+                Term::Unrelation(ty, RVK::AnyVar, RVK::AnyVar) => {
+                    panic!("!{ty}(_,_) does not make sense.")
                 }
                 Term::OptionalComponent(ty, var) => {
                     let index = opt_components.len();
