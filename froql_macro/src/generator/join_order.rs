@@ -53,7 +53,7 @@ pub struct NewJoin {
     pub unrel_constraints: Vec<UnrelationConstraint>,
 }
 
-struct JoinOrderComputer<'a> {
+pub struct JoinOrderComputer<'a> {
     infos: &'a mut [VarInfo],
     prefills: &'a HashMap<isize, String>,
     relations_left: Vec<Relation>,
@@ -66,7 +66,7 @@ struct JoinOrderComputer<'a> {
 }
 
 impl<'a> JoinOrderComputer<'a> {
-    fn new(
+    pub fn new(
         relations: &'a [Relation],
         infos: &'a mut [VarInfo],
         prefills: &'a HashMap<isize, String>,
@@ -98,7 +98,7 @@ impl<'a> JoinOrderComputer<'a> {
         }
     }
 
-    fn compute_join_order(mut self) -> Vec<JoinKind> {
+    pub fn compute_join_order(mut self) -> Vec<JoinKind> {
         // figure out what to start with
         if !self.prefills.is_empty() {
             // if we have prefills we just start with those
@@ -286,16 +286,6 @@ impl<'a> JoinOrderComputer<'a> {
     }
 }
 
-pub fn compute_join_order(
-    relations: &[Relation],
-    infos: &mut [VarInfo],
-    prefills: &HashMap<isize, String>,
-    unequals: &[(isize, isize)],
-    unrelations: &[Unrelation],
-) -> Vec<JoinKind> {
-    JoinOrderComputer::new(relations, infos, prefills, unequals, unrelations).compute_join_order()
-}
-
 fn newly_available_constraints(
     available: &[isize],
     relations_left: &mut Vec<Relation>,
@@ -400,7 +390,8 @@ mod test {
             &[],
         );
 
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &[], &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
@@ -462,7 +453,8 @@ mod test {
         );
 
         let join_order =
-            compute_join_order(&relations, &mut infos, &prefills, &unequals, &unrelations);
+            JoinOrderComputer::new(&relations, &mut infos, &prefills, &unequals, &unrelations)
+                .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitInvars(

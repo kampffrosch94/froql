@@ -7,8 +7,8 @@ use std::{collections::HashMap, ops::Range};
 use join_order::InitInvars;
 use join_order::InitVar;
 use join_order::JoinKind;
+use join_order::JoinOrderComputer;
 use join_order::NewJoin;
-use join_order::compute_join_order;
 
 mod join_order;
 mod nodes;
@@ -334,7 +334,7 @@ pub fn generate_archetype_sets(
     return infos;
 }
 
-pub(crate) fn generate_fsm_context(
+pub fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
     components: &[Component],
@@ -374,7 +374,8 @@ pub fn generate_resumable_query_closure(
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let join_order = compute_join_order(relations, infos, prefills, unequals, unrelations);
+    let join_order = JoinOrderComputer::new(relations, infos, prefills, unequals, unrelations)
+        .compute_join_order();
 
     append.push_str(
         "
@@ -464,7 +465,6 @@ _ => unreachable!(),
 
 #[cfg(test)]
 mod test {
-    use join_order::compute_join_order;
 
     use super::*;
     use crate::Accessor;
@@ -556,7 +556,8 @@ mod test {
         ]
         "#);
 
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &[], &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
@@ -581,7 +582,8 @@ mod test {
         "#);
 
         let unequals = vec![(0, 1)];
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals, &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &unequals, &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
