@@ -63,6 +63,15 @@ let bk = &world.bookkeeping;
             &self.relations,
             &self.opt_components,
         );
+        let join_order: Vec<JoinKind> = JoinOrderComputer::new(
+            &self.relations,
+            &mut infos,
+            &self.prefills,
+            &self.unequals,
+            &self.unrelations,
+        )
+        .compute_join_order();
+
         generate_archetype_sets(
             &mut result,
             &self.vars,
@@ -77,12 +86,10 @@ let bk = &world.bookkeeping;
         generate_resumable_query_closure(
             &mut result,
             &self.vars,
+            join_order,
             &self.prefills,
-            &mut infos,
-            &self.relations,
-            &self.unequals,
+            &infos,
             &self.accessors,
-            &self.unrelations,
         );
 
         result.push_str("\n}");
@@ -411,22 +418,17 @@ let mut col_indexes = [usize::MAX; {col_count}];
     .unwrap();
 }
 
-#[allow(clippy::too_many_arguments)] // TODO this is temporary
 pub fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
+    join_order: Vec<JoinKind>,
     prefills: &HashMap<isize, String>,
-    infos: &mut [VarInfo],
-    relations: &[Relation],
-    unequals: &[(isize, isize)],
+    infos: &[VarInfo],
     accessors: &[Accessor],
-    unrelations: &[Unrelation],
 ) {
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let join_order = JoinOrderComputer::new(relations, infos, prefills, unequals, unrelations)
-        .compute_join_order();
 
     append.push_str(
         "
