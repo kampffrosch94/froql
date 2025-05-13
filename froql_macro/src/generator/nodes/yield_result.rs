@@ -1,7 +1,7 @@
 use crate::{Accessor, generator::VarInfo};
 
 use super::GeneratorNode;
-use std::{fmt::Write, usize};
+use std::fmt::Write;
 
 #[derive(Debug)]
 pub struct YieldResult<'a> {
