@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use crate::{
     ANYVAR, Relation, Unrelation,
-    generator_nodes::{
+    generator::nodes::{
         relation_helper::{RelationHelperInfo, UnrelationHelperInfo},
         types::{RelationConstraint, UnrelationConstraint},
     },
@@ -53,7 +53,7 @@ pub struct NewJoin {
     pub unrel_constraints: Vec<UnrelationConstraint>,
 }
 
-struct JoinOrderComputer<'a> {
+pub struct JoinOrderComputer<'a> {
     infos: &'a mut [VarInfo],
     prefills: &'a HashMap<isize, String>,
     relations_left: Vec<Relation>,
@@ -66,7 +66,7 @@ struct JoinOrderComputer<'a> {
 }
 
 impl<'a> JoinOrderComputer<'a> {
-    fn new(
+    pub fn new(
         relations: &'a [Relation],
         infos: &'a mut [VarInfo],
         prefills: &'a HashMap<isize, String>,
@@ -98,7 +98,7 @@ impl<'a> JoinOrderComputer<'a> {
         }
     }
 
-    fn compute_join_order(mut self) -> Vec<JoinKind> {
+    pub fn compute_join_order(mut self) -> Vec<JoinKind> {
         // figure out what to start with
         if !self.prefills.is_empty() {
             // if we have prefills we just start with those
@@ -286,16 +286,6 @@ impl<'a> JoinOrderComputer<'a> {
     }
 }
 
-pub fn compute_join_order(
-    relations: &[Relation],
-    infos: &mut [VarInfo],
-    prefills: &HashMap<isize, String>,
-    unequals: &[(isize, isize)],
-    unrelations: &[Unrelation],
-) -> Vec<JoinKind> {
-    JoinOrderComputer::new(relations, infos, prefills, unequals, unrelations).compute_join_order()
-}
-
 fn newly_available_constraints(
     available: &[isize],
     relations_left: &mut Vec<Relation>,
@@ -379,7 +369,7 @@ fn newly_available_unrelations(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::generate_archetype_sets;
+    use crate::{generate_archetype_sets, generator::compute_var_infos};
 
     #[test]
     fn test_join_order_single_var() {
@@ -389,7 +379,9 @@ mod test {
         let vars = vec![0];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
+
+        generate_archetype_sets(
             &mut result,
             &vars,
             &prefills,
@@ -397,10 +389,10 @@ mod test {
             &relations,
             &uncomponents,
             &[],
-            &[],
         );
 
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &[], &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
@@ -444,25 +436,15 @@ mod test {
         let components = vec![("Circle".into(), 0)];
         let relations = vec![("Inside".into(), 2, 1)];
         let unrelations = vec![("Inside".into(), 0, 1, 0)];
-        let uncomponents = vec![];
         let vars = vec![0, 1, 2];
         let prefills = vec![(2, "e_circle".into())].into_iter().collect();
         let unequals = vec![];
 
-        let mut result = String::new();
-        let mut infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &[],
-            &unrelations,
-        );
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
 
         let join_order =
-            compute_join_order(&relations, &mut infos, &prefills, &unequals, &unrelations);
+            JoinOrderComputer::new(&relations, &mut infos, &prefills, &unequals, &unrelations)
+                .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitInvars(

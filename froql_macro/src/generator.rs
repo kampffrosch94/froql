@@ -7,21 +7,24 @@ use std::{collections::HashMap, ops::Range};
 use join_order::InitInvars;
 use join_order::InitVar;
 use join_order::JoinKind;
+use join_order::JoinOrderComputer;
 use join_order::NewJoin;
-use join_order::compute_join_order;
+
+mod join_order;
+mod nodes;
 
 use crate::ANYVAR;
 use crate::Unrelation;
-use crate::generator_nodes::GeneratorNode;
-use crate::generator_nodes::archetype_start::ArchetypeStart;
-use crate::generator_nodes::invar_start::InvarInfo;
-use crate::generator_nodes::invar_start::InvarStart;
-use crate::generator_nodes::relation_helper::RelationHelperInfo;
-use crate::generator_nodes::relation_helper::UnrelationHelperInfo;
-use crate::generator_nodes::relation_join::RelationJoin;
 use crate::{Accessor, Component, Relation};
-mod join_order;
 pub use join_order::Checks;
+use nodes::GeneratorNode;
+use nodes::archetype_start::ArchetypeStart;
+use nodes::invar_start::InvarInfo;
+use nodes::invar_start::InvarStart;
+use nodes::relation_helper::RelationHelperInfo;
+use nodes::relation_helper::UnrelationHelperInfo;
+use nodes::relation_join::RelationJoin;
+use nodes::yield_result::YieldResult;
 
 #[derive(Default, Debug)]
 pub struct Generator {
@@ -54,14 +57,28 @@ let bk = &world.bookkeeping;
         )
         .unwrap();
 
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(
+            &self.vars,
+            &self.components,
+            &self.relations,
+            &self.opt_components,
+        );
+        let join_order: Vec<JoinKind> = JoinOrderComputer::new(
+            &self.relations,
+            &mut infos,
+            &self.prefills,
+            &self.unequals,
+            &self.unrelations,
+        )
+        .compute_join_order();
+
+        generate_archetype_sets(
             &mut result,
             &self.vars,
             &self.prefills,
             &self.components,
             &self.relations,
             &self.uncomponents,
-            &self.opt_components,
             &self.unrelations,
         );
         generate_fsm_context(&mut result, &self.vars, &self.components, &self.relations);
@@ -69,12 +86,10 @@ let bk = &world.bookkeeping;
         generate_resumable_query_closure(
             &mut result,
             &self.vars,
+            join_order,
             &self.prefills,
-            &mut infos,
-            &self.relations,
-            &self.unequals,
+            &infos,
             &self.accessors,
-            &self.unrelations,
         );
 
         result.push_str("\n}");
@@ -82,31 +97,31 @@ let bk = &world.bookkeeping;
     }
 }
 
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq, Eq, Default)]
 pub struct VarInfo {
     /// Index of this variable
-    index: isize,
+    pub index: isize,
     /// variables are intialized in this order
     /// useful for finding out which one is initialized earlier
     /// None when rank is not decided yet
-    init_rank: Option<u32>,
+    pub init_rank: Option<u32>,
     /// relation type + other var index => index for relation component
-    related_with: HashMap<(String, isize), usize>,
+    pub related_with: HashMap<(String, isize), usize>,
     /// indexes in component array for this variables non-optional components
-    component_range: Range<usize>,
+    pub component_range: Range<usize>,
     /// map from type to component index for accessors
-    components: HashMap<String, usize>,
+    pub components: HashMap<String, usize>,
     /// type, index part of context variable name
-    opt_components: Vec<(String, usize)>,
+    pub opt_components: Vec<(String, usize)>,
     /// only built up when joins are computed
     /// When a join is added the already existing variable (`old`) gets a relationship helper added.
     /// This is then used for code gen in steps leading up to the join.
-    relation_helpers: Vec<RelationHelperInfo>,
+    pub relation_helpers: Vec<RelationHelperInfo>,
     /// Unrelationhelpers are optional (!) RelationHelpers that are negated in checks.
-    unrelation_helpers: Vec<UnrelationHelperInfo>,
+    pub unrelation_helpers: Vec<UnrelationHelperInfo>,
     /// if this var is set by a relation join, then this is the index of the RelationHelper
     /// for that join
-    join_helper_index: Option<usize>,
+    pub join_helper_index: Option<usize>,
 }
 
 impl Debug for VarInfo {
@@ -155,17 +170,11 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     }
 }
 
-// TODO put building the varinfo into a separate function
-#[allow(clippy::too_many_arguments)] // TODO this is temporary
-pub fn generate_archetype_sets(
-    result: &mut String,
+pub fn compute_var_infos(
     vars: &[isize],
-    prefills: &HashMap<isize, String>,
     components: &[Component],
     relations: &[Relation],
-    uncomponents: &[Component],
     opt_components: &[(String, isize, usize)],
-    unrelations: &[Unrelation], // only care about unrelations with anyvars here
 ) -> Vec<VarInfo> {
     assert_ne!(
         0,
@@ -193,7 +202,6 @@ pub fn generate_archetype_sets(
             init_rank: None,
             unrelation_helpers: Vec::new(),
         };
-        write!(result, "let components_{var} = [").unwrap();
         // component
         let mut dedup = HashSet::new();
         for (ty, _) in components.iter().filter(|(_, id)| id == var) {
@@ -202,7 +210,6 @@ pub fn generate_archetype_sets(
             }
             dedup.insert(ty);
 
-            write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
             info.components.insert(ty.clone(), index);
             index += 1;
             info.component_range.end += 1;
@@ -216,11 +223,6 @@ pub fn generate_archetype_sets(
             }
             dedup.insert(ty);
 
-            write!(
-                result,
-                "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
-            )
-            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
@@ -232,18 +234,10 @@ pub fn generate_archetype_sets(
                 continue;
             }
             dedup.insert(ty);
-
-            result.push_str("\n    ");
-            write!(
-                result,
-                "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
-            )
-            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
         }
-        result.push_str("\n];\n\n");
 
         // optional components are not written into archetype set
         // but they are put into the var info
@@ -252,6 +246,74 @@ pub fn generate_archetype_sets(
         }
 
         infos.push(info);
+    }
+    return infos;
+}
+
+pub fn generate_archetype_sets(
+    result: &mut String,
+    vars: &[isize],
+    prefills: &HashMap<isize, String>,
+    components: &[Component],
+    relations: &[Relation],
+    uncomponents: &[Component],
+    unrelations: &[Unrelation], // only care about unrelations with anyvars here
+) {
+    assert_ne!(
+        0,
+        components.len() + relations.len(),
+        "A query needs have at least one Component or Relation."
+    );
+    assert_ne!(
+        0,
+        vars.len(),
+        "A query needs to have at least one Variable."
+    );
+
+    for var in vars {
+        write!(result, "let components_{var} = [").unwrap();
+        // component
+        let mut dedup = HashSet::new();
+        for (ty, _) in components.iter().filter(|(_, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
+        }
+
+        // relation from
+        dedup.clear();
+        for (ty, _, _) in relations.iter().filter(|(_, id, _)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            write!(
+                result,
+                "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
+            )
+            .unwrap();
+        }
+
+        // relation to
+        dedup.clear();
+        for (ty, _, _) in relations.iter().filter(|(_, _, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            result.push_str("\n    ");
+            write!(
+                result,
+                "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
+            )
+            .unwrap();
+        }
+        result.push_str("\n];\n\n");
     }
 
     if uncomponents.is_empty() && unrelations.is_empty() {
@@ -328,10 +390,9 @@ pub fn generate_archetype_sets(
         }
         result.push_str("];\n\n");
     }
-    return infos;
 }
 
-pub(crate) fn generate_fsm_context(
+pub fn generate_fsm_context(
     result: &mut String,
     vars: &[isize],
     components: &[Component],
@@ -357,21 +418,17 @@ let mut col_indexes = [usize::MAX; {col_count}];
     .unwrap();
 }
 
-#[allow(clippy::too_many_arguments)] // TODO this is temporary
 pub fn generate_resumable_query_closure(
     result: &mut String,
     vars: &[isize],
+    join_order: Vec<JoinKind>,
     prefills: &HashMap<isize, String>,
-    infos: &mut [VarInfo],
-    relations: &[Relation],
-    unequals: &[(isize, isize)],
+    infos: &[VarInfo],
     accessors: &[Accessor],
-    unrelations: &[Unrelation],
 ) {
     assert_eq!(infos.len(), vars.len());
     let prepend = result;
     let mut append = String::new();
-    let join_order = compute_join_order(relations, infos, prefills, unequals, unrelations);
 
     append.push_str(
         "
@@ -445,106 +502,8 @@ pub fn generate_resumable_query_closure(
         };
     }
 
-    // TODO put yield into generator node
     // yield row
-    write!(
-        &mut append,
-        "
-// yield row
-{step_count} => {{
-    current_step -= 1;
-    return Some(unsafe {{
-        ("
-    )
-    .unwrap();
-    for accessor in accessors {
-        match accessor {
-            Accessor::Component(ty, var) => {
-                let col = infos[*var as usize].components[ty];
-                write!(
-                    &mut append,
-                    "
-            ::froql::query_helper::coerce_cast::<{ty}>(
-                world,
-                a_refs[{var}].columns[col_indexes[{col}]].get(a_rows[{var}].0)
-            ).borrow(),"
-                )
-                .unwrap();
-            }
-            Accessor::ComponentMut(ty, var) => {
-                let col = infos[*var as usize].components[ty];
-                write!(
-                    &mut append,
-                    "
-            ::froql::query_helper::coerce_cast::<{ty}>(
-                world,
-                a_refs[{var}].columns[col_indexes[{col}]].get(a_rows[{var}].0)
-            ).borrow_mut(),"
-                )
-                .unwrap();
-            }
-            Accessor::OutVar(var) => {
-                write!(
-                    &mut append,
-                    "
-            ::froql::entity_view_deferred::EntityViewDeferred::from_id_unchecked(world,
-                                a_refs[{var}].entities[a_rows[{var}].0 as usize]),"
-                )
-                .unwrap();
-            }
-            Accessor::OptComponent(ty, var, opt_id) => {
-                write!(
-                    &mut append,
-                    "
-            (opt_col_{opt_id}.map(|col| {{
-                ::froql::query_helper::coerce_cast::<{ty}>(
-                    world,
-                    col.get(a_rows[{var}].0)
-                ).borrow()
-            }})),"
-                )
-                .unwrap();
-            }
-            Accessor::OptMutComponent(ty, var, opt_id) => {
-                write!(
-                    &mut append,
-                    "
-            (opt_col_{opt_id}.map(|col| {{
-                ::froql::query_helper::coerce_cast::<{ty}>(
-                    world,
-                    col.get(a_rows[{var}].0)
-                ).borrow_mut()
-            }})),"
-                )
-                .unwrap();
-            }
-            Accessor::Singleton(ty) => {
-                write!(
-                    &mut append,
-                    "
-            world.singleton::<{ty}>(),"
-                )
-                .unwrap();
-            }
-            Accessor::SingletonMut(ty) => {
-                write!(
-                    &mut append,
-                    "
-            world.singleton_mut::<{ty}>(),"
-                )
-                .unwrap();
-            }
-        }
-    }
-    write!(
-        &mut append,
-        "
-        )
-    }});
-}}
-"
-    )
-    .unwrap();
+    YieldResult { accessors, infos }.generate(step_count, prepend, &mut append);
 
     // close the scope
     append.push_str(
@@ -559,7 +518,6 @@ _ => unreachable!(),
 
 #[cfg(test)]
 mod test {
-    use join_order::compute_join_order;
 
     use super::*;
     use crate::Accessor;
@@ -572,7 +530,9 @@ mod test {
         let vars = vec![0, 1];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
+
+        generate_archetype_sets(
             &mut result,
             &vars,
             &prefills,
@@ -580,9 +540,9 @@ mod test {
             &relations,
             &uncomponents,
             &[],
-            &[],
         );
-        insta::assert_snapshot!(result, @r#"
+
+        insta::assert_snapshot!(result, @r"
         let components_0 = [
             world.get_component_id::<Unit>(),
             world.get_component_id::<Health>(),
@@ -607,7 +567,7 @@ mod test {
             bk.matching_archetypes(&components_0, &uncomponents_0),
             bk.matching_archetypes(&components_1, &uncomponents_1),
         ];
-        "#);
+        ");
 
         insta::assert_debug_snapshot!(infos, @r#"
         [
@@ -651,7 +611,8 @@ mod test {
         ]
         "#);
 
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &[], &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &[], &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
@@ -676,7 +637,8 @@ mod test {
         "#);
 
         let unequals = vec![(0, 1)];
-        let join_order = compute_join_order(&relations, &mut infos, &prefills, &unequals, &[]);
+        let join_order = JoinOrderComputer::new(&relations, &mut infos, &prefills, &unequals, &[])
+            .compute_join_order();
         insta::assert_debug_snapshot!(join_order, @r#"
         [
             InitVar(
