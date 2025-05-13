@@ -369,7 +369,7 @@ fn newly_available_unrelations(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::generate_archetype_sets;
+    use crate::{generate_archetype_sets, generator::compute_var_infos};
 
     #[test]
     fn test_join_order_single_var() {
@@ -379,14 +379,15 @@ mod test {
         let vars = vec![0];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
+
+        generate_archetype_sets(
             &mut result,
             &vars,
             &prefills,
             &components,
             &relations,
             &uncomponents,
-            &[],
             &[],
         );
 
@@ -435,22 +436,11 @@ mod test {
         let components = vec![("Circle".into(), 0)];
         let relations = vec![("Inside".into(), 2, 1)];
         let unrelations = vec![("Inside".into(), 0, 1, 0)];
-        let uncomponents = vec![];
         let vars = vec![0, 1, 2];
         let prefills = vec![(2, "e_circle".into())].into_iter().collect();
         let unequals = vec![];
 
-        let mut result = String::new();
-        let mut infos = generate_archetype_sets(
-            &mut result,
-            &vars,
-            &prefills,
-            &components,
-            &relations,
-            &uncomponents,
-            &[],
-            &unrelations,
-        );
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
 
         let join_order =
             JoinOrderComputer::new(&relations, &mut infos, &prefills, &unequals, &unrelations)

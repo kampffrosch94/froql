@@ -57,14 +57,19 @@ let bk = &world.bookkeeping;
         )
         .unwrap();
 
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(
+            &self.vars,
+            &self.components,
+            &self.relations,
+            &self.opt_components,
+        );
+        generate_archetype_sets(
             &mut result,
             &self.vars,
             &self.prefills,
             &self.components,
             &self.relations,
             &self.uncomponents,
-            &self.opt_components,
             &self.unrelations,
         );
         generate_fsm_context(&mut result, &self.vars, &self.components, &self.relations);
@@ -158,17 +163,11 @@ pub(crate) fn generate_invar_captures(result: &mut String, prefills: &HashMap<is
     }
 }
 
-// TODO put building the varinfo into a separate function
-#[allow(clippy::too_many_arguments)] // TODO this is temporary
-pub fn generate_archetype_sets(
-    result: &mut String,
+pub fn compute_var_infos(
     vars: &[isize],
-    prefills: &HashMap<isize, String>,
     components: &[Component],
     relations: &[Relation],
-    uncomponents: &[Component],
     opt_components: &[(String, isize, usize)],
-    unrelations: &[Unrelation], // only care about unrelations with anyvars here
 ) -> Vec<VarInfo> {
     assert_ne!(
         0,
@@ -196,7 +195,6 @@ pub fn generate_archetype_sets(
             init_rank: None,
             unrelation_helpers: Vec::new(),
         };
-        write!(result, "let components_{var} = [").unwrap();
         // component
         let mut dedup = HashSet::new();
         for (ty, _) in components.iter().filter(|(_, id)| id == var) {
@@ -205,7 +203,6 @@ pub fn generate_archetype_sets(
             }
             dedup.insert(ty);
 
-            write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
             info.components.insert(ty.clone(), index);
             index += 1;
             info.component_range.end += 1;
@@ -219,11 +216,6 @@ pub fn generate_archetype_sets(
             }
             dedup.insert(ty);
 
-            write!(
-                result,
-                "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
-            )
-            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
@@ -235,18 +227,10 @@ pub fn generate_archetype_sets(
                 continue;
             }
             dedup.insert(ty);
-
-            result.push_str("\n    ");
-            write!(
-                result,
-                "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
-            )
-            .unwrap();
             info.related_with.insert((ty.clone(), *other), index);
             index += 1;
             info.component_range.end += 1;
         }
-        result.push_str("\n];\n\n");
 
         // optional components are not written into archetype set
         // but they are put into the var info
@@ -255,6 +239,74 @@ pub fn generate_archetype_sets(
         }
 
         infos.push(info);
+    }
+    return infos;
+}
+
+pub fn generate_archetype_sets(
+    result: &mut String,
+    vars: &[isize],
+    prefills: &HashMap<isize, String>,
+    components: &[Component],
+    relations: &[Relation],
+    uncomponents: &[Component],
+    unrelations: &[Unrelation], // only care about unrelations with anyvars here
+) {
+    assert_ne!(
+        0,
+        components.len() + relations.len(),
+        "A query needs have at least one Component or Relation."
+    );
+    assert_ne!(
+        0,
+        vars.len(),
+        "A query needs to have at least one Variable."
+    );
+
+    for var in vars {
+        write!(result, "let components_{var} = [").unwrap();
+        // component
+        let mut dedup = HashSet::new();
+        for (ty, _) in components.iter().filter(|(_, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            write!(result, "\n    world.get_component_id::<{ty}>(),").unwrap();
+        }
+
+        // relation from
+        dedup.clear();
+        for (ty, _, _) in relations.iter().filter(|(_, id, _)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            write!(
+                result,
+                "\n    bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()),"
+            )
+            .unwrap();
+        }
+
+        // relation to
+        dedup.clear();
+        for (ty, _, _) in relations.iter().filter(|(_, _, id)| id == var) {
+            if dedup.contains(&ty) {
+                continue;
+            }
+            dedup.insert(ty);
+
+            result.push_str("\n    ");
+            write!(
+                result,
+                "bk.get_component_id_unchecked(::std::any::TypeId::of::<::froql::relation::Relation<{ty}>>()).flip_target(),"
+            )
+            .unwrap();
+        }
+        result.push_str("\n];\n\n");
     }
 
     if uncomponents.is_empty() && unrelations.is_empty() {
@@ -331,7 +383,6 @@ pub fn generate_archetype_sets(
         }
         result.push_str("];\n\n");
     }
-    return infos;
 }
 
 pub fn generate_fsm_context(
@@ -477,7 +528,9 @@ mod test {
         let vars = vec![0, 1];
         let mut result = String::new();
         let prefills = HashMap::new();
-        let mut infos = generate_archetype_sets(
+        let mut infos = compute_var_infos(&vars, &components, &relations, &[]);
+
+        generate_archetype_sets(
             &mut result,
             &vars,
             &prefills,
@@ -485,9 +538,9 @@ mod test {
             &relations,
             &uncomponents,
             &[],
-            &[],
         );
-        insta::assert_snapshot!(result, @r#"
+
+        insta::assert_snapshot!(result, @r"
         let components_0 = [
             world.get_component_id::<Unit>(),
             world.get_component_id::<Health>(),
@@ -512,7 +565,7 @@ mod test {
             bk.matching_archetypes(&components_0, &uncomponents_0),
             bk.matching_archetypes(&components_1, &uncomponents_1),
         ];
-        "#);
+        ");
 
         insta::assert_debug_snapshot!(infos, @r#"
         [
