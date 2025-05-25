@@ -44,11 +44,22 @@ fn query_rel(world: &mut World) {
         pos.1 += speed.1;
     }
 }
+
 fn query_rel_empty_body(world: &mut World) {
     for (_pos, _speed) in query!(world, mut Pos(a), Speed(b), Rel(a,b) ) {}
 }
 
+fn query_trivial(world: &mut World) {
+    for (_pos,) in query!(world, Pos(a)) {}
+}
+
 fn criterion_benchmark(c: &mut Criterion) {
+    {
+        let mut world = create_entities_simple(1);
+        c.bench_function("iterate 1 Pos(a)", |b| {
+            b.iter(|| query_trivial(black_box(&mut world)))
+        });
+    }
     {
         let mut world = create_entities_simple(10000);
         c.bench_function("iterate 10000 Pos, Speed", |b| {
