@@ -123,21 +123,22 @@ impl Archetype {
         result_indexes: &mut [usize],
     ) -> usize {
         debug_assert_eq!(cids.len(), result_indexes.len());
-        debug_assert!(cids.is_sorted());
         if cids.is_empty() {
             return 0;
         }
-        let mut j = 0;
-        for i in 0..self.components.len() {
-            if self.components[i] == cids[j] {
-                result_indexes[j] = i;
-                j += 1;
-                if j >= cids.len() {
-                    break;
+        let mut counter = 0;
+        for j in 0..cids.len() {
+            for i in 0..self.components.len() {
+                if self.components[i] == cids[j] {
+                    result_indexes[j] = i;
+                    counter += 1;
+                    if counter >= cids.len() {
+                        break;
+                    }
                 }
             }
         }
-        return j;
+        return counter;
     }
 
     pub fn find_multiple_columns(&self, cids: &[ComponentId], result_indexes: &mut [usize]) {
