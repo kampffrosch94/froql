@@ -362,6 +362,18 @@ impl World {
         self.bookkeeping.destroy(e);
     }
 
+    /// Defers execution of closure until next World::process()
+    /// Useful when borrows get tricky.
+    pub fn defer_closure<F>(&self, f: F)
+    where
+        F: FnOnce(&mut World) + 'static,
+    {
+        self.deferred_queue
+            .borrow_mut()
+            .operations
+            .push(DeferredOperation::Closure(Box::new(f)));
+    }
+
     /// Executes all queued deferred operations.
     pub fn process(&mut self) {
         self.bookkeeping.realize_deferred();
@@ -393,6 +405,9 @@ impl World {
                         panic!("Can't register relation in deferred context.");
                     };
                     self.bookkeeping.remove_relation(cid, from, to);
+                }
+                DeferredOperation::Closure(func) => {
+                    func(self);
                 }
             }
         }

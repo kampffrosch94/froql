@@ -37,6 +37,8 @@ pub(crate) enum DeferredOperation {
     AddRelation(TypeId, Entity, Entity),
     /// tid, from, to
     RemoveRelation(TypeId, Entity, Entity),
+    /// User provided closure
+    Closure(Box<dyn FnOnce(&mut World)>),
 }
 use DeferredOperation as D;
 
