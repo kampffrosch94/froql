@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Add
 - `World::defer_closure(f)` for deferring an arbitrary operation until `World::process()`
+### Fix
+- entities had invalid IDs when created in defered mode after another entity was forced alive
 
 ## [0.1.0] - 2025-05-08
 - first public release of froql

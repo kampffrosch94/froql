@@ -142,14 +142,10 @@ impl EntityStore {
         self.deferred_creations.set(count + 1);
 
         let mut index = self.next_free;
-        while count > 0 {
+        while count > 0 && index < self.slots.len() {
             count -= 1;
-            if index < self.slots.len() {
-                let slot = &self.slots[index];
-                index = slot.next_free();
-            } else {
-                index += 1;
-            }
+            let slot = &self.slots[index];
+            index = slot.next_free();
         }
 
         if index < self.slots.len() {
@@ -162,7 +158,7 @@ impl EntityStore {
         } else {
             Entity {
                 generation: EntityGeneration(1),
-                id: EntityId(index as u32),
+                id: EntityId((self.slots.len() + count) as u32),
             }
         }
     }
@@ -309,6 +305,23 @@ mod test {
     }
 
     #[test]
+    fn entity_create_deferred() {
+        let mut store = EntityStore::new();
+        for _ in 0..10 {
+            store.create();
+        }
+        let e = store.create();
+        assert_eq!(11, store.next_free);
+        store.destroy(e);
+        assert_eq!(10, store.next_free);
+
+        let e = store.create_deferred();
+        let e = store.create_deferred();
+        assert_eq!(11, e.id.0);
+        assert_eq!(1, e.generation.0);
+    }
+
+    #[test]
     fn entity_reuse() {
         let mut store = EntityStore::new();
         let e = store.create();
@@ -376,5 +389,23 @@ mod test {
         assert_eq!(1, store.create().id.0);
         assert_eq!(6, store.create().id.0);
         assert_eq!(7, store.create().id.0);
+    }
+
+    // this is a regression test
+    #[test]
+    fn force_alive_and_defer() {
+        let mut store = EntityStore::new();
+        let e1 = store.create();
+        assert_eq!(0, e1.id.0);
+        assert_eq!(1, e1.generation.0);
+        let e = match store.force_alive(EntityId(2)) {
+            ForceAliveResult::MadeAlive(entity) => entity,
+            ForceAliveResult::WasAliveBefore(_) => unreachable!(),
+        };
+        assert_eq!(2, e.id.0);
+        assert_eq!(1, store.create().id.0);
+        assert_eq!(3, store.create_deferred().id.0);
+        assert_eq!(4, store.create_deferred().id.0);
+        assert_eq!(5, store.create_deferred().id.0);
     }
 }
