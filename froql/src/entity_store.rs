@@ -315,7 +315,7 @@ mod test {
         store.destroy(e);
         assert_eq!(10, store.next_free);
 
-        let e = store.create_deferred();
+        let _e = store.create_deferred();
         let e = store.create_deferred();
         assert_eq!(11, e.id.0);
         assert_eq!(1, e.generation.0);

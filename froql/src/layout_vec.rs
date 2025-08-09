@@ -10,7 +10,7 @@ pub struct LayoutVec {
     element_size: u32,
     element_align: u32,
     ptr: NonNull<u8>,
-    drop_fn: fn(*mut u8),
+    drop_fn: unsafe fn(*mut u8),
 }
 
 impl LayoutVec {
@@ -18,7 +18,7 @@ impl LayoutVec {
     /// drop_fn: Boxed fn of drop_in_place for the contained type with type punning
     ///
     /// the correct arguments for a type can be obtained by calling `layout_vec_args::<T>()`
-    pub fn new(layout: Layout, drop_fn: fn(*mut u8)) -> Self {
+    pub fn new(layout: Layout, drop_fn: unsafe fn(*mut u8)) -> Self {
         debug_assert!(layout.size() > 0, "Layout vec does not handle ZSTs");
         LayoutVec {
             len: 0,
@@ -31,7 +31,7 @@ impl LayoutVec {
     }
 
     /// Useful for hotreloading
-    pub unsafe fn change_drop_function(&mut self, drop_fn: fn(*mut u8)) {
+    pub unsafe fn change_drop_function(&mut self, drop_fn: unsafe fn(*mut u8)) {
         self.drop_fn = drop_fn;
     }
 
@@ -90,12 +90,13 @@ impl LayoutVec {
     pub fn remove_last(&mut self) {
         debug_assert!(self.len > 0);
         self.len -= 1;
-        let r = unsafe {
-            self.ptr
+        unsafe {
+            let r = self
+                .ptr
                 .as_ptr()
-                .add((self.len * self.element_size) as usize)
-        };
-        (self.drop_fn)(r)
+                .add((self.len * self.element_size) as usize);
+            (self.drop_fn)(r)
+        }
     }
 
     /// deletes element at index and drops it
@@ -106,9 +107,9 @@ impl LayoutVec {
         if index == self.len - 1 {
             self.remove_last();
         } else {
-            let deletee = unsafe { self.ptr.as_ptr().add((index * self.element_size) as usize) };
-            (self.drop_fn)(deletee);
             unsafe {
+                let deletee = self.ptr.as_ptr().add((index * self.element_size) as usize);
+                (self.drop_fn)(deletee);
                 let last = self.get(self.len - 1);
                 std::ptr::copy_nonoverlapping(last, deletee, self.element_size as usize);
             }
@@ -179,11 +180,15 @@ impl Drop for LayoutVec {
 }
 
 #[inline]
-pub fn layout_vec_args<T>() -> (Layout, fn(*mut u8)) {
-    (Layout::new::<T>(), |ptr: *mut u8| unsafe {
-        let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
-        std::ptr::drop_in_place(ptr);
-    })
+pub fn layout_vec_args<T>() -> (Layout, unsafe fn(*mut u8)) {
+    unsafe fn drop_fn<T>(ptr: *mut u8) {
+        unsafe {
+            let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
+            std::ptr::drop_in_place(ptr);
+        }
+    }
+
+    (Layout::new::<T>(), drop_fn::<T>)
 }
 
 #[cfg(test)]

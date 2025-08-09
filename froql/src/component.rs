@@ -152,7 +152,7 @@ pub struct Component {
     /// component type is either RefCell<T> or RelationVec
     pub(crate) layout: Layout,
     /// drops elements of the component type stored in an archetypes column
-    pub(crate) drop_fn: fn(*mut u8),
+    pub(crate) drop_fn: unsafe fn(*mut u8),
     pub name: String,
     /// keeps track of what archetypes have this component
     /// boxed because its big
