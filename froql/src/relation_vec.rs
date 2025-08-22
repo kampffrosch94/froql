@@ -249,6 +249,26 @@ mod test {
         vec.remove(20);
         vec.remove(30);
         assert_eq!(&[10, 50, 40], &vec[..]);
+        vec.remove(10);
+        vec.remove(50);
+        vec.remove(40);
+
+        let v: &[u32] = &[];
+        assert_eq!(v, &vec[..]);
+        assert_eq!(0, vec.len());
+    }
+
+    #[test]
+    fn outline_vec_drop() {
+        let mut vec = RelationVec::new();
+        assert_eq!(0, vec.len());
+        vec.push(10);
+        vec.push(20);
+        vec.push(30);
+        vec.push(40);
+        vec.push(50);
+        assert_eq!(5, vec.len());
+        assert_eq!(&[10, 20, 30, 40, 50], &vec[..]);
     }
 
     #[test]
