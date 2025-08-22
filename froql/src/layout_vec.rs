@@ -181,14 +181,14 @@ impl Drop for LayoutVec {
 
 #[inline]
 pub fn layout_vec_args<T>() -> (Layout, unsafe fn(*mut u8)) {
-    unsafe fn drop_fn<T>(ptr: *mut u8) {
-        unsafe {
-            let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
-            std::ptr::drop_in_place(ptr);
-        }
-    }
-
     (Layout::new::<T>(), drop_fn::<T>)
+}
+
+unsafe fn drop_fn<T>(ptr: *mut u8) {
+    unsafe {
+        let ptr = std::mem::transmute::<*mut u8, *mut T>(ptr);
+        std::ptr::drop_in_place(ptr);
+    }
 }
 
 #[cfg(test)]
