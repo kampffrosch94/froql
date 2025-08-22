@@ -369,8 +369,8 @@ impl Bookkeeping {
             for (cid, other_id) in to_delete {
                 let (a_id, a_row) = self.entities.get_archetype_unchecked(other_id);
                 let a = &mut self.archetypes[a_id.0 as usize];
-                let col = a.components.iter().position(|it| *it == cid).unwrap();
-                let ptr = unsafe { a.columns[col].get(a_row.0) } as *mut RelationVec;
+                let col = a.find_column_mut(cid);
+                let ptr = unsafe { col.get(a_row.0) } as *mut RelationVec;
                 let rel_vec = unsafe { &mut *ptr };
                 rel_vec.remove(e.id.0);
                 if rel_vec.is_empty() {
