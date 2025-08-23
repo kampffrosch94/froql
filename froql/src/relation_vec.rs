@@ -171,6 +171,8 @@ impl Drop for RelationVec {
         if self.len > INLINE_COUNT as u32 {
             unsafe {
                 let outline = &mut self.content.outline;
+                debug_assert!(outline.ptr.is_aligned(), "Pointer is not aligned.");
+                debug_assert!(self.len < 1_000_000_000, "Length is unrealistic.");
                 outline.dealloc();
             }
         }
@@ -185,6 +187,8 @@ impl Deref for RelationVec {
             return &inline.elements[0..self.len as usize];
         } else {
             let outline = unsafe { &self.content.outline };
+            debug_assert!(outline.ptr.is_aligned(), "Pointer is not aligned.");
+            debug_assert!(self.len < 1_000_000_000, "Length is unrealistic.");
             unsafe { std::slice::from_raw_parts(outline.ptr.as_ptr(), self.len as usize) }
         }
     }
@@ -197,6 +201,8 @@ impl DerefMut for RelationVec {
             return &mut inline.elements[0..self.len as usize];
         } else {
             let outline = unsafe { &self.content.outline };
+            debug_assert!(outline.ptr.is_aligned(), "Pointer is not aligned.");
+            debug_assert!(self.len < 1_000_000_000, "Length is unrealistic.");
             unsafe { std::slice::from_raw_parts_mut(outline.ptr.as_ptr(), self.len as usize) }
         }
     }
