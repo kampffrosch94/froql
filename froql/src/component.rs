@@ -1,6 +1,9 @@
 use std::{alloc::Layout, fmt};
 
-use crate::{archetype::ArchetypeId, layout_vec::layout_vec_args, world::ReregisterError};
+use crate::{
+    archetype::ArchetypeId, layout_vec::layout_vec_args, relation_vec::RelationVec,
+    world::ReregisterError,
+};
 
 type BitSet = hi_sparse_bitset::BitSet<hi_sparse_bitset::config::_128bit>;
 
@@ -186,16 +189,17 @@ impl Component {
     /// The drop function must be valid for the components type.
     pub unsafe fn update_type<T>(&mut self) -> Result<(), ReregisterError> {
         let (layout, drop_fn) = layout_vec_args::<T>();
-        if layout == self.layout {
+        if layout != self.layout {
+            return Err(ReregisterError::DifferingLayout);
+        }
+        if self.id.is_relation() {
+            self.drop_fn = layout_vec_args::<RelationVec>().1
+        } else {
             self.drop_fn = drop_fn;
             // debug_fn ptr is also out of date now and must be reset
-            if !self.id.is_relation() {
-                self.debug_fn = None;
-            }
-            Ok(())
-        } else {
-            Err(ReregisterError::DifferingLayout)
+            self.debug_fn = None;
         }
+        Ok(())
     }
 
     pub fn insert_archetype(&mut self, aid: ArchetypeId, cid: ComponentId) {
