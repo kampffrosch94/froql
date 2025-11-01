@@ -197,6 +197,14 @@ impl EntityStore {
             .unwrap_or(false)
     }
 
+    pub fn is_alive_id(&self, id: EntityId) -> bool {
+        let index = id.0 as usize;
+        self.slots
+            .get(index)
+            .map(|slot| slot.generation.is_alive())
+            .unwrap_or(false)
+    }
+
     pub fn get_archetype(&self, e: Entity) -> (ArchetypeId, ArchetypeRow) {
         let index = e.id.0 as usize;
         let slot = &self.slots[index];
@@ -214,8 +222,7 @@ impl EntityStore {
     /// Returns Entity for EntityId
     /// Panics if that Entity is not alive.
     pub fn get_from_id(&self, id: EntityId) -> Entity {
-        let index = id.0 as usize;
-        let slot = &self.slots[index];
+        let slot = &self.slots[id.as_index()];
         assert!(slot.generation.is_alive(), "Entity in slot is not alive.");
         Entity {
             generation: slot.generation,
@@ -275,6 +282,12 @@ impl EntityStore {
                 id,
             });
         }
+    }
+
+    pub fn override_generation(&mut self, id: EntityId, new_gen: EntityGeneration) {
+        assert!(new_gen.is_alive(), "New generation must be alive!");
+        assert!(self.is_alive_id(id));
+        self.slots[id.as_index()].generation = new_gen;
     }
 }
 

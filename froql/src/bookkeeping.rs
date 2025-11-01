@@ -98,6 +98,13 @@ impl Bookkeeping {
         }
     }
 
+    pub fn ensure_alive_generation(&mut self, entity: Entity) {
+        let id = entity.id;
+        let new_gen = entity.generation;
+        self.ensure_alive(id);
+        self.entities.override_generation(id, new_gen);
+    }
+
     pub fn get_component_id(&self, tid: TypeId) -> Option<ComponentId> {
         self.component_map.get(&tid).copied()
     }
