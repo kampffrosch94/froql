@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 ### Add
 - `World::defer_closure(f)` for deferring an arbitrary operation until `World::process()`
+- `World::view_deferred(entity)`: Wraps an existing Entity in an `EntityViewDeferred`.
 ### Fix
 - entities had invalid IDs when created in defered mode after another entity was forced alive
 

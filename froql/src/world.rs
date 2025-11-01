@@ -252,6 +252,14 @@ impl World {
         }
     }
 
+    /// Wraps an existing Entity in an `EntityViewDeferred`.
+    pub fn view_deferred(&self, e: Entity) -> EntityViewDeferred {
+        EntityViewDeferred {
+            entity: e,
+            world: self,
+        }
+    }
+
     /// Creates an Entity and immediately wraps it in a `EntityViewDeferred`.
     /// Useful when you only have shared reference to `World`.
     ///
