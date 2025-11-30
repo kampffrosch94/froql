@@ -317,6 +317,21 @@ impl World {
         cell.borrow()
     }
 
+    /// Returns an immutable Ref to the component.
+    /// Returns `None` if the Entity does not have the component.
+    ///
+    /// Panics if `Entity` is not alive.
+    /// Panics if component type is not registered.
+    pub fn get_component_opt<T: 'static>(&self, e: Entity) -> Option<Ref<T>> {
+        let cid = self.get_component_id::<T>();
+        let Some(ptr) = self.bookkeeping.get_component_opt(e, cid) else {
+            return None;
+        };
+        let ptr = ptr as *const RefCell<T>;
+        let cell = unsafe { &*ptr };
+        Some(cell.borrow())
+    }
+
     /// Returns a immutable Ref to the component of the Entity with the given `EntityId`.
     ///
     /// Useful if you don't have a generation for whatever reason.
@@ -341,6 +356,21 @@ impl World {
         let ptr = self.bookkeeping.get_component(e, cid) as *const RefCell<T>;
         let cell = unsafe { &*ptr };
         cell.borrow_mut()
+    }
+
+    /// Returns a mutable RefMut to the component.
+    /// Returns `None` if the Entity does not have the component.
+    ///
+    /// Panics if `Entity` is not alive.
+    /// Panics if component type is not registered.
+    pub fn get_component_mut_opt<T: 'static>(&self, e: Entity) -> Option<RefMut<T>> {
+        let cid = self.get_component_id::<T>();
+        let Some(ptr) = self.bookkeeping.get_component_opt(e, cid) else {
+            return None;
+        };
+        let ptr = ptr as *const RefCell<T>;
+        let cell = unsafe { &*ptr };
+        Some(cell.borrow_mut())
     }
 
     /// Returns true, if the Entity has the component.
