@@ -125,8 +125,14 @@ impl EntityViewMut<'_> {
     ///
     /// Panics if component type is not registered.
     pub fn remove<T: 'static>(&mut self) {
-        // TODO option?
         self.world.remove_component::<T>(self.entity)
+    }
+
+    /// Removes component of type `T` from Entity and returns it.
+    ///
+    /// Panics if component type is not registered.
+    pub fn take<T: 'static>(&mut self) -> Option<T> {
+        self.world.take_component::<T>(self.entity)
     }
 
     /// Makes entity not alive.

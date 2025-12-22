@@ -6,6 +6,7 @@ use std::{
     any::{TypeId, type_name},
     cell::{Ref, RefCell, RefMut},
     fmt::{self, Debug},
+    mem::MaybeUninit,
 };
 
 use crate::{
@@ -402,8 +403,16 @@ impl World {
             self.register_component::<T>()
         };
 
-        self.bookkeeping.remove_component(e, cid, todo!());
-        todo!()
+        let mut sink: MaybeUninit<RefCell<T>> = MaybeUninit::uninit();
+        if self
+            .bookkeeping
+            .remove_component(e, cid, Some(sink.as_mut_ptr() as *mut u8))
+        {
+            let r: RefCell<T> = unsafe { sink.assume_init() };
+            Some(r.into_inner())
+        } else {
+            None
+        }
     }
 
     /// Makes entity not alive.
