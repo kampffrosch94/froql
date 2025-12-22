@@ -228,15 +228,26 @@ impl Bookkeeping {
         new_aid
     }
 
-    /// Works for normal components and ZSTs
-    pub fn remove_component(&mut self, e: Entity, cid: ComponentId, sink: Option<*mut u8>) {
+    /// Returns true if a component was removed
+    /// The removed component gets moved into the sink if one is provided,
+    /// otherwise it gets dropped
+    ///
+    /// This function is `pub(crate)` to help with inlining.
+    pub(crate) fn remove_component(
+        &mut self,
+        e: Entity,
+        cid: ComponentId,
+        sink: Option<*mut u8>,
+    ) -> bool {
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
             e.id,
             self.archetypes[old_a_id.0 as usize].entities[old_a_row.0 as usize]
         );
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
-        let removed_column = components.iter().position(|it| *it == cid);
+        let Some(removed_column) = components.iter().position(|it| *it == cid) else {
+            return false;
+        };
 
         components.retain(|it| *it != cid);
         let new_a_id = self.find_archetype_or_create(components);
@@ -244,11 +255,13 @@ impl Bookkeeping {
         let (old, new) = get_mut_2(&mut self.archetypes, old_a_id.0, new_a_id.0);
 
         Archetype::move_row(old, new, old_a_row);
-        if let Some(removed_column) = removed_column {
-            debug_assert!(self.components[cid.as_index()].layout.size() > 0);
-            old.columns[removed_column].remove_swap(old_a_row.0);
+        debug_assert!(self.components[cid.as_index()].layout.size() > 0);
+        if let Some(sink) = sink {
+            old.columns[removed_column].remove_custom(old_a_row.0, |ptr, len| unsafe {
+                std::ptr::copy_nonoverlapping(ptr, sink, len);
+            });
         } else {
-            debug_assert!(self.components[cid.as_index()].layout.size() == 0);
+            old.columns[removed_column].remove_swap(old_a_row.0);
         }
 
         // update entities in the entity storage
@@ -271,6 +284,7 @@ impl Bookkeeping {
             let expected = new.entities.len();
             new.columns.iter().all(|col| col.len() == expected as u32)
         });
+        true
     }
 
     pub fn matching_archetypes(
