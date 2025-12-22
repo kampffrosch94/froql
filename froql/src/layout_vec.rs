@@ -87,7 +87,7 @@ impl LayoutVec {
     }
 
     /// deletes the last element and calls the drop function on it if necessary
-    pub fn remove_last(&mut self) {
+    fn remove_last(&mut self) {
         debug_assert!(self.len > 0);
         self.len -= 1;
         unsafe {

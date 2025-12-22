@@ -264,8 +264,6 @@ impl World {
     /// Useful when you only have shared reference to `World`.
     ///
     /// The wrapped Entity can be accessed as `.entity` member on the view.
-    ///
-    /// Don't
     pub fn create_deferred(&self) -> EntityViewDeferred {
         EntityViewDeferred {
             entity: self.bookkeeping.create_deferred(),
@@ -281,7 +279,7 @@ impl World {
     /// Adds a component to the entity.
     ///
     /// Panics if `Entity` is not alive.
-    /// Panics if Component type is not registered.
+    /// Panics if component type is not registered if the feature `manual_registration` is enabled.
     pub fn add_component<T: 'static>(&mut self, e: Entity, mut val: T) {
         let cid = if cfg!(feature = "manual_registration") {
             self.get_component_id::<T>()
@@ -384,14 +382,28 @@ impl World {
     /// Removes component of type `T` from Entity.
     /// This operation is idempotent.
     ///
-    /// Panics if component type is not registered.
+    /// Panics if component type is not registered if the feature `manual_registration` is enabled.
     pub fn remove_component<T: 'static>(&mut self, e: Entity) {
         let cid = if cfg!(feature = "manual_registration") {
             self.get_component_id::<T>()
         } else {
             self.register_component::<T>()
         };
-        self.bookkeeping.remove_component(e, cid);
+        self.bookkeeping.remove_component(e, cid, None);
+    }
+
+    /// Removes component of type `T` from Entity and returns it if it was present.
+    ///
+    /// Panics if component type is not registered if the feature `manual_registration` is enabled.
+    pub fn take_component<T: 'static>(&mut self, e: Entity) -> Option<T> {
+        let cid = if cfg!(feature = "manual_registration") {
+            self.get_component_id::<T>()
+        } else {
+            self.register_component::<T>()
+        };
+
+        self.bookkeeping.remove_component(e, cid, todo!());
+        todo!()
     }
 
     /// Makes entity not alive.
@@ -430,7 +442,7 @@ impl World {
                 }
                 DeferredOperation::RemoveComponent(tid, e) => {
                     let cid = self.bookkeeping.get_component_id(tid).unwrap(); // TODO error msg
-                    self.bookkeeping.remove_component(e, cid);
+                    self.bookkeeping.remove_component(e, cid, None);
                 }
                 DeferredOperation::AddRelation(tid, from, to) => {
                     let Some(cid) = self.bookkeeping.get_component_id(tid) else {

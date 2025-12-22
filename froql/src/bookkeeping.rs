@@ -229,7 +229,7 @@ impl Bookkeeping {
     }
 
     /// Works for normal components and ZSTs
-    pub fn remove_component(&mut self, e: Entity, cid: ComponentId) {
+    pub fn remove_component(&mut self, e: Entity, cid: ComponentId, sink: Option<*mut u8>) {
         let (old_a_id, old_a_row) = self.entities.get_archetype(e);
         debug_assert_eq!(
             e.id,
@@ -237,6 +237,7 @@ impl Bookkeeping {
         );
         let mut components = self.archetypes[old_a_id.0 as usize].components.clone();
         let removed_column = components.iter().position(|it| *it == cid);
+
         components.retain(|it| *it != cid);
         let new_a_id = self.find_archetype_or_create(components);
 
@@ -383,7 +384,7 @@ impl Bookkeeping {
                 if rel_vec.is_empty() {
                     let other = self.entities.get_from_id(other_id);
                     // this moves the other entity
-                    self.remove_component(other, cid);
+                    self.remove_component(other, cid, None);
                 }
             }
 
@@ -440,7 +441,7 @@ impl Bookkeeping {
                 let rel_vec = unsafe { &mut *ptr };
                 rel_vec.remove(other.id.0);
                 if rel_vec.is_empty() {
-                    this.remove_component(e, cid);
+                    this.remove_component(e, cid, None);
                 }
             }
         }
