@@ -87,29 +87,44 @@ impl LayoutVec {
     }
 
     /// deletes the last element and calls the drop function on it if necessary
-    pub fn remove_last(&mut self) {
-        debug_assert!(self.len > 0);
-        self.len -= 1;
-        unsafe {
-            let r = self
-                .ptr
-                .as_ptr()
-                .add((self.len * self.element_size) as usize);
-            (self.drop_fn)(r)
-        }
+    fn remove_last(&mut self) {
+        let drop_fn = self.drop_fn;
+        let index = self.len - 1;
+        self.remove_custom(index, |ptr, _len| unsafe { (drop_fn)(ptr) });
     }
 
     /// deletes element at index and drops it
     /// then swaps the last element into the resulting hole and reduces len by one
     /// returns the index of the last element before it was swapped
     pub fn remove_swap(&mut self, index: u32) -> u32 {
+        let drop_fn = self.drop_fn;
+        self.remove_custom(index, |ptr, _len| unsafe { (drop_fn)(ptr) })
+    }
+
+    /// deletes element at index and executes a custom closure on it
+    /// usually this closure is just the drop fn for the element
+    /// but it may also move the element somewhere else (for example onto the stack)
+    ///
+    /// This function is `pub(crate)` to help with inlining.
+    pub(crate) fn remove_custom<F: Fn(*mut u8, usize)>(
+        &mut self,
+        index: u32,
+        dispose_handler: F,
+    ) -> u32 {
         debug_assert!(self.len > 0 && index < self.len);
         if index == self.len - 1 {
-            self.remove_last();
+            self.len -= 1;
+            unsafe {
+                let r = self
+                    .ptr
+                    .as_ptr()
+                    .add((self.len * self.element_size) as usize);
+                dispose_handler(r, self.element_size())
+            }
         } else {
             unsafe {
                 let deletee = self.ptr.as_ptr().add((index * self.element_size) as usize);
-                (self.drop_fn)(deletee);
+                dispose_handler(deletee, self.element_size());
                 let last = self.get(self.len - 1);
                 std::ptr::copy_nonoverlapping(last, deletee, self.element_size as usize);
             }
