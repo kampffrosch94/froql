@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Bookkeeping::ensure_alive_generation(entity)`: like `ensure_alive(..)` but also has a preset generation. Useful for deserialization.
 - `World::get_component_opt(..)` and `World::get_component_mut_opt(..)`, they return an `Option<Ref<T>>` or `Option<RefMut<T>>`
 - `World::take_component(e)` removes component from entity and returns it
+- derive `Hash` for Entity
 
 ### Fix
 - entities had invalid IDs when created in defered mode after another entity was forced alive
