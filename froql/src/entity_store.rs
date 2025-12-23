@@ -2,9 +2,9 @@ use std::cell::Cell;
 
 use crate::archetype::{ArchetypeId, ArchetypeRow};
 
-#[derive(Clone, Copy, Debug, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct EntityId(pub u32);
-#[derive(Clone, Copy, Debug, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct EntityGeneration(pub u32);
 
 impl EntityId {
@@ -20,7 +20,7 @@ impl EntityGeneration {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct Entity {
     pub generation: EntityGeneration,
     pub id: EntityId,
