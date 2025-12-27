@@ -74,7 +74,7 @@ You can also find more elaborate examples in the `examples/` folder.
 
 or 
 
-`cargo add cargo add --git https://github.com/kampffrosch94/froql froql` for latest master.
+`cargo add --git https://github.com/kampffrosch94/froql froql` for latest master.
 
 ## Plans for 1.0
 
