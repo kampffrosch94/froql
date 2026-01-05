@@ -119,11 +119,26 @@ impl World {
         self.get_component::<T>(self.singleton)
     }
 
+    /// Convenience method for getting an optional Component of the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_opt<T: 'static>(&self) -> Option<Ref<T>> {
+        self.get_component_opt::<T>(self.singleton)
+    }
+
     /// Convenience method for getting a mutable ref to a Component of the singleton entity.
     ///
     /// The singleton entity is meant to be used for things that only exist once.
     pub fn singleton_mut<T: 'static>(&self) -> RefMut<T> {
         self.get_component_mut::<T>(self.singleton)
+    }
+
+    /// Convenience method for getting an optional mutable ref to a Component of
+    /// the singleton entity.
+    ///
+    /// The singleton entity is meant to be used for things that only exist once.
+    pub fn singleton_mut_opt<T: 'static>(&self) -> Option<RefMut<T>> {
+        self.get_component_mut_opt::<T>(self.singleton)
     }
 
     /// Convenience method for setting a Component of the singleton entity.
