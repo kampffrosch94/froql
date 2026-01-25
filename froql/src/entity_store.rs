@@ -20,10 +20,19 @@ impl EntityGeneration {
     }
 }
 
-#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
+#[derive(Clone, Copy, PartialEq, Hash, Eq)]
 pub struct Entity {
     pub generation: EntityGeneration,
     pub id: EntityId,
+}
+
+impl std::fmt::Debug for Entity {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_fmt(format_args!(
+            "Entity(gen: {}, id: {})",
+            self.generation.0, self.id.0
+        ))
+    }
 }
 
 // needed for some trickery in the macro
@@ -420,5 +429,15 @@ mod test {
         assert_eq!(3, store.create_deferred().id.0);
         assert_eq!(4, store.create_deferred().id.0);
         assert_eq!(5, store.create_deferred().id.0);
+    }
+
+    #[test]
+    fn debug_format() {
+        let e = Entity {
+            generation: EntityGeneration(12),
+            id: EntityId(15),
+        };
+        assert_eq!(&format!("{e:?}"), "Entity(gen: 12, id: 15)");
+        assert_eq!(&format!("{e:#?}"), "Entity(gen: 12, id: 15)");
     }
 }

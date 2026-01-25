@@ -18,5 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fix
 - entities had invalid IDs when created in defered mode after another entity was forced alive
 
+### Change
+- changed the Debug String for Entities to be more compact
+
 ## [0.1.0] - 2025-05-08
 - first public release of froql
