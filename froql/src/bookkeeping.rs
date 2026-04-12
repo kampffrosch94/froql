@@ -1,9 +1,8 @@
-use std::{
-    any::TypeId,
-    collections::{HashMap, HashSet},
-};
+use std::any::TypeId;
 
 use hi_sparse_bitset::reduce;
+use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::FxHashSet as HashSet;
 
 use crate::{
     archetype::{Archetype, ArchetypeId, ArchetypeRow},
@@ -41,11 +40,11 @@ impl Bookkeeping {
         let mut archetypes = Vec::new();
         let empty_archetype = Archetype::new(Vec::new(), Vec::new());
         archetypes.push(empty_archetype);
-        let mut exact_archetype = HashMap::new();
+        let mut exact_archetype = HashMap::default();
         exact_archetype.insert(Vec::new(), ArchetypeId(0));
         Bookkeeping {
-            component_map: HashMap::new(),
-            component_name_map: HashMap::new(),
+            component_map: HashMap::default(),
+            component_name_map: HashMap::default(),
             components: Vec::new(),
             archetypes,
             entities: EntityStore::new(),
@@ -473,7 +472,7 @@ impl Bookkeeping {
             }
             if origin_cid.is_transitive() {
                 // now we need to follow the transitive relationship
-                let mut visited = HashSet::new();
+                let mut visited = HashSet::default();
                 let mut work = Vec::new();
                 work.extend_from_slice(rel_vec);
                 visited.extend(work.iter().copied());

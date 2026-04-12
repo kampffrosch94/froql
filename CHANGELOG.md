@@ -21,5 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Change
 - changed the Debug String for Entities to be more compact
 
+### Dependencies
+- dependency on `rustc-hash` for the faster hashmap hashing
+
+
 ## [0.1.0] - 2025-05-08
 - first public release of froql
