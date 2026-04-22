@@ -15,7 +15,7 @@ readme = "../README.md"
 manual_registration = []
 
 [dependencies]
-hi_sparse_bitset = "0.6.1"
+hi_sparse_bitset = "0.7.3"
 rustc-hash = "2.1"
 froql_macro = { version = "0.1.0", path = "../froql_macro" }
 
