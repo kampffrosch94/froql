@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `World::take_component(e)` removes component from entity and returns it
 - derive `Hash` and `Eq` for Entity, so it can be put into hash maps and sets
 - `World::singleton_opt(..)` and `World::singleton_mut_opt(..)`
+- `EntityViewDeferred::get_opt(..)` and `EntityViewDeferred::get_mut_opt(..)`
 
 ### Fix
 - entities had invalid IDs when created in defered mode after another entity was forced alive

@@ -85,6 +85,22 @@ impl<'me> EntityViewDeferred<'me> {
         self.world.get_component_mut::<T>(self.entity)
     }
 
+    /// Returns an immutable Ref to the component if the entity has it.
+    ///
+    /// Panics if `Entity` is not alive or does not have the component.
+    /// Panics if component type is not registered.
+    pub fn get_opt<'a, T: 'static>(&'a self) -> Option<Ref<'me, T>> {
+        self.world.get_component_opt::<T>(self.entity)
+    }
+
+    /// Returns a mutable RefMut to the component if the entity has it.
+    ///
+    /// Panics if `Entity` is not alive or does not have the component.
+    /// Panics if component type is not registered.
+    pub fn get_mut_opt<'a, T: 'static>(&'a self) -> Option<RefMut<'me, T>> {
+        self.world.get_component_mut_opt::<T>(self.entity)
+    }
+
     /// Adds a component to the entity.
     ///
     /// This method is deferred until `world.process()` is called.
